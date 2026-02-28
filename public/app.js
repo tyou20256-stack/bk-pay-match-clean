@@ -66,6 +66,12 @@ function renderData(data){
   else{document.getElementById('bestSellPrice').textContent='--';document.getElementById('bestSellExchange').textContent='--';}
   if(buys.length&&sells.length){document.getElementById('bestSpread').textContent='¥'+fmt(sells.reduce((s,o)=>s+o.price,0)/sells.length-buys.reduce((s,o)=>s+o.price,0)/buys.length);}
 
+  // Volume within 5% of spot
+  if(spot&&buys.length){var buyVol=0;buys.forEach(function(o){if(o.price<=spot*1.05){buyVol+=o.available*o.price;}});document.getElementById('volBuy5').textContent='¥'+fmtInt(buyVol);}
+  else{document.getElementById('volBuy5').textContent='--';}
+  if(spot&&sells.length){var sellVol=0;sells.forEach(function(o){if(o.price>=spot*0.95){sellVol+=o.available*o.price;}});document.getElementById('volSell5').textContent='¥'+fmtInt(sellVol);}
+  else{document.getElementById('volSell5').textContent='--';}
+
   // Filter count
   const total=data.rates.reduce((s,r)=>s+r.buyOrders.length+r.sellOrders.length,0);
   document.getElementById('filterCount').textContent=`${buys.length+sells.length} / ${total}`;
