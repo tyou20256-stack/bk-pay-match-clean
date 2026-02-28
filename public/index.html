@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BK P2P Aggregator</title>
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
   <!-- Top Bar -->
@@ -28,6 +28,25 @@
     </div>
   </header>
 
+  <!-- Filters (collapsible) -->
+  <div class="filter-bar open" id="filterBar">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:12px;font-weight:700;color:var(--text2)" data-i18n="filter_btn">フィルター</span>
+      <span class="filter-active-count" id="filterCount" style="font-size:10px;color:var(--dim)"></span>
+    </div>
+    <div class="filter-row">
+      <div class="filter-group"><label data-i18n="f_payment">決済方法</label><div id="paymentFilters" class="filter-chips"></div></div>
+      <div class="filter-group"><label data-i18n="f_exchange">取引所</label><div id="exchangeFilters" class="filter-chips"></div></div>
+    </div>
+    <div class="filter-row">
+      <div class="filter-group"><label data-i18n="f_amount">取引金額</label><input type="number" id="filterAmount" placeholder="例: 100,000" class="filter-input"></div>
+      <div class="filter-group"><label data-i18n="f_completion">完了率</label><select id="filterCompletion" class="filter-select"><option value="0">全て</option><option value="80">80%+</option><option value="90">90%+</option><option value="95" selected>95%+</option><option value="98">98%+</option></select></div>
+      <div class="filter-group"><label data-i18n="f_stock">最低在庫</label><select id="filterMinAvail" class="filter-select"><option value="0">全て</option><option value="100">100+</option><option value="1000">1K+</option><option value="5000">5K+</option></select></div>
+      <div class="filter-group"><label data-i18n="f_status">状態</label><select id="filterOnline" class="filter-select"><option value="all">全て</option><option value="online">オンラインのみ</option></select></div>
+      <button class="filter-reset-btn" onclick="resetFilters()" data-i18n="reset">リセット</button>
+    </div>
+  </div>
+
   <!-- Hero: Best Rates -->
   <section class="hero">
     <div class="hero-card buy-card">
@@ -47,6 +66,9 @@
     </div>
   </section>
 
+  <!-- Exchange Comparison -->
+  <section class="exchange-compare" id="exchangeCompare"></section>
+
   <!-- Arbitrage Dropdown -->
   <div class="arb-dropdown collapsed" id="arbPanel">
     <div class="arb-dropdown-bar">
@@ -57,28 +79,6 @@
     </div>
     <div id="arbActivePanel" class="arb-content"><div id="arbActiveList"></div></div>
     <div id="arbHistoryPanel" class="arb-content" style="display:none"><div id="arbHistoryList"></div></div><div class="arb-close-mobile" onclick="toggleArbPanel()">閉じる</div>
-  </div>
-
-  <!-- Exchange Comparison -->
-  <section class="exchange-compare" id="exchangeCompare"></section>
-
-  <!-- Filters (collapsible) -->
-  <div class="filter-bar open" id="filterBar">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <span style="font-size:12px;font-weight:700;color:var(--text2)" data-i18n="filter_btn">フィルター</span>
-      <span class="filter-active-count" id="filterCount" style="font-size:10px;color:var(--dim)"></span>
-    </div>
-    <div class="filter-row">
-      <div class="filter-group"><label data-i18n="f_payment">決済方法</label><div id="paymentFilters" class="filter-chips"></div></div>
-      <div class="filter-group"><label data-i18n="f_exchange">取引所</label><div id="exchangeFilters" class="filter-chips"></div></div>
-    </div>
-    <div class="filter-row">
-      <div class="filter-group"><label data-i18n="f_amount">取引金額</label><input type="number" id="filterAmount" placeholder="例: 100,000" class="filter-input"></div>
-      <div class="filter-group"><label data-i18n="f_completion">完了率</label><select id="filterCompletion" class="filter-select"><option value="0">全て</option><option value="80">80%+</option><option value="90">90%+</option><option value="95" selected>95%+</option><option value="98">98%+</option></select></div>
-      <div class="filter-group"><label data-i18n="f_stock">最低在庫</label><select id="filterMinAvail" class="filter-select"><option value="0">全て</option><option value="100">100+</option><option value="1000">1K+</option><option value="5000">5K+</option></select></div>
-      <div class="filter-group"><label data-i18n="f_status">状態</label><select id="filterOnline" class="filter-select"><option value="all">全て</option><option value="online">オンラインのみ</option></select></div>
-      <button class="filter-reset-btn" onclick="resetFilters()" data-i18n="reset">リセット</button>
-    </div>
   </div>
 
   <!-- Order Book: Side by Side -->
@@ -114,7 +114,7 @@
   </main>
 
   <footer><span>BK P2P Aggregator &mdash; Bybit / Binance / OKX / HTX</span></footer>
-  <script src="i18n.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="i18n.js?v=10"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
