@@ -101,7 +101,7 @@ function renderArbitrage(data){
   const badge=document.getElementById('arbActiveBadge');
   
   badge.textContent=data.active.length;
-  badge.style.display=data.active.length>0?'inline-block':'none';
+  badge.classList.toggle('zero',data.active.length===0);
   
   if(data.active.length>0){
     activeEl.innerHTML=data.active.map(w=>renderArbCard(w,true)).join('');
@@ -174,6 +174,8 @@ loadData();
 
 function toggleArbPanel(){
   const p=document.getElementById('arbPanel');
+  const btn=document.getElementById('arbHeaderBtn');
   p.classList.toggle('collapsed');
+  btn.classList.toggle('active',!p.classList.contains('collapsed'));
   if(!p.classList.contains('collapsed')) loadArbitrage();
 }
