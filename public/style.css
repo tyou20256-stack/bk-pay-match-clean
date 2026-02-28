@@ -274,3 +274,24 @@ footer{text-align:center;padding:14px;color:var(--dim);font-size:10px;border-top
 @media(min-width:769px){
   .arb-close-mobile{display:none}
 }
+
+@media(max-width:768px){
+  .filter-bar{padding:8px 12px}
+  .filter-row{gap:6px;margin-bottom:6px;flex-wrap:nowrap;overflow-x:auto}
+  .filter-row:first-child{flex-wrap:wrap}
+  .filter-group{min-width:0;gap:2px}
+  .filter-group label{font-size:8px;margin-bottom:0}
+  .filter-chips{max-height:60px;overflow-y:auto;gap:3px}
+  .filter-chip{padding:3px 8px;font-size:9px}
+  .filter-input{width:80px;padding:4px 6px;font-size:10px}
+  .filter-select{padding:4px 4px;font-size:10px}
+  .filter-reset-btn{padding:4px 10px;font-size:9px}
+  .hero{padding:8px 12px;gap:6px}
+  .hero-card{padding:10px}
+  .hero-price{font-size:18px}
+  .hero-label{font-size:9px}
+  .hero-sub{font-size:10px}
+  .hero-divider{padding:6px 0}
+  .hero-spread-label{font-size:9px}
+  .hero-spread-value{font-size:14px}
+}
