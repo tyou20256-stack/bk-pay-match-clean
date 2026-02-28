@@ -1,16 +1,13 @@
 let currentCrypto = 'USDT';
 let countdown = 30;
-let timer = null;
 let rawData = null;
-
 let filters = { payments: new Set(), exchanges: new Set(), amount: 0, completionRate: 95, minAvail: 0, onlineOnly: false };
 let allPaymentMethods = new Set();
 let allExchanges = new Set();
 
 function toggleTheme() {
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
   document.getElementById('themeToggle').textContent = next === 'dark' ? 'Light' : 'Dark';
   localStorage.setItem('theme', next);
 }
@@ -69,7 +66,6 @@ function pass(o) {
 }
 
 function render() { if (rawData) renderData(rawData); }
-
 function fmt(n,d=1) { return n==null?'--':Number(n).toLocaleString('ja-JP',{minimumFractionDigits:d,maximumFractionDigits:d}); }
 function fmtInt(n) { return n==null?'--':Number(n).toLocaleString('ja-JP',{maximumFractionDigits:0}); }
 
@@ -92,10 +88,15 @@ function renderData(data) {
   const spot = data.spotPrices?.[currentCrypto];
   document.getElementById('spotPrices').innerHTML = spot ? `<div class="spot-item">Spot: <span class="spot-val">${fmt(spot)}</span></div>` : '';
 
+  // Update titles with i18n
+  document.getElementById('buyTitle').innerHTML = tf('buy_title', currentCrypto);
+  document.getElementById('sellTitle').innerHTML = tf('sell_title', currentCrypto);
+  document.getElementById('buyDesc').textContent = t('buy_desc');
+  document.getElementById('sellDesc').textContent = t('sell_desc');
+
   let buys=[], sells=[];
   data.rates.forEach(r => { buys.push(...r.buyOrders.filter(pass)); sells.push(...r.sellOrders.filter(pass)); });
 
-  // Best buy/sell
   if (buys.length) { const b=buys.reduce((a,b)=>a.price<b.price?a:b); document.getElementById('bestBuyPrice').textContent=fmt(b.price); document.getElementById('bestBuyExchange').textContent=b.exchange; }
   else { document.getElementById('bestBuyPrice').textContent='--'; document.getElementById('bestBuyExchange').textContent='--'; }
   if (sells.length) { const s=sells.reduce((a,b)=>a.price>b.price?a:b); document.getElementById('bestSellPrice').textContent=fmt(s.price); document.getElementById('bestSellExchange').textContent=s.exchange; }
@@ -105,10 +106,13 @@ function renderData(data) {
   const arbEl=document.getElementById('arbAlert'), arbC=document.getElementById('arbContent');
   if (data.arbitrageOpportunities?.length) {
     const a=data.arbitrageOpportunities[0]; arbEl.classList.remove('hidden');
-    arbC.innerHTML=`<span class="arb-profit">+${fmt(a.profitPercent,2)}%</span> <span style="color:var(--dim);font-size:11px">Buy ${a.buyExchange} (${fmt(a.buyPrice)}) &rarr; Sell ${a.sellExchange} (${fmt(a.sellPrice)}) = +${fmt(a.profitPerUnit)}/unit</span>`;
+    arbC.innerHTML=`<span class="arb-profit">+${fmt(a.profitPercent,2)}%</span>
+      <span style="color:var(--dim);font-size:11px">
+        ${a.buyExchange} ${t('arb_buy')} (${fmt(a.buyPrice)}) &rarr; ${a.sellExchange} ${t('arb_sell')} (${fmt(a.sellPrice)}) = +${fmt(a.profitPerUnit)}${t('arb_unit')}
+      </span>`;
   } else arbEl.classList.add('hidden');
 
-  // Spread bars (center card)
+  // Spread
   const bars=document.getElementById('spreadBars');
   const maxS=Math.max(...data.rates.map(r=>Math.abs(r.spread||0)),1);
   bars.innerHTML=data.rates.map(r => {
@@ -135,7 +139,7 @@ function renderTable(tid,cid,orders,side,spot) {
   if(side==='buy') orders.sort((a,b)=>a.price-b.price); else orders.sort((a,b)=>b.price-a.price);
   const show=orders.slice(0,40);
   document.getElementById(cid).textContent=`${orders.length}`;
-  if(!show.length){ tbody.innerHTML='<tr><td colspan="9" class="loading">No orders</td></tr>'; return; }
+  if(!show.length){ tbody.innerHTML=`<tr><td colspan="9" class="loading">${t('no_orders')}</td></tr>`; return; }
   tbody.innerHTML=show.map((o,i)=>{
     const r=i+1, rc=r<=3?`rank-${r}`:'';
     const prem=spot?((o.price-spot)/spot*100):null;
@@ -156,6 +160,6 @@ function renderTable(tid,cid,orders,side,spot) {
   }).join('');
 }
 
-async function refresh() { document.getElementById('refreshBtn').textContent='...'; await loadData(); document.getElementById('refreshBtn').textContent='Refresh'; countdown=30; }
+async function refresh() { document.getElementById('refreshBtn').textContent='...'; await loadData(); document.getElementById('refreshBtn').textContent=t('refresh'); countdown=30; }
 setInterval(()=>{ countdown--; document.getElementById('countdown').textContent=countdown; if(countdown<=0){countdown=30;loadData();} },1000);
 loadData();

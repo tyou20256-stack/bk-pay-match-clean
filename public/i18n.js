@@ -1,0 +1,70 @@
+const I18N = {
+  ja: {
+    subtitle: 'P2P取引所 横断レート監視',
+    refresh: '更新',
+    f_payment: '決済方法', f_exchange: '取引所', f_amount: '金額 (JPY)',
+    f_completion: '完了率', f_stock: '最低在庫', f_status: '状態',
+    all: '全て', online_only: 'オンラインのみ', reset: 'リセット',
+    arb_detected: '裁定機会あり',
+    best_buy: '最安値（購入）', best_sell: '最高値（売却）',
+    th_exchange: '取引所', th_rate: 'レート', th_premium: '乖離率',
+    th_avail: '在庫', th_limit: '取引範囲', th_merchant: '業者',
+    th_comp: '完了率', th_pay: '決済',
+    no_orders: '該当する注文なし',
+    buy_title: (c) => `円で購入 (JPY → ${c})`,
+    sell_title: (c) => `円に換金 (${c} → JPY)`,
+    buy_desc: '日本円を支払って暗号資産を受け取る',
+    sell_desc: '暗号資産を支払って日本円を受け取る',
+    spread_prem: 'プレミアム',
+    arb_buy: 'で購入',
+    arb_sell: 'で売却',
+    arb_unit: '/枚',
+    filter_placeholder: '例: 100000',
+  },
+  en: {
+    subtitle: 'P2P Cross-Exchange Rate Monitor',
+    refresh: 'Refresh',
+    f_payment: 'Payment', f_exchange: 'Exchange', f_amount: 'Amount (JPY)',
+    f_completion: 'Completion', f_stock: 'Min. Stock', f_status: 'Status',
+    all: 'All', online_only: 'Online Only', reset: 'Reset',
+    arb_detected: 'ARBITRAGE DETECTED',
+    best_buy: 'BEST BUY', best_sell: 'BEST SELL',
+    th_exchange: 'Exchange', th_rate: 'Rate', th_premium: 'Premium',
+    th_avail: 'Available', th_limit: 'Limit', th_merchant: 'Merchant',
+    th_comp: 'Completion', th_pay: 'Payment',
+    no_orders: 'No matching orders',
+    buy_title: (c) => `Buy Crypto (JPY → ${c})`,
+    sell_title: (c) => `Sell to JPY (${c} → JPY)`,
+    buy_desc: 'Pay JPY, receive crypto',
+    sell_desc: 'Pay crypto, receive JPY',
+    spread_prem: 'Premium',
+    arb_buy: 'Buy at',
+    arb_sell: 'Sell at',
+    arb_unit: '/unit',
+    filter_placeholder: 'e.g. 100000',
+  }
+};
+
+let currentLang = localStorage.getItem('lang') || 'ja';
+
+function t(key) { return I18N[currentLang]?.[key] || I18N.ja[key] || key; }
+function tf(key, ...args) { const v = I18N[currentLang]?.[key] || I18N.ja[key]; return typeof v === 'function' ? v(...args) : v || key; }
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val) el.textContent = val;
+  });
+  document.getElementById('filterAmount').placeholder = t('filter_placeholder');
+  document.getElementById('langToggle').textContent = currentLang === 'ja' ? 'EN' : 'JA';
+}
+
+function toggleLang() {
+  currentLang = currentLang === 'ja' ? 'en' : 'ja';
+  localStorage.setItem('lang', currentLang);
+  applyI18n();
+  if (typeof render === 'function') render();
+}
+
+document.addEventListener('DOMContentLoaded', applyI18n);
