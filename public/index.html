@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BK P2P Aggregator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>⚡ BK P2P Aggregator</h1>
+      <span class="subtitle">P2P取引所 横断レート監視</span>
+    </div>
+    <div class="header-right">
+      <div class="spot-prices" id="spotPrices"></div>
+      <div class="update-info">
+        <span id="countdown">--</span>s
+        <button id="refreshBtn" onclick="refresh()">🔄</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="crypto-tabs">
+    <button class="tab active" data-crypto="USDT">USDT/JPY</button>
+    <button class="tab" data-crypto="BTC">BTC/JPY</button>
+    <button class="tab" data-crypto="ETH">ETH/JPY</button>
+  </nav>
+
+  <main>
+    <!-- Arbitrage Alert -->
+    <div id="arbAlert" class="arb-alert hidden">
+      <div class="arb-icon">⚡</div>
+      <div id="arbContent"></div>
+    </div>
+
+    <!-- Best Prices -->
+    <div class="best-prices">
+      <div class="best-card buy">
+        <div class="best-label">最安値（買い）</div>
+        <div class="best-price" id="bestBuyPrice">--</div>
+        <div class="best-exchange" id="bestBuyExchange">--</div>
+      </div>
+      <div class="best-card spread">
+        <div class="best-label">スプレッド</div>
+        <div class="best-price" id="bestSpread">--</div>
+        <div class="best-exchange">取引所間最大差</div>
+      </div>
+      <div class="best-card sell">
+        <div class="best-label">最高値（売り）</div>
+        <div class="best-price" id="bestSellPrice">--</div>
+        <div class="best-exchange" id="bestSellExchange">--</div>
+      </div>
+    </div>
+
+    <!-- Spread Comparison -->
+    <div class="section">
+      <h2>📊 スプレッド比較</h2>
+      <div id="spreadBars" class="spread-bars"></div>
+    </div>
+
+    <!-- Buy Orders -->
+    <div class="section">
+      <h2>🟢 買い注文（JPY → <span class="current-crypto">USDT</span>）安い順</h2>
+      <div class="table-wrapper">
+        <table id="buyTable">
+          <thead>
+            <tr>
+              <th>順位</th><th>取引所</th><th>レート (¥)</th><th>乖離率</th>
+              <th>在庫</th><th>取引範囲</th><th>マーチャント</th><th>完了率</th><th>決済方法</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sell Orders -->
+    <div class="section">
+      <h2>🔴 売り注文（<span class="current-crypto">USDT</span> → JPY）高い順</h2>
+      <div class="table-wrapper">
+        <table id="sellTable">
+          <thead>
+            <tr>
+              <th>順位</th><th>取引所</th><th>レート (¥)</th><th>乖離率</th>
+              <th>在庫</th><th>取引範囲</th><th>マーチャント</th><th>完了率</th><th>決済方法</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span>BK P2P Aggregator v1.0 | Exchanges: Bybit • Binance • OKX | Powered by ccxt</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

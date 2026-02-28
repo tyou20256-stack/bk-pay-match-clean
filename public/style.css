@@ -1,0 +1,72 @@
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e17;--card:#111827;--border:#1e293b;--text:#e2e8f0;--dim:#64748b;--green:#10b981;--red:#ef4444;--blue:#3b82f6;--yellow:#f59e0b;--purple:#8b5cf6}
+body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',monospace;font-size:13px}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border);background:var(--card)}
+.header-left h1{font-size:18px;color:var(--green)}
+.subtitle{color:var(--dim);font-size:12px}
+.header-right{display:flex;align-items:center;gap:20px}
+.spot-prices{display:flex;gap:12px;font-size:11px;color:var(--dim)}
+.spot-prices .spot-item{background:var(--bg);padding:4px 10px;border-radius:4px;border:1px solid var(--border)}
+.spot-prices .spot-label{color:var(--dim)}
+.spot-prices .spot-val{color:var(--yellow);font-weight:bold}
+.update-info{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:12px}
+#refreshBtn{background:var(--border);border:none;color:var(--text);padding:4px 8px;border-radius:4px;cursor:pointer;font-size:14px}
+#refreshBtn:hover{background:var(--blue)}
+nav.crypto-tabs{display:flex;gap:0;padding:0 24px;background:var(--card);border-bottom:1px solid var(--border)}
+.tab{background:none;border:none;color:var(--dim);padding:12px 24px;cursor:pointer;font-size:13px;font-family:inherit;border-bottom:2px solid transparent;transition:all .2s}
+.tab.active{color:var(--green);border-bottom-color:var(--green)}
+.tab:hover{color:var(--text)}
+main{padding:20px 24px;max-width:1400px;margin:0 auto}
+.arb-alert{background:linear-gradient(135deg,#1a0a2e,#0a1628);border:1px solid var(--purple);border-radius:8px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;animation:pulse 2s infinite}
+.arb-alert.hidden{display:none}
+.arb-icon{font-size:24px}
+.arb-content{font-size:13px}
+.arb-profit{color:var(--green);font-weight:bold;font-size:16px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.8}}
+.best-prices{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px}
+.best-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;text-align:center}
+.best-card.buy{border-color:#065f4622}
+.best-card.sell{border-color:#7f1d1d22}
+.best-card.spread{border-color:#1e3a5f22}
+.best-label{color:var(--dim);font-size:11px;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.best-price{font-size:28px;font-weight:bold;margin-bottom:4px}
+.best-card.buy .best-price{color:var(--green)}
+.best-card.sell .best-price{color:var(--red)}
+.best-card.spread .best-price{color:var(--yellow)}
+.best-exchange{color:var(--dim);font-size:12px}
+.section{margin-bottom:24px}
+.section h2{font-size:14px;margin-bottom:12px;color:var(--text);font-weight:600}
+.spread-bars{display:flex;gap:12px;flex-wrap:wrap}
+.spread-bar{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px 16px;min-width:200px;flex:1}
+.spread-bar .ex-name{font-size:12px;color:var(--dim);margin-bottom:6px}
+.spread-bar .bar-wrap{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.spread-bar .bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.spread-bar .spread-val{font-size:16px;font-weight:bold}
+.spread-bar .spread-detail{font-size:11px;color:var(--dim);margin-top:4px}
+.table-wrapper{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:8px;overflow:hidden}
+thead{background:var(--bg)}
+th{padding:10px 12px;text-align:left;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600;border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap}
+tr:hover{background:#ffffff06}
+.rank{font-weight:bold;font-size:16px}
+.rank-1{color:var(--yellow)}
+.rank-2{color:var(--dim)}
+.rank-3{color:#cd7f32}
+.exchange-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:bold}
+.exchange-Bybit{background:#f7a60020;color:#f7a600}
+.exchange-Binance{background:#f3ba2f20;color:#f3ba2f}
+.exchange-OKX{background:#ffffff15;color:#fff}
+.price-cell{font-size:14px;font-weight:bold}
+.premium-positive{color:var(--red);font-size:11px}
+.premium-negative{color:var(--green);font-size:11px}
+.completion-high{color:var(--green)}
+.completion-mid{color:var(--yellow)}
+.completion-low{color:var(--red)}
+.payment-tag{display:inline-block;background:var(--bg);padding:1px 6px;border-radius:3px;font-size:10px;margin:1px;color:var(--dim)}
+.online-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
+.online-dot.on{background:var(--green)}
+.online-dot.off{background:var(--red)}
+.loading{text-align:center;padding:40px;color:var(--dim)}
+footer{text-align:center;padding:16px;color:var(--dim);font-size:11px;border-top:1px solid var(--border)}
+@media(max-width:768px){.best-prices{grid-template-columns:1fr}.spread-bars{flex-direction:column}}
