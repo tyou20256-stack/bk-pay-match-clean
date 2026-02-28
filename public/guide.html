@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BK P2P Aggregator - 利用ガイド</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .guide{max-width:900px;margin:0 auto;padding:24px 20px}
+    .guide h1{font-size:22px;font-weight:800;margin-bottom:8px}
+    .guide .lead{color:var(--text2);font-size:13px;margin-bottom:32px;line-height:1.8}
+    .guide h2{font-size:16px;font-weight:700;margin:32px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border);color:var(--green)}
+    .guide h3{font-size:14px;font-weight:700;margin:20px 0 8px;color:var(--text)}
+    .guide p,.guide li{font-size:13px;line-height:1.8;color:var(--text2);margin-bottom:8px}
+    .guide ul,.guide ol{padding-left:20px;margin-bottom:12px}
+    .guide li{margin-bottom:4px}
+    .guide strong{color:var(--text)}
+    .guide .box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:12px 0}
+    .guide .box-title{font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+    .guide .box.warn{border-color:var(--red-border);background:var(--red-soft)}
+    .guide .box.warn .box-title{color:var(--red)}
+    .guide .box.info{border-color:var(--green-border);background:var(--green-soft)}
+    .guide .box.info .box-title{color:var(--green)}
+    .guide .box.purple{border-color:var(--purple);background:var(--purple-soft)}
+    .guide .box.purple .box-title{color:var(--purple)}
+    .guide table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}
+    .guide th{background:var(--bg);padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);border-bottom:1px solid var(--border)}
+    .guide td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2)}
+    .guide .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0;font-size:12px}
+    .guide .flow-step{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 14px;text-align:center;font-weight:600;color:var(--text)}
+    .guide .flow-arrow{color:var(--dim);font-size:16px}
+    .guide .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin:0 2px}
+    .guide .tag-user{background:var(--blue);color:#fff;--blue:rgba(96,165,250,1)}
+    .guide .tag-merchant{background:var(--purple);color:#fff}
+    .guide .tag-platform{background:var(--green);color:#fff}
+    .back-link{display:inline-block;padding:8px 16px;color:var(--text2);font-size:12px;text-decoration:none;border:1px solid var(--border);border-radius:6px;margin-bottom:20px}
+    .back-link:hover{border-color:var(--text);color:var(--text)}
+    .toc{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:24px}
+    .toc-title{font-size:12px;font-weight:700;color:var(--dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+    .toc a{display:block;font-size:12px;color:var(--text2);text-decoration:none;padding:3px 0}
+    .toc a:hover{color:var(--green)}
+  </style>
+</head>
+<body>
+<div class="guide">
+  <a href="/" class="back-link">← ダッシュボードに戻る</a>
+  <h1>BK P2P Aggregator 利用ガイド</h1>
+  <p class="lead">P2P取引所を活用した暗号資産の売買、および収納代行の代替手段としての運用方法を解説します。</p>
+
+  <div class="toc">
+    <div class="toc-title">目次</div>
+    <a href="#sec1">1. P2P取引とは</a>
+    <a href="#sec2">2. 取引に必要な準備（ユーザー側）</a>
+    <a href="#sec3">3. 取引に必要な準備（マーチャント側）</a>
+    <a href="#sec4">4. 取引の流れ（ステップバイステップ）</a>
+    <a href="#sec5">5. ダッシュボードの使い方</a>
+    <a href="#sec6">6. アービトラージの活用方法</a>
+    <a href="#sec7">7. 収納代行の代替モデル</a>
+    <a href="#sec8">8. リスクと注意事項</a>
+    <a href="#sec9">9. 取引所別の特徴</a>
+    <a href="#sec10">10. よくある質問</a>
+  </div>
+
+  <!-- Section 1 -->
+  <h2 id="sec1">1. P2P取引とは</h2>
+  <p>P2P（Peer-to-Peer）取引は、取引所を仲介者として、<strong>個人間で直接</strong>暗号資産と法定通貨を交換する仕組みです。</p>
+  
+  <div class="box info">
+    <div class="box-title">従来の取引所取引との違い</div>
+    <table>
+      <tr><th>項目</th><th>通常の取引所</th><th>P2P取引</th></tr>
+      <tr><td>相手</td><td>取引所自体</td><td>個人（マーチャント）</td></tr>
+      <tr><td>価格</td><td>市場価格（自動）</td><td>マーチャントが設定</td></tr>
+      <tr><td>決済方法</td><td>銀行振込のみ</td><td>銀行振込、PayPay、LINE Pay等</td></tr>
+      <tr><td>手数料</td><td>0.1%〜</td><td>基本無料（Bybit/Binance/OKX/HTX）</td></tr>
+      <tr><td>KYC</td><td>必須</td><td>必須（取引所アカウント）</td></tr>
+      <tr><td>入金口座</td><td>取引所指定口座</td><td>マーチャント個人の口座</td></tr>
+    </table>
+  </div>
+
+  <div class="box">
+    <div class="box-title">エスクロー保護</div>
+    <p>P2P取引では、取引所がエスクロー（第三者預託）として機能します。マーチャントの暗号資産は取引開始時にロックされ、買い手の支払いが確認されるまで解放されません。これにより<strong>詐欺リスクが大幅に低減</strong>されます。</p>
+  </div>
+
+  <!-- Section 2 -->
+  <h2 id="sec2">2. 取引に必要な準備（ユーザー側）</h2>
+  <h3>必要なもの</h3>
+  <table>
+    <tr><th>項目</th><th>詳細</th><th>所要時間</th></tr>
+    <tr><td><strong>取引所アカウント</strong></td><td>Bybit / Binance / OKX / HTX いずれか</td><td>5〜10分</td></tr>
+    <tr><td><strong>本人確認（KYC）</strong></td><td>パスポート or 運転免許証 + 顔写真</td><td>数時間〜1日</td></tr>
+    <tr><td><strong>決済手段</strong></td><td>銀行口座 / PayPay / LINE Pay 等</td><td>既存のもの</td></tr>
+    <tr><td><strong>暗号資産ウォレット</strong></td><td>取引所内ウォレット（自動作成）</td><td>自動</td></tr>
+  </table>
+
+  <h3>アカウント開設手順</h3>
+  <ol>
+    <li>取引所のウェブサイトまたはアプリにアクセス</li>
+    <li>メールアドレスまたは電話番号で登録</li>
+    <li>本人確認書類をアップロード（パスポート推奨）</li>
+    <li>顔認証（セルフィー）を完了</li>
+    <li>KYC承認を待つ（通常数時間以内）</li>
+    <li>P2Pセクションにアクセス可能になる</li>
+  </ol>
+
+  <div class="box info">
+    <div class="box-title">推奨：複数取引所のアカウントを持つ</div>
+    <p>取引所ごとにレートが異なるため、<strong>最低2つ以上</strong>の取引所アカウントを持つことで、常に最良レートで取引できます。このダッシュボードで比較して最安値の取引所を選びましょう。</p>
+  </div>
+
+  <!-- Section 3 -->
+  <h2 id="sec3">3. 取引に必要な準備（マーチャント側）</h2>
+  <h3>マーチャントとは</h3>
+  <p>P2P取引で暗号資産を売買する広告を掲載する側です。一般ユーザーより多くの要件がありますが、<strong>より有利なレートで取引</strong>できます。</p>
+
+  <h3>マーチャント登録要件</h3>
+  <table>
+    <tr><th>取引所</th><th>デポジット</th><th>月間取引量</th><th>完了率</th><th>その他</th></tr>
+    <tr><td><strong>Bybit</strong></td><td>なし（申請制）</td><td>制限なし</td><td>80%以上推奨</td><td>認証済みアカウント</td></tr>
+    <tr><td><strong>Binance</strong></td><td>1,000 USDT</td><td>制限なし</td><td>80%以上</td><td>30日以上のアカウント</td></tr>
+    <tr><td><strong>OKX</strong></td><td>なし（レベル制）</td><td>制限なし</td><td>90%以上推奨</td><td>認証済み + 実績</td></tr>
+    <tr><td><strong>HTX</strong></td><td>1,000 USDT</td><td>制限なし</td><td>80%以上</td><td>KYC Level 3</td></tr>
+  </table>
+
+  <h3>マーチャントに必要な準備</h3>
+  <ol>
+    <li><strong>取引所アカウント</strong> — KYC Level 2以上（法人可）</li>
+    <li><strong>暗号資産の在庫</strong> — 売り注文を出すためのUSDT等</li>
+    <li><strong>受取用銀行口座</strong> — 複数口座推奨（凍結リスク分散）</li>
+    <li><strong>決済アプリ</strong> — PayPay、LINE Pay等（対応する場合）</li>
+    <li><strong>オンライン対応</strong> — 注文が入ったら15分以内に対応</li>
+    <li><strong>デポジット</strong> — 取引所により1,000 USDT程度</li>
+  </ol>
+
+  <div class="box warn">
+    <div class="box-title">重要：マーチャントの口座凍結リスク</div>
+    <p>P2P取引で不特定多数から銀行振込を受ける場合、銀行が「不審な取引」として口座を凍結する可能性があります。以下の対策を推奨します：</p>
+    <ul>
+      <li>1口座あたりの月間取引量を分散する</li>
+      <li>取引時間帯を分散する</li>
+      <li>複数の銀行口座を用意する</li>
+      <li>取引履歴を明確に記録する</li>
+      <li>電子マネー（PayPay等）を活用して銀行口座の使用を減らす</li>
+    </ul>
+  </div>
+
+  <!-- Section 4 -->
+  <h2 id="sec4">4. 取引の流れ（ステップバイステップ）</h2>
+  
+  <h3>A. 暗号資産を購入する場合（JPY → USDT）</h3>
+  <div class="flow">
+    <div class="flow-step">1. ダッシュボードで<br>最安値を確認</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">2. 取引所のP2Pページで<br>注文を選択</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">3. 購入金額を入力<br>注文を確定</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">4. マーチャントの口座に<br>銀行振込 / PayPay等</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">5. 支払い完了を<br>マーク</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">6. マーチャントが確認<br>USDTが解放される</div>
+  </div>
+
+  <div class="box">
+    <div class="box-title">所要時間</div>
+    <p>通常 <strong>5〜15分</strong>（マーチャントのオンライン状況による）。銀行振込の場合は銀行の処理時間に依存。PayPay/LINE Payなら即時。</p>
+  </div>
+
+  <h3>B. 暗号資産を売却する場合（USDT → JPY）</h3>
+  <div class="flow">
+    <div class="flow-step">1. ダッシュボードで<br>最高値を確認</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">2. 取引所のP2Pページで<br>売り注文を選択</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">3. 売却数量を入力<br>注文を確定</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">4. USDTがエスクロー<br>にロック</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">5. 買い手が支払い<br>（振込 / PayPay）</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">6. 入金確認後<br>USDTを解放</div>
+  </div>
+
+  <!-- Section 5 -->
+  <h2 id="sec5">5. ダッシュボードの使い方</h2>
+  
+  <h3>画面の見方</h3>
+  <table>
+    <tr><th>要素</th><th>説明</th><th>活用方法</th></tr>
+    <tr><td><strong>一番安く買える</strong></td><td>全取引所中の最安購入レート</td><td>この取引所で購入すると最もお得</td></tr>
+    <tr><td><strong>一番高く売れる</strong></td><td>全取引所中の最高売却レート</td><td>この取引所で売却すると最も利益が出る</td></tr>
+    <tr><td><strong>差額</strong></td><td>最安購入と最高売却の差</td><td>差額が大きいほどアービトラージの機会</td></tr>
+    <tr><td><strong>取引所カード</strong></td><td>各取引所の購入/売却ベスト価格</td><td>取引所間の価格差を一目で比較</td></tr>
+    <tr><td><strong>乖離率</strong></td><td>Spot価格との差（%）</td><td>マイナス = Spotより安い（お得）</td></tr>
+    <tr><td><strong>完了率</strong></td><td>マーチャントの取引成功率</td><td>95%以上を推奨。低いとキャンセルリスク</td></tr>
+    <tr><td><strong>フィルター</strong></td><td>決済方法、金額等で絞り込み</td><td>PayPayのみ、10万円以上等で絞り込み</td></tr>
+  </table>
+
+  <h3>おすすめの使い方</h3>
+  <ol>
+    <li><strong>購入時：</strong> 「購入」側で「#1」のレートが最安。取引所名をクリックして直接注文</li>
+    <li><strong>売却時：</strong> 「売却」側で「#1」のレートが最高。そこで売れば最大利益</li>
+    <li><strong>決済方法フィルター：</strong> PayPayのみで検索すれば、銀行口座を使わずに取引可能</li>
+    <li><strong>完了率95%以上：</strong> デフォルト設定で信頼できるマーチャントのみ表示</li>
+  </ol>
+
+  <!-- Section 6 -->
+  <h2 id="sec6">6. アービトラージの活用方法</h2>
+  
+  <h3>アービトラージとは</h3>
+  <p><strong>取引所間の価格差</strong>を利用して利益を得る手法です。例えば、HTXで安く買い、Bybitで高く売ることで差額が利益になります。</p>
+
+  <div class="flow">
+    <div class="flow-step" style="border-color:var(--green-border);background:var(--green-soft)">HTXで USDT購入<br>¥148.0/USDT</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">USDTを<br>Bybitに送金</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-color:var(--red-border);background:var(--red-soft)">Bybitで USDT売却<br>¥168.0/USDT</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-color:var(--yellow);background:rgba(251,191,36,.1)">差額利益<br>¥20.0/USDT<br>(+13.5%)</div>
+  </div>
+
+  <h3>アービトラージモニターの見方</h3>
+  <table>
+    <tr><th>項目</th><th>意味</th></tr>
+    <tr><td><strong>ルート</strong></td><td>購入取引所 → 売却取引所</td></tr>
+    <tr><td><strong>利益率</strong></td><td>購入→売却時の利益率（%）</td></tr>
+    <tr><td><strong>取引可能量</strong></td><td>両取引所で実際に取引できる最大数量</td></tr>
+    <tr><td><strong>最大利益</strong></td><td>取引可能量すべてを取引した場合の円建て利益</td></tr>
+    <tr><td><strong>購入/売却範囲</strong></td><td>1回の取引で許容される金額範囲</td></tr>
+    <tr><td><strong>継続時間</strong></td><td>この機会がどれくらい続いているか</td></tr>
+    <tr><td><strong>ピーク</strong></td><td>この機会の最高利益率</td></tr>
+    <tr><td><strong>推移グラフ</strong></td><td>利益率の時間変化（バーチャート）</td></tr>
+  </table>
+
+  <div class="box warn">
+    <div class="box-title">アービトラージの注意点</div>
+    <ul>
+      <li><strong>送金時間：</strong> USDT（TRC-20）の送金は通常1〜5分。その間にレートが変動するリスク</li>
+      <li><strong>送金手数料：</strong> TRC-20で約1 USDT。利益がこれを上回る必要あり</li>
+      <li><strong>最低取引額：</strong> 各取引所の最低注文額に注意</li>
+      <li><strong>取引制限：</strong> P2P注文のキャンセルが多いとアカウント制限される可能性</li>
+      <li><strong>タイミング：</strong> 利益率が3%以上の機会を狙うのが現実的</li>
+    </ul>
+  </div>
+
+  <!-- Section 7 -->
+  <h2 id="sec7">7. 収納代行の代替モデル</h2>
+  
+  <div class="box purple">
+    <div class="box-title">このセクションの概要</div>
+    <p>従来の銀行口座ベースの収納代行から、P2P取引所を活用した<strong>暗号資産ベースの決済フロー</strong>に移行することで、自社口座の凍結リスクを排除する方法を解説します。</p>
+  </div>
+
+  <h3>モデル1: Bybit P2P マーチャントモデル</h3>
+  <p><strong>概要：</strong> 自社がBybit P2Pのマーチャントとして登録し、顧客からUSDTで直接受け取る。</p>
+  <div class="flow">
+    <div class="flow-step"><span class="tag tag-user">顧客</span><br>P2Pで USDT購入<br>（他マーチャントから）</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="tag tag-user">顧客</span><br>USDTを送金</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="tag tag-platform">自社ウォレット</span><br>USDT受取<br>自動検知</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="tag tag-platform">システム</span><br>入金反映</div>
+  </div>
+  <div class="box">
+    <div class="box-title">メリット / デメリット</div>
+    <table>
+      <tr><th>メリット</th><th>デメリット</th></tr>
+      <tr><td>自社銀行口座を一切使わない</td><td>顧客にUSDT購入の手間が発生</td></tr>
+      <tr><td>凍結リスクゼロ</td><td>暗号資産に不慣れな顧客の離脱</td></tr>
+      <tr><td>24時間365日受付可能</td><td>レート変動リスク</td></tr>
+      <tr><td>手数料ほぼゼロ</td><td>KYCが必要</td></tr>
+    </table>
+  </div>
+
+  <h3>モデル2: P2Pマーチャント活用モデル（推奨）</h3>
+  <p><strong>概要：</strong> 既存のP2Pマーチャントを「決済代行者」として活用。顧客はマーチャントに円を支払い、マーチャントからUSDTを受け取り、そのUSDTを自社に送金する。</p>
+  <div class="flow">
+    <div class="flow-step"><span class="tag tag-user">顧客</span><br>このダッシュボードで<br>最安値を確認</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="tag tag-user">顧客</span><br>P2Pで USDT購入<br>銀行振込/PayPay</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="tag tag-merchant">マーチャント</span><br>エスクロー経由で<br>USDT解放</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="tag tag-user">顧客</span><br>USDTを自社<br>アドレスに送金</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="tag tag-platform">自社システム</span><br>USDT着金検知<br>→ 残高反映</div>
+  </div>
+
+  <div class="box info">
+    <div class="box-title">このモデルの最大のメリット</div>
+    <ul>
+      <li><strong>自社の銀行口座を一切使用しない</strong> — 凍結リスク完全排除</li>
+      <li><strong>マーチャントの口座が凍結しても影響なし</strong> — 別のマーチャントから購入すればよい</li>
+      <li><strong>PayPay/LINE Pay対応</strong> — 銀行口座すら不要な顧客体験</li>
+      <li><strong>24時間対応</strong> — P2Pマーチャントは常にオンライン</li>
+      <li><strong>スタッフの手動作業が不要</strong> — USDT着金は自動検知</li>
+    </ul>
+  </div>
+
+  <h3>モデル3: 自社マーチャント出金モデル</h3>
+  <p><strong>概要：</strong> 出金時に自社がP2Pマーチャントとして顧客のUSDTを買い取り、円を送金する。</p>
+  <div class="flow">
+    <div class="flow-step"><span class="tag tag-user">顧客</span><br>出金申請</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="tag tag-platform">自社</span><br>USDT残高から<br>P2P売り注文</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="tag tag-user">買い手</span><br>銀行振込で<br>円を支払い</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><span class="tag tag-platform">自社</span><br>受取った円を<br>顧客に送金</div>
+  </div>
+
+  <h3>モデル4: ハイブリッドモデル（段階的移行）</h3>
+  <table>
+    <tr><th>フェーズ</th><th>銀行口座</th><th>USDT</th><th>内容</th></tr>
+    <tr><td>現状</td><td>90%</td><td>10%</td><td>銀行口座中心</td></tr>
+    <tr><td>Phase 1</td><td>60%</td><td>40%</td><td>USDT入金をこのダッシュボードで案内開始</td></tr>
+    <tr><td>Phase 2</td><td>30%</td><td>70%</td><td>P2P購入ガイド + 自動USDT検知システム</td></tr>
+    <tr><td>Phase 3</td><td>10%</td><td>90%</td><td>銀行口座は大口VIPのみ</td></tr>
+  </table>
+
+  <!-- Section 8 -->
+  <h2 id="sec8">8. リスクと注意事項</h2>
+  
+  <div class="box warn">
+    <div class="box-title">法的リスク</div>
+    <ul>
+      <li><strong>資金決済法：</strong> 暗号資産の売買仲介は「暗号資産交換業」に該当する可能性。自社は仲介せず、顧客自身がP2Pで購入する形にすること</li>
+      <li><strong>犯罪収益移転防止法：</strong> マーチャントとして大量取引する場合、AML/KYC義務が発生する可能性</li>
+      <li><strong>税務：</strong> 暗号資産取引の利益は雑所得（個人）or 法人所得として課税対象</li>
+    </ul>
+  </div>
+
+  <div class="box warn">
+    <div class="box-title">運用リスク</div>
+    <ul>
+      <li><strong>レート変動：</strong> USDTは概ね安定だがJPYレートは変動する</li>
+      <li><strong>取引所リスク：</strong> 取引所のハッキング・倒産リスク（分散推奨）</li>
+      <li><strong>詐欺：</strong> P2P取引で偽の支払い証明を送る詐欺。必ず着金確認後にUSDTを解放</li>
+      <li><strong>口座凍結（マーチャント側）：</strong> 前述の対策を実施</li>
+      <li><strong>送金ミス：</strong> ウォレットアドレスの間違い = 資金喪失。必ずテスト送金から</li>
+    </ul>
+  </div>
+
+  <!-- Section 9 -->
+  <h2 id="sec9">9. 取引所別の特徴</h2>
+  <table>
+    <tr><th>取引所</th><th>JPY P2P<br>流動性</th><th>手数料</th><th>決済方法</th><th>特徴</th></tr>
+    <tr><td><strong>Bybit</strong></td><td>高</td><td>無料</td><td>銀行振込、PayPay、LINE Pay</td><td>マーチャント数多、レスポンス速い</td></tr>
+    <tr><td><strong>Binance</strong></td><td>中〜高</td><td>無料</td><td>銀行振込、PayPay、LINE Pay、au PAY</td><td>決済方法が豊富</td></tr>
+    <tr><td><strong>OKX</strong></td><td>中</td><td>無料</td><td>銀行振込、PayPay、LINE Pay</td><td>銀行別指定が可能</td></tr>
+    <tr><td><strong>HTX</strong></td><td>低〜中</td><td>無料</td><td>銀行振込、Alipay、WeChat</td><td>レートが安い傾向（中国系マーチャント多い）</td></tr>
+  </table>
+
+  <!-- Section 10 -->
+  <h2 id="sec10">10. よくある質問</h2>
+
+  <h3>Q. P2P取引は違法ですか？</h3>
+  <p>いいえ。個人間の暗号資産売買自体は合法です。ただし、業として反復継続的に行う場合は暗号資産交換業の登録が必要になる可能性があります。</p>
+
+  <h3>Q. USDTは安全ですか？</h3>
+  <p>USDT（Tether）は米ドルに1:1でペッグされたステーブルコインです。価格変動は非常に小さいですが、発行体（Tether社）のリスクは存在します。</p>
+
+  <h3>Q. 最低いくらから取引できますか？</h3>
+  <p>取引所やマーチャントにより異なりますが、概ね<strong>500〜5,000円</strong>から取引可能です。このダッシュボードの「取引範囲」列で確認できます。</p>
+
+  <h3>Q. 送金にどのネットワークを使うべきですか？</h3>
+  <p><strong>TRC-20（TRON）</strong>を推奨します。手数料が約1 USDT（約150円）と最安で、到着も1〜5分です。ERC-20（Ethereum）は手数料が数千円かかるため避けてください。</p>
+
+  <h3>Q. ダッシュボードのデータはリアルタイムですか？</h3>
+  <p><strong>30秒ごと</strong>に自動更新されます。実際の取引時には取引所で最新価格を確認してください。</p>
+
+  <h3>Q. アービトラージで確実に利益が出ますか？</h3>
+  <p>理論上は利益が出ますが、送金時間中のレート変動、手数料、取引制限などにより<strong>保証はありません</strong>。利益率5%以上の機会を狙い、少額から試すことを推奨します。</p>
+
+</div>
+
+<footer><span>BK P2P Aggregator &mdash; 利用ガイド v1.0</span></footer>
+</body>
+</html>
