@@ -80,66 +80,64 @@
       <div id="arbContent"></div>
     </div>
 
-    <!-- Best Prices -->
-    <div class="best-prices">
-      <div class="best-card buy">
-        <div class="best-label">BEST BUY</div>
-        <div class="best-price" id="bestBuyPrice">--</div>
-        <div class="best-exchange" id="bestBuyExchange">--</div>
+    <!-- Summary Row -->
+    <div class="summary-row">
+      <div class="summary-card buy">
+        <div class="summary-label">BEST BUY</div>
+        <div class="summary-price" id="bestBuyPrice">--</div>
+        <div class="summary-detail" id="bestBuyExchange">--</div>
       </div>
-      <div class="best-card spread">
-        <div class="best-label">SPREAD</div>
-        <div class="best-price" id="bestSpread">--</div>
-        <div class="best-exchange">Cross-exchange max diff</div>
+      <div class="summary-card spread-card">
+        <div class="spread-grid" id="spreadBars"></div>
       </div>
-      <div class="best-card sell">
-        <div class="best-label">BEST SELL</div>
-        <div class="best-price" id="bestSellPrice">--</div>
-        <div class="best-exchange" id="bestSellExchange">--</div>
+      <div class="summary-card sell">
+        <div class="summary-label">BEST SELL</div>
+        <div class="summary-price" id="bestSellPrice">--</div>
+        <div class="summary-detail" id="bestSellExchange">--</div>
       </div>
     </div>
 
-    <!-- Spread Comparison -->
-    <div class="section">
-      <h2>Spread Comparison</h2>
-      <div id="spreadBars" class="spread-bars"></div>
-    </div>
-
-    <!-- Buy Orders -->
-    <div class="section">
-      <h2>Buy Orders — JPY to <span class="current-crypto">USDT</span> <span class="order-count" id="buyCount"></span></h2>
-      <div class="table-wrapper">
-        <table id="buyTable">
-          <thead>
-            <tr>
-              <th>#</th><th>Exchange</th><th>Rate</th><th>Premium</th>
-              <th>Available</th><th>Limit</th><th>Merchant</th><th>Completion</th><th>Payment</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+    <!-- Two Column Order Book -->
+    <div class="orderbook">
+      <div class="orderbook-side">
+        <div class="orderbook-header buy-header">
+          <span>BUY &mdash; JPY to <span class="current-crypto">USDT</span></span>
+          <span class="order-count" id="buyCount"></span>
+        </div>
+        <div class="table-wrapper">
+          <table id="buyTable">
+            <thead>
+              <tr>
+                <th>#</th><th>Exch</th><th>Rate</th><th>Prem</th>
+                <th>Avail</th><th>Limit</th><th>Merchant</th><th>Comp</th><th>Pay</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
-    </div>
-
-    <!-- Sell Orders -->
-    <div class="section">
-      <h2>Sell Orders — <span class="current-crypto">USDT</span> to JPY <span class="order-count" id="sellCount"></span></h2>
-      <div class="table-wrapper">
-        <table id="sellTable">
-          <thead>
-            <tr>
-              <th>#</th><th>Exchange</th><th>Rate</th><th>Premium</th>
-              <th>Available</th><th>Limit</th><th>Merchant</th><th>Completion</th><th>Payment</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div class="orderbook-side">
+        <div class="orderbook-header sell-header">
+          <span>SELL &mdash; <span class="current-crypto">USDT</span> to JPY</span>
+          <span class="order-count" id="sellCount"></span>
+        </div>
+        <div class="table-wrapper">
+          <table id="sellTable">
+            <thead>
+              <tr>
+                <th>#</th><th>Exch</th><th>Rate</th><th>Prem</th>
+                <th>Avail</th><th>Limit</th><th>Merchant</th><th>Comp</th><th>Pay</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </main>
 
   <footer>
-    <span>BK P2P Aggregator v1.1 &mdash; Bybit / Binance / OKX &mdash; Powered by ccxt</span>
+    <span>BK P2P Aggregator v1.2 &mdash; Bybit / Binance / OKX &mdash; Powered by ccxt</span>
   </footer>
 
   <script src="app.js"></script>
