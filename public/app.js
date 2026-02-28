@@ -1,3 +1,5 @@
+var volThreshold=5.0;
+function adjustThreshold(d){volThreshold=Math.max(0.5,Math.min(20,volThreshold+d));document.getElementById('volThresholdVal').textContent=volThreshold.toFixed(1);render();}
 let currentCrypto='USDT',countdown=30,rawData=null,arbTab='active';
 let filters={payments:new Set(),exchanges:new Set(),amount:0,completionRate:95,minAvail:0,onlineOnly:false};
 let allPaymentMethods=new Set(),allExchanges=new Set();
@@ -66,10 +68,11 @@ function renderData(data){
   else{document.getElementById('bestSellPrice').textContent='--';document.getElementById('bestSellExchange').textContent='--';}
   if(buys.length&&sells.length){document.getElementById('bestSpread').textContent='¥'+fmt(sells.reduce((s,o)=>s+o.price,0)/sells.length-buys.reduce((s,o)=>s+o.price,0)/buys.length);}
 
-  // Volume within 5% of spot
-  if(spot&&buys.length){var buyVol=0;buys.forEach(function(o){if(o.price<=spot*1.05){buyVol+=o.available*o.price;}});document.getElementById('volBuy5').textContent='¥'+fmtInt(buyVol);}
+  // Volume within threshold% of spot
+  var th=volThreshold/100;
+  if(spot&&buys.length){var buyVol=0;buys.forEach(function(o){if(o.price<=spot*(1+th)){buyVol+=o.available*o.price;}});document.getElementById('volBuy5').textContent='¥'+fmtInt(buyVol);}
   else{document.getElementById('volBuy5').textContent='--';}
-  if(spot&&sells.length){var sellVol=0;sells.forEach(function(o){if(o.price>=spot*0.95){sellVol+=o.available*o.price;}});document.getElementById('volSell5').textContent='¥'+fmtInt(sellVol);}
+  if(spot&&sells.length){var sellVol=0;sells.forEach(function(o){if(o.price>=spot*(1-th)){sellVol+=o.available*o.price;}});document.getElementById('volSell5').textContent='¥'+fmtInt(sellVol);}
   else{document.getElementById('volSell5').textContent='--';}
 
   // Filter count
