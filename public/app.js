@@ -17,7 +17,16 @@ document.getElementById('filterOnline').addEventListener('change',e=>{filters.on
 function resetFilters(){filters={payments:new Set(),exchanges:new Set(),amount:0,completionRate:95,minAvail:0,onlineOnly:false};document.getElementById('filterAmount').value='';document.getElementById('filterCompletion').value='95';document.getElementById('filterMinAvail').value='0';document.getElementById('filterOnline').value='all';buildChips();render();}
 function toggleFilter(type,val){const s=type==='payment'?filters.payments:filters.exchanges;s.has(val)?s.delete(val):s.add(val);buildChips();render();}
 function clearFilter(type){if(type==='payment')filters.payments.clear();else filters.exchanges.clear();buildChips();render();}
-function buildChips(){const pa=filters.payments.size===0?'active':'';document.getElementById('paymentFilters').innerHTML=`<span class="filter-chip ${pa}" onclick="clearFilter('payment')">全て</span>`+[...allPaymentMethods].sort().map(m=>`<span class="filter-chip ${filters.payments.has(m)?'active':''}" onclick="toggleFilter('payment','${m.replace(/'/g,"\\'")}')">${m}</span>`).join('');const ea=filters.exchanges.size===0?'active':'';document.getElementById('exchangeFilters').innerHTML=`<span class="filter-chip ${ea}" onclick="clearFilter('exchange')">全て</span>`+[...allExchanges].sort().map(ex=>`<span class="filter-chip ${filters.exchanges.has(ex)?'active':''}" onclick="toggleFilter('exchange','${ex}')">${ex}</span>`).join('');}
+function buildChips(){
+  var ph=document.getElementById('paymentFilters');
+  var eh=document.getElementById('exchangeFilters');
+  var pArr=['<span class="filter-chip '+(filters.payments.size===0?'active':'')+'" onclick="clearFilter(\'payment\')">全て</span>'];
+  allPaymentMethods.forEach(function(m){var a=filters.payments.has(m)?'active':'';pArr.push('<span class="filter-chip '+a+'" onclick="toggleFilter(\'payment\',\''+m.replace(/'/g,"\\'")+'\')">'+m+'</span>');});
+  ph.innerHTML=pArr.join('');
+  var eArr=['<span class="filter-chip '+(filters.exchanges.size===0?'active':'')+'" onclick="clearFilter(\'exchange\')">全て</span>'];
+  allExchanges.forEach(function(ex){var a=filters.exchanges.has(ex)?'active':'';eArr.push('<span class="filter-chip '+a+'" onclick="toggleFilter(\'exchange\',\''+ex+'\')">'+ex+'</span>');});
+  eh.innerHTML=eArr.join('');
+}
 function pass(o){if(filters.payments.size>0&&!o.paymentMethods.some(m=>filters.payments.has(m)))return false;if(filters.exchanges.size>0&&!filters.exchanges.has(o.exchange))return false;if(filters.amount>0&&(o.minLimit>filters.amount||(o.maxLimit>0&&o.maxLimit<filters.amount)))return false;if(filters.completionRate>0&&o.merchant.completionRate<filters.completionRate)return false;if(filters.minAvail>0&&o.available<filters.minAvail)return false;if(filters.onlineOnly&&!o.merchant.isOnline)return false;return true;}
 function render(){if(rawData)renderData(rawData);}
 
