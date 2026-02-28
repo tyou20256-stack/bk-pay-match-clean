@@ -2,6 +2,17 @@ import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
 import { CONFIG } from '../config';
 
+// Bybit payment method ID → name mapping
+const PAYMENT_NAMES: Record<string, string> = {
+  '14': '銀行振込',
+  '78': 'PayPay',
+  '410': 'LINE Pay',
+  '46': 'Wise',
+  '68': 'Alipay',
+  '45': 'WeChat Pay',
+  '48': 'Revolut',
+};
+
 export class BybitFetcher implements FetcherInterface {
   name = 'Bybit';
 
@@ -31,11 +42,14 @@ export class BybitFetcher implements FetcherInterface {
         maxLimit: parseFloat(item.maxAmount),
         merchant: {
           name: item.nickName || 'Unknown',
-          completionRate: parseFloat(item.recentExecuteRate || '0') * 100,
+          completionRate: parseFloat(item.recentExecuteRate || '0') / 100,
           orderCount: parseInt(item.recentOrderNum || '0'),
           isOnline: item.isOnline === 1,
         },
-        paymentMethods: (item.payments || []).map((p: any) => p.paymentName || String(p)),
+        paymentMethods: (item.payments || []).map((p: any) => {
+          const id = p.paymentName || String(p);
+          return PAYMENT_NAMES[id] || id;
+        }),
         fetchedAt: Date.now(),
       }));
     } catch (err: any) {

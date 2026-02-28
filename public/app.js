@@ -1,6 +1,21 @@
 let currentCrypto = 'USDT';
 let countdown = 30;
 let timer = null;
+let rawData = null;
+
+// Filters state
+let filters = {
+  payments: new Set(),    // empty = all
+  exchanges: new Set(),   // empty = all
+  amount: 0,
+  completionRate: 95,
+  minAvail: 0,
+  onlineOnly: false,
+};
+
+// All known payment methods and exchanges (populated from data)
+let allPaymentMethods = new Set();
+let allExchanges = new Set();
 
 // Tab switching
 document.querySelectorAll('.tab').forEach(tab => {
@@ -13,11 +28,84 @@ document.querySelectorAll('.tab').forEach(tab => {
   });
 });
 
+// Filter event listeners
+document.getElementById('filterAmount').addEventListener('input', e => {
+  filters.amount = parseFloat(e.target.value) || 0;
+  applyFiltersAndRender();
+});
+document.getElementById('filterCompletion').addEventListener('change', e => {
+  filters.completionRate = parseFloat(e.target.value);
+  applyFiltersAndRender();
+});
+document.getElementById('filterMinAvail').addEventListener('change', e => {
+  filters.minAvail = parseFloat(e.target.value);
+  applyFiltersAndRender();
+});
+document.getElementById('filterOnline').addEventListener('change', e => {
+  filters.onlineOnly = e.target.value === 'online';
+  applyFiltersAndRender();
+});
+
+function resetFilters() {
+  filters = { payments: new Set(), exchanges: new Set(), amount: 0, completionRate: 95, minAvail: 0, onlineOnly: false };
+  document.getElementById('filterAmount').value = '';
+  document.getElementById('filterCompletion').value = '95';
+  document.getElementById('filterMinAvail').value = '0';
+  document.getElementById('filterOnline').value = 'all';
+  buildFilterChips();
+  applyFiltersAndRender();
+}
+
+function toggleFilter(type, value) {
+  const set = type === 'payment' ? filters.payments : filters.exchanges;
+  if (set.has(value)) set.delete(value); else set.add(value);
+  buildFilterChips();
+  applyFiltersAndRender();
+}
+
+function buildFilterChips() {
+  // Payment chips
+  const payEl = document.getElementById('paymentFilters');
+  payEl.innerHTML = [...allPaymentMethods].sort().map(m =>
+    `<span class="filter-chip ${filters.payments.has(m) ? 'active' : ''}" onclick="toggleFilter('payment','${m.replace(/'/g,"\\'")}')">${m}</span>`
+  ).join('');
+  
+  // Exchange chips
+  const exEl = document.getElementById('exchangeFilters');
+  exEl.innerHTML = [...allExchanges].sort().map(ex =>
+    `<span class="filter-chip ${filters.exchanges.has(ex) ? 'active' : ''}" onclick="toggleFilter('exchange','${ex}')">${ex}</span>`
+  ).join('');
+}
+
+function filterOrder(o) {
+  // Payment method filter
+  if (filters.payments.size > 0) {
+    const match = o.paymentMethods.some(m => filters.payments.has(m));
+    if (!match) return false;
+  }
+  // Exchange filter
+  if (filters.exchanges.size > 0 && !filters.exchanges.has(o.exchange)) return false;
+  // Amount filter
+  if (filters.amount > 0) {
+    if (o.minLimit > filters.amount || (o.maxLimit > 0 && o.maxLimit < filters.amount)) return false;
+  }
+  // Completion rate filter
+  if (filters.completionRate > 0 && o.merchant.completionRate < filters.completionRate) return false;
+  // Min available filter
+  if (filters.minAvail > 0 && o.available < filters.minAvail) return false;
+  // Online filter
+  if (filters.onlineOnly && !o.merchant.isOnline) return false;
+  return true;
+}
+
+function applyFiltersAndRender() {
+  if (rawData) renderData(rawData);
+}
+
 function fmt(n, d=1) {
   if (n === null || n === undefined) return '--';
   return Number(n).toLocaleString('ja-JP', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
-
 function fmtInt(n) {
   if (n === null || n === undefined) return '--';
   return Number(n).toLocaleString('ja-JP', { maximumFractionDigits: 0 });
@@ -28,7 +116,19 @@ async function loadData() {
     const res = await fetch(`/api/rates/${currentCrypto}`);
     const json = await res.json();
     if (!json.success) return;
-    renderData(json.data);
+    rawData = json.data;
+    
+    // Extract all payment methods & exchanges
+    allPaymentMethods.clear();
+    allExchanges.clear();
+    rawData.rates.forEach(r => {
+      allExchanges.add(r.exchange);
+      [...r.buyOrders, ...r.sellOrders].forEach(o => {
+        o.paymentMethods.forEach(m => { if (m) allPaymentMethods.add(m); });
+      });
+    });
+    buildFilterChips();
+    renderData(rawData);
   } catch (err) {
     console.error('Fetch error:', err);
   }
@@ -42,25 +142,40 @@ function renderData(data) {
     ? `<div class="spot-item"><span class="spot-label">Spot:</span> <span class="spot-val">¥${fmt(spotPrice)}</span></div>` 
     : '';
 
-  // Best prices
-  if (data.bestBuyExchange) {
-    document.getElementById('bestBuyPrice').textContent = `¥${fmt(data.bestBuyExchange.price)}`;
-    document.getElementById('bestBuyExchange').textContent = data.bestBuyExchange.exchange;
+  // Collect filtered orders for best price calc
+  let allBuyFiltered = [];
+  let allSellFiltered = [];
+  data.rates.forEach(r => {
+    allBuyFiltered.push(...r.buyOrders.filter(filterOrder));
+    allSellFiltered.push(...r.sellOrders.filter(filterOrder));
+  });
+
+  // Best prices (from filtered)
+  if (allBuyFiltered.length) {
+    const best = allBuyFiltered.reduce((a, b) => a.price < b.price ? a : b);
+    document.getElementById('bestBuyPrice').textContent = `¥${fmt(best.price)}`;
+    document.getElementById('bestBuyExchange').textContent = best.exchange;
+  } else {
+    document.getElementById('bestBuyPrice').textContent = '--';
+    document.getElementById('bestBuyExchange').textContent = '--';
   }
-  if (data.bestSellExchange) {
-    document.getElementById('bestSellPrice').textContent = `¥${fmt(data.bestSellExchange.price)}`;
-    document.getElementById('bestSellExchange').textContent = data.bestSellExchange.exchange;
-  }
-  
-  // Best spread
-  const allBuys = data.rates.filter(r => r.bestBuy).map(r => r.bestBuy);
-  const allSells = data.rates.filter(r => r.bestSell).map(r => r.bestSell);
-  if (allBuys.length && allSells.length) {
-    const maxSpread = Math.max(...allSells) - Math.min(...allBuys);
-    document.getElementById('bestSpread').textContent = `¥${fmt(maxSpread)}`;
+  if (allSellFiltered.length) {
+    const best = allSellFiltered.reduce((a, b) => a.price > b.price ? a : b);
+    document.getElementById('bestSellPrice').textContent = `¥${fmt(best.price)}`;
+    document.getElementById('bestSellExchange').textContent = best.exchange;
+  } else {
+    document.getElementById('bestSellPrice').textContent = '--';
+    document.getElementById('bestSellExchange').textContent = '--';
   }
 
-  // Arbitrage alert
+  // Spread
+  if (allBuyFiltered.length && allSellFiltered.length) {
+    const minBuy = Math.min(...allBuyFiltered.map(o => o.price));
+    const maxSell = Math.max(...allSellFiltered.map(o => o.price));
+    document.getElementById('bestSpread').textContent = `¥${fmt(maxSell - minBuy)}`;
+  }
+
+  // Arbitrage
   const arbAlert = document.getElementById('arbAlert');
   const arbContent = document.getElementById('arbContent');
   if (data.arbitrageOpportunities?.length > 0) {
@@ -82,7 +197,7 @@ function renderData(data) {
   spreadBars.innerHTML = data.rates.map(r => {
     const w = r.spread ? Math.abs(r.spread) / maxSpreadVal * 100 : 0;
     const color = r.spread && r.spread > 0 ? 'var(--red)' : 'var(--green)';
-    const premStr = r.buyPremium !== null ? `買プレミアム: ${r.buyPremium > 0 ? '+' : ''}${fmt(r.buyPremium, 2)}%` : '';
+    const premStr = r.buyPremium !== null ? `乖離: ${r.buyPremium > 0 ? '+' : ''}${fmt(r.buyPremium, 2)}%` : '';
     return `<div class="spread-bar">
       <div class="ex-name">${r.exchange}</div>
       <div class="bar-wrap"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div>
@@ -91,37 +206,44 @@ function renderData(data) {
     </div>`;
   }).join('');
 
-  // Order tables
-  renderOrderTable('buyTable', data.rates, 'buy', spotPrice);
-  renderOrderTable('sellTable', data.rates, 'sell', spotPrice);
+  // Filter count
+  const totalBuy = allBuyFiltered.length;
+  const totalSell = allSellFiltered.length;
+  const totalAll = data.rates.reduce((s, r) => s + r.buyOrders.length + r.sellOrders.length, 0);
+  document.getElementById('filterCount').textContent = `表示: ${totalBuy + totalSell} / ${totalAll} 件`;
+
+  // Tables
+  renderOrderTable('buyTable', 'buyCount', allBuyFiltered, 'buy', spotPrice);
+  renderOrderTable('sellTable', 'sellCount', allSellFiltered, 'sell', spotPrice);
 }
 
-function renderOrderTable(tableId, rates, side, spotPrice) {
+function renderOrderTable(tableId, countId, orders, side, spotPrice) {
   const tbody = document.querySelector(`#${tableId} tbody`);
-  let allOrders = [];
-  rates.forEach(r => {
-    const orders = side === 'buy' ? r.buyOrders : r.sellOrders;
-    allOrders.push(...orders);
-  });
   
-  if (side === 'buy') allOrders.sort((a, b) => a.price - b.price);
-  else allOrders.sort((a, b) => b.price - a.price);
+  if (side === 'buy') orders.sort((a, b) => a.price - b.price);
+  else orders.sort((a, b) => b.price - a.price);
 
-  allOrders = allOrders.slice(0, 30);
+  const display = orders.slice(0, 50);
+  document.getElementById(countId).textContent = `(${orders.length}件)`;
 
-  if (allOrders.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" class="loading">データ取得中...</td></tr>';
+  if (display.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="loading">該当する注文がありません</td></tr>';
     return;
   }
 
-  tbody.innerHTML = allOrders.map((o, i) => {
+  tbody.innerHTML = display.map((o, i) => {
     const rank = i + 1;
     const rankClass = rank <= 3 ? `rank-${rank}` : '';
     const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
     const premium = spotPrice ? ((o.price - spotPrice) / spotPrice * 100) : null;
     const premClass = premium > 0 ? 'premium-positive' : 'premium-negative';
     const compClass = o.merchant.completionRate >= 95 ? 'completion-high' : o.merchant.completionRate >= 80 ? 'completion-mid' : 'completion-low';
-    const payments = o.paymentMethods.slice(0, 3).map(p => `<span class="payment-tag">${p}</span>`).join('');
+    
+    // Highlight active payment filters
+    const payments = o.paymentMethods.slice(0, 4).map(p => {
+      const isActive = filters.payments.size > 0 && filters.payments.has(p);
+      return `<span class="payment-tag ${isActive ? 'payment-active' : ''}">${p}</span>`;
+    }).join('');
     
     return `<tr>
       <td><span class="rank ${rankClass}">${rankEmoji}</span></td>
@@ -148,13 +270,9 @@ function startCountdown() {
   timer = setInterval(() => {
     countdown--;
     document.getElementById('countdown').textContent = countdown;
-    if (countdown <= 0) {
-      countdown = 30;
-      loadData();
-    }
+    if (countdown <= 0) { countdown = 30; loadData(); }
   }, 1000);
 }
 
-// Init
 loadData();
 startCountdown();

@@ -27,6 +27,51 @@
     <button class="tab" data-crypto="ETH">ETH/JPY</button>
   </nav>
 
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>💳 決済方法</label>
+      <div id="paymentFilters" class="filter-chips"></div>
+    </div>
+    <div class="filter-group">
+      <label>🏦 取引所</label>
+      <div id="exchangeFilters" class="filter-chips"></div>
+    </div>
+    <div class="filter-group">
+      <label>💰 金額</label>
+      <input type="number" id="filterAmount" placeholder="取引金額 (¥)" class="filter-input">
+    </div>
+    <div class="filter-group">
+      <label>⭐ 完了率</label>
+      <select id="filterCompletion" class="filter-select">
+        <option value="0">全て</option>
+        <option value="80">80%以上</option>
+        <option value="90">90%以上</option>
+        <option value="95" selected>95%以上</option>
+        <option value="98">98%以上</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>📊 在庫</label>
+      <select id="filterMinAvail" class="filter-select">
+        <option value="0">全て</option>
+        <option value="100">100以上</option>
+        <option value="1000">1,000以上</option>
+        <option value="5000">5,000以上</option>
+        <option value="10000">10,000以上</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>🟢 状態</label>
+      <select id="filterOnline" class="filter-select">
+        <option value="all">全て</option>
+        <option value="online">オンラインのみ</option>
+      </select>
+    </div>
+    <button class="filter-reset" onclick="resetFilters()">✕ リセット</button>
+    <div class="filter-count" id="filterCount"></div>
+  </div>
+
   <main>
     <!-- Arbitrage Alert -->
     <div id="arbAlert" class="arb-alert hidden">
@@ -61,7 +106,7 @@
 
     <!-- Buy Orders -->
     <div class="section">
-      <h2>🟢 買い注文（JPY → <span class="current-crypto">USDT</span>）安い順</h2>
+      <h2>🟢 買い注文（JPY → <span class="current-crypto">USDT</span>）安い順 <span class="order-count" id="buyCount"></span></h2>
       <div class="table-wrapper">
         <table id="buyTable">
           <thead>
@@ -77,7 +122,7 @@
 
     <!-- Sell Orders -->
     <div class="section">
-      <h2>🔴 売り注文（<span class="current-crypto">USDT</span> → JPY）高い順</h2>
+      <h2>🔴 売り注文（<span class="current-crypto">USDT</span> → JPY）高い順 <span class="order-count" id="sellCount"></span></h2>
       <div class="table-wrapper">
         <table id="sellTable">
           <thead>

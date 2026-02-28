@@ -27,7 +27,7 @@ async function start() {
     updateAllCryptos().catch(err => console.error('Update error:', err.message));
   }, CONFIG.updateIntervalMs);
 
-  app.listen(CONFIG.port, () => {
+  app.listen(CONFIG.port, '0.0.0.0', () => {
     console.log(`\n✅ Dashboard: http://localhost:${CONFIG.port}`);
     console.log(`📊 API: http://localhost:${CONFIG.port}/api/rates`);
   });
