@@ -72,7 +72,7 @@ function renderData(data){
     const w=r.spread?Math.abs(r.spread)/maxS*100:0;
     const c=r.spread&&r.spread>0?'var(--red)':'var(--green)';
     const prem=r.buyPremium!=null?`${r.buyPremium>0?'+':''}${fmt(r.buyPremium,2)}%`:'--';
-    return`<div class="ex-card"><div class="ex-card-header"><span class="ex-name-badge exchange-badge exchange-${r.exchange}">${r.exchange}</span><span class="ex-status"></span></div><div class="ex-prices"><div class="ex-price-box buy"><div class="ex-price-label">${t('ex_buy')}</div><div class="ex-price-val">${r.bestBuy?'¥'+fmt(r.bestBuy):'--'}</div></div><div class="ex-price-box sell"><div class="ex-price-label">${t('ex_sell')}</div><div class="ex-price-val">${r.bestSell?'¥'+fmt(r.bestSell):'--'}</div></div></div><div class="ex-spread"><span>${t('ex_spread')}</span><div class="ex-spread-bar"><div class="ex-spread-fill" style="width:${w}%;background:${c}"></div></div><span class="ex-prem" style="color:${c}">${prem}</span></div></div>`;
+    return`<div class="ex-card"><div class="ex-card-header"><span class="ex-name-badge exchange-badge exchange-${r.exchange}">${r.exchange}</span><span class="ex-status"></span></div><div class="ex-prices"><div class="ex-price-box buy"><div class="ex-price-label">${t('ex_buy')}</div><div class="ex-price-val">${r.bestBuy?'¥'+fmt(r.bestBuy):'--'}</div></div><div class="ex-price-box sell"><div class="ex-price-label">${t('ex_sell')}</div><div class="ex-price-val">${r.bestSell?'¥'+fmt(r.bestSell):'--'}</div></div></div></div>`;
   }).join('');
 
   // Filter count
