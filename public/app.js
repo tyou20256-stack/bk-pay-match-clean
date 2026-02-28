@@ -64,7 +64,7 @@ function renderData(data){
   else{document.getElementById('bestBuyPrice').textContent='--';document.getElementById('bestBuyExchange').textContent='--';}
   if(sells.length){const s=sells.reduce((a,b)=>a.price>b.price?a:b);document.getElementById('bestSellPrice').textContent='¥'+fmt(s.price);document.getElementById('bestSellExchange').textContent=s.exchange;}
   else{document.getElementById('bestSellPrice').textContent='--';document.getElementById('bestSellExchange').textContent='--';}
-  if(buys.length&&sells.length){document.getElementById('bestSpread').textContent='¥'+fmt(Math.max(...sells.map(o=>o.price))-Math.min(...buys.map(o=>o.price)));}
+  if(buys.length&&sells.length){document.getElementById('bestSpread').textContent='¥'+fmt(sells.reduce((s,o)=>s+o.price,0)/sells.length-buys.reduce((s,o)=>s+o.price,0)/buys.length);}
 
   // Filter count
   const total=data.rates.reduce((s,r)=>s+r.buyOrders.length+r.sellOrders.length,0);
