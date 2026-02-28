@@ -60,9 +60,9 @@ function renderData(data){
   data.rates.forEach(r=>{buys.push(...r.buyOrders.filter(pass));sells.push(...r.sellOrders.filter(pass));});
 
   // Hero
-  if(buys.length){const b=buys.reduce((a,b)=>a.price<b.price?a:b);document.getElementById('bestBuyPrice').textContent='¥'+fmt(b.price);document.getElementById('bestBuyExchange').textContent=b.exchange;}
+  if(buys.length){var avgB=buys.reduce((s,o)=>s+o.price,0)/buys.length;document.getElementById('bestBuyPrice').textContent='¥'+fmt(avgB);document.getElementById('bestBuyExchange').textContent=buys.length+' orders';}
   else{document.getElementById('bestBuyPrice').textContent='--';document.getElementById('bestBuyExchange').textContent='--';}
-  if(sells.length){const s=sells.reduce((a,b)=>a.price>b.price?a:b);document.getElementById('bestSellPrice').textContent='¥'+fmt(s.price);document.getElementById('bestSellExchange').textContent=s.exchange;}
+  if(sells.length){var avgS=sells.reduce((s,o)=>s+o.price,0)/sells.length;document.getElementById('bestSellPrice').textContent='¥'+fmt(avgS);document.getElementById('bestSellExchange').textContent=sells.length+' orders';}
   else{document.getElementById('bestSellPrice').textContent='--';document.getElementById('bestSellExchange').textContent='--';}
   if(buys.length&&sells.length){document.getElementById('bestSpread').textContent='¥'+fmt(sells.reduce((s,o)=>s+o.price,0)/sells.length-buys.reduce((s,o)=>s+o.price,0)/buys.length);}
 
