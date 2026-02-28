@@ -119,8 +119,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 .filter-toggle{padding:8px 20px;background:var(--bg2);border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);font-weight:600;user-select:none}
 .filter-toggle:hover{color:var(--text)}
 .filter-active-count{font-size:10px;color:var(--dim)}
-.filter-bar{background:var(--bg2);border-bottom:1px solid var(--border)}
-.filter-bar.open{padding:10px 20px}
+.filter-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 20px}
 .filter-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:8px}
 .filter-group{display:flex;flex-direction:column;gap:3px}
 .filter-group label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;font-weight:700}
