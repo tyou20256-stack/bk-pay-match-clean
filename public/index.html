@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,90 +9,91 @@
 <body>
   <header>
     <div class="header-left">
-      <h1>⚡ BK P2P Aggregator</h1>
-      <span class="subtitle">P2P取引所 横断レート監視</span>
+      <h1>BK P2P Aggregator</h1>
+      <span class="subtitle">P2P Exchange Rate Monitor</span>
     </div>
     <div class="header-right">
       <div class="spot-prices" id="spotPrices"></div>
       <div class="update-info">
         <span id="countdown">--</span>s
-        <button id="refreshBtn" onclick="refresh()">🔄</button>
+        <button id="refreshBtn" onclick="refresh()">Refresh</button>
       </div>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">Light</button>
     </div>
   </header>
 
   <nav class="crypto-tabs">
-    <button class="tab active" data-crypto="USDT">USDT/JPY</button>
-    <button class="tab" data-crypto="BTC">BTC/JPY</button>
-    <button class="tab" data-crypto="ETH">ETH/JPY</button>
+    <button class="tab active" data-crypto="USDT">USDT / JPY</button>
+    <button class="tab" data-crypto="BTC">BTC / JPY</button>
+    <button class="tab" data-crypto="ETH">ETH / JPY</button>
   </nav>
 
   <!-- Filter Bar -->
   <div class="filter-bar">
     <div class="filter-group">
-      <label>💳 決済方法</label>
+      <label>Payment</label>
       <div id="paymentFilters" class="filter-chips"></div>
     </div>
     <div class="filter-group">
-      <label>🏦 取引所</label>
+      <label>Exchange</label>
       <div id="exchangeFilters" class="filter-chips"></div>
     </div>
     <div class="filter-group">
-      <label>💰 金額</label>
-      <input type="number" id="filterAmount" placeholder="取引金額 (¥)" class="filter-input">
+      <label>Amount (JPY)</label>
+      <input type="number" id="filterAmount" placeholder="e.g. 100000" class="filter-input">
     </div>
     <div class="filter-group">
-      <label>⭐ 完了率</label>
+      <label>Completion</label>
       <select id="filterCompletion" class="filter-select">
-        <option value="0">全て</option>
-        <option value="80">80%以上</option>
-        <option value="90">90%以上</option>
-        <option value="95" selected>95%以上</option>
-        <option value="98">98%以上</option>
+        <option value="0">All</option>
+        <option value="80">80%+</option>
+        <option value="90">90%+</option>
+        <option value="95" selected>95%+</option>
+        <option value="98">98%+</option>
       </select>
     </div>
     <div class="filter-group">
-      <label>📊 在庫</label>
+      <label>Min. Stock</label>
       <select id="filterMinAvail" class="filter-select">
-        <option value="0">全て</option>
-        <option value="100">100以上</option>
-        <option value="1000">1,000以上</option>
-        <option value="5000">5,000以上</option>
-        <option value="10000">10,000以上</option>
+        <option value="0">All</option>
+        <option value="100">100+</option>
+        <option value="1000">1,000+</option>
+        <option value="5000">5,000+</option>
+        <option value="10000">10,000+</option>
       </select>
     </div>
     <div class="filter-group">
-      <label>🟢 状態</label>
+      <label>Status</label>
       <select id="filterOnline" class="filter-select">
-        <option value="all">全て</option>
-        <option value="online">オンラインのみ</option>
+        <option value="all">All</option>
+        <option value="online">Online Only</option>
       </select>
     </div>
-    <button class="filter-reset" onclick="resetFilters()">✕ リセット</button>
+    <button class="filter-reset" onclick="resetFilters()">Reset</button>
     <div class="filter-count" id="filterCount"></div>
   </div>
 
   <main>
     <!-- Arbitrage Alert -->
     <div id="arbAlert" class="arb-alert hidden">
-      <div class="arb-icon">⚡</div>
+      <div class="arb-label">ARBITRAGE DETECTED</div>
       <div id="arbContent"></div>
     </div>
 
     <!-- Best Prices -->
     <div class="best-prices">
       <div class="best-card buy">
-        <div class="best-label">最安値（買い）</div>
+        <div class="best-label">BEST BUY</div>
         <div class="best-price" id="bestBuyPrice">--</div>
         <div class="best-exchange" id="bestBuyExchange">--</div>
       </div>
       <div class="best-card spread">
-        <div class="best-label">スプレッド</div>
+        <div class="best-label">SPREAD</div>
         <div class="best-price" id="bestSpread">--</div>
-        <div class="best-exchange">取引所間最大差</div>
+        <div class="best-exchange">Cross-exchange max diff</div>
       </div>
       <div class="best-card sell">
-        <div class="best-label">最高値（売り）</div>
+        <div class="best-label">BEST SELL</div>
         <div class="best-price" id="bestSellPrice">--</div>
         <div class="best-exchange" id="bestSellExchange">--</div>
       </div>
@@ -100,19 +101,19 @@
 
     <!-- Spread Comparison -->
     <div class="section">
-      <h2>📊 スプレッド比較</h2>
+      <h2>Spread Comparison</h2>
       <div id="spreadBars" class="spread-bars"></div>
     </div>
 
     <!-- Buy Orders -->
     <div class="section">
-      <h2>🟢 買い注文（JPY → <span class="current-crypto">USDT</span>）安い順 <span class="order-count" id="buyCount"></span></h2>
+      <h2>Buy Orders — JPY to <span class="current-crypto">USDT</span> <span class="order-count" id="buyCount"></span></h2>
       <div class="table-wrapper">
         <table id="buyTable">
           <thead>
             <tr>
-              <th>順位</th><th>取引所</th><th>レート (¥)</th><th>乖離率</th>
-              <th>在庫</th><th>取引範囲</th><th>マーチャント</th><th>完了率</th><th>決済方法</th>
+              <th>#</th><th>Exchange</th><th>Rate</th><th>Premium</th>
+              <th>Available</th><th>Limit</th><th>Merchant</th><th>Completion</th><th>Payment</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -122,13 +123,13 @@
 
     <!-- Sell Orders -->
     <div class="section">
-      <h2>🔴 売り注文（<span class="current-crypto">USDT</span> → JPY）高い順 <span class="order-count" id="sellCount"></span></h2>
+      <h2>Sell Orders — <span class="current-crypto">USDT</span> to JPY <span class="order-count" id="sellCount"></span></h2>
       <div class="table-wrapper">
         <table id="sellTable">
           <thead>
             <tr>
-              <th>順位</th><th>取引所</th><th>レート (¥)</th><th>乖離率</th>
-              <th>在庫</th><th>取引範囲</th><th>マーチャント</th><th>完了率</th><th>決済方法</th>
+              <th>#</th><th>Exchange</th><th>Rate</th><th>Premium</th>
+              <th>Available</th><th>Limit</th><th>Merchant</th><th>Completion</th><th>Payment</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -138,7 +139,7 @@
   </main>
 
   <footer>
-    <span>BK P2P Aggregator v1.0 | Exchanges: Bybit • Binance • OKX | Powered by ccxt</span>
+    <span>BK P2P Aggregator v1.1 &mdash; Bybit / Binance / OKX &mdash; Powered by ccxt</span>
   </footer>
 
   <script src="app.js"></script>
