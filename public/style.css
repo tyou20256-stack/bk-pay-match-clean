@@ -35,8 +35,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 .header-right{display:flex;align-items:center;gap:8px}
 .spot-badge{font-size:11px;color:var(--yellow);background:var(--bg);padding:4px 10px;border-radius:5px;font-weight:600;font-variant-numeric:tabular-nums}
 .auto-update{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--dim)}
-.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
 .icon-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);color:var(--text2);border-radius:6px;cursor:pointer;font-size:14px;transition:all .15s}
 .icon-btn:hover{border-color:var(--text2);color:var(--text);background:var(--card-hover)}
 
@@ -120,8 +119,8 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 .filter-toggle{padding:8px 20px;background:var(--bg2);border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);font-weight:600;user-select:none}
 .filter-toggle:hover{color:var(--text)}
 .filter-active-count{font-size:10px;color:var(--dim)}
-.filter-bar{max-height:0;overflow:hidden;transition:max-height .3s;background:var(--bg2);border-bottom:1px solid var(--border)}
-.filter-bar.open{max-height:200px;padding:10px 20px}
+.filter-bar{background:var(--bg2);border-bottom:1px solid var(--border)}
+.filter-bar.open{padding:10px 20px}
 .filter-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:8px}
 .filter-group{display:flex;flex-direction:column;gap:3px}
 .filter-group label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;font-weight:700}

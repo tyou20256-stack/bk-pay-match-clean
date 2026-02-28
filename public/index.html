@@ -21,10 +21,10 @@
     </div>
     <div class="header-right">
       <div class="spot-badge" id="spotPrices"></div>
-      <div class="auto-update"><span class="pulse-dot"></span><span id="countdown">30</span>s</div>
+      <div class="auto-update"><span class="status-dot"></span><span id="countdown">30</span>s</div>
       <button class="icon-btn" onclick="refresh()" id="refreshBtn" title="更新">&#x21bb;</button>
       <button class="icon-btn" onclick="toggleLang()" id="langToggle">EN</button>
-      <a href="/guide.html" class="icon-btn" title="ガイド" style="text-decoration:none;font-size:11px">?</a><button class="icon-btn" onclick="toggleTheme()" id="themeToggle">&#x263E;</button>
+      <a href="/guide.html" class="icon-btn" title="ガイド" style="text-decoration:none;font-size:11px">Guide</a><button class="icon-btn" onclick="toggleTheme()" id="themeToggle">&#x263E;</button>
     </div>
   </header>
 
@@ -66,11 +66,11 @@
   <section class="exchange-compare" id="exchangeCompare"></section>
 
   <!-- Filters (collapsible) -->
-  <div class="filter-toggle" onclick="document.getElementById('filterBar').classList.toggle('open')">
-    <span data-i18n="filter_btn">フィルター</span>
-    <span class="filter-active-count" id="filterCount"></span>
-  </div>
-  <div class="filter-bar" id="filterBar">
+  <div class="filter-bar open" id="filterBar">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:12px;font-weight:700;color:var(--text2)" data-i18n="filter_btn">フィルター</span>
+      <span class="filter-active-count" id="filterCount" style="font-size:10px;color:var(--dim)"></span>
+    </div>
     <div class="filter-row">
       <div class="filter-group"><label data-i18n="f_payment">決済方法</label><div id="paymentFilters" class="filter-chips"></div></div>
       <div class="filter-group"><label data-i18n="f_exchange">取引所</label><div id="exchangeFilters" class="filter-chips"></div></div>
