@@ -39,7 +39,7 @@ function fmtDuration(ms){const s=Math.floor(ms/1000);if(s<60)return`${s}s`;const
 function fmtTime(ts){return new Date(ts).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
 
 // Arb panel
-function toggleArbPanel(){const p=document.getElementById('arbPanel'),b=document.getElementById('arbHeaderBtn');p.classList.toggle('collapsed');b.classList.toggle('active',!p.classList.contains('collapsed'));if(!p.classList.contains('collapsed'))loadArbitrage();}
+function toggleArbPanel(){const p=document.getElementById('arbPanel'),bar=document.getElementById('arbAlertBar');p.classList.toggle('collapsed');if(bar)bar.classList.toggle('open',!p.classList.contains('collapsed'));if(!p.classList.contains('collapsed'))loadArbitrage();}
 function switchArbTab(tab){arbTab=tab;document.getElementById('arbTabActive').classList.toggle('active',tab==='active');document.getElementById('arbTabHistory').classList.toggle('active',tab==='history');document.getElementById('arbActivePanel').style.display=tab==='active'?'block':'none';document.getElementById('arbHistoryPanel').style.display=tab==='history'?'block':'none';}
 
 async function loadArbitrage(){try{const r=await fetch('/api/arbitrage');const j=await r.json();if(j.success)renderArbitrage(j.data);}catch(e){}}
