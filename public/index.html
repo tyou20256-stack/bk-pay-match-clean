@@ -42,8 +42,8 @@
 
   <main>
     <!-- Arbitrage Monitor Panel -->
-    <div class="arb-panel">
-      <div class="arb-panel-header">
+    <div class="arb-panel collapsed" id="arbPanel">
+      <div class="arb-panel-header" onclick="toggleArbPanel()">
         <h2 data-i18n="arb_panel_title">アービトラージ モニター</h2>
         <div class="arb-tabs">
           <button class="arb-tab active" onclick="switchArbTab('active')" id="arbTabActive"><span data-i18n="arb_active">発生中</span> <span class="arb-badge" id="arbActiveBadge">0</span></button>

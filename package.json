@@ -13,7 +13,8 @@
     "better-sqlite3": "^11.0.0",
     "ccxt": "^4.5.40",
     "express": "^4.21.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "puppeteer": "^24.37.5"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.0",

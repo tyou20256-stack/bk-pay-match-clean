@@ -141,7 +141,7 @@ footer{text-align:center;padding:12px;color:var(--dim);font-size:10px;border-top
 .arb-content{padding:12px 16px}
 
 /* Active arbitrage cards */
-.arb-card{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:12px 16px;margin-bottom:8px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:center}
+.arb-card{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:12px 16px;margin-bottom:8px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:center}
 .arb-card.live{border-left:3px solid var(--green);animation:arb-pulse 3s infinite}
 .arb-card.closed{border-left:3px solid var(--dim);opacity:.7}
 @keyframes arb-pulse{0%,100%{border-left-color:var(--green)}50%{border-left-color:var(--purple)}}
@@ -167,3 +167,13 @@ footer{text-align:center;padding:12px;color:var(--dim);font-size:10px;border-top
 .arb-spark-bar{width:3px;background:var(--green);border-radius:1px;min-height:1px;transition:height .2s}
 
 .arb-empty{text-align:center;padding:20px;color:var(--dim);font-size:12px}
+
+.arb-panel.collapsed .arb-content{display:none!important}
+.arb-panel.collapsed .arb-tabs{display:none}
+.arb-panel-header{cursor:pointer;user-select:none}
+.arb-panel-header h2::before{content:'▶ ';font-size:10px;transition:transform .2s;display:inline-block}
+.arb-panel:not(.collapsed) .arb-panel-header h2::before{content:'▼ ';font-size:10px}
+.arb-volume-cell{font-size:11px;color:var(--text2)}
+.arb-volume-row{margin-bottom:3px}
+.arb-volume-row .label{color:var(--dim);font-size:10px;display:inline-block;width:55px}
+.arb-max-profit{color:var(--green);font-weight:700;font-size:13px}

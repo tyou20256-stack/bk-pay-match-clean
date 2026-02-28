@@ -60,6 +60,9 @@ function renderSparkline(snapshots){
 function renderArbCard(w,isLive){
   const statusClass=isLive?'live':'closed';
   const statusText=isLive?t('arb_status_open'):t('arb_status_closed');
+  const minLimit=Math.max(w.buyMinLimit||0, w.sellMinLimit||0);
+  const maxLimit=Math.min(w.buyMaxLimit||Infinity, w.sellMaxLimit||Infinity);
+  const limitStr=maxLimit<Infinity?`¥${fmtInt(minLimit)} - ¥${fmtInt(maxLimit)}`:'--';
   return `<div class="arb-card ${statusClass}">
     <div class="arb-route">
       <span class="arb-exchange exchange-badge exchange-${w.buyExchange}">${w.buyExchange}</span>
@@ -71,6 +74,12 @@ function renderArbCard(w,isLive){
       <div><span class="label">${t('arb_buy_at')}</span> <span style="color:var(--green)">¥${fmt(w.buyPrice)}</span></div>
       <div><span class="label">${t('arb_sell_at')}</span> <span style="color:var(--red)">¥${fmt(w.sellPrice)}</span></div>
       <div><span class="label">${t('arb_per_unit')}</span> +¥${fmt(w.profitPerUnit)}</div>
+    </div>
+    <div class="arb-volume-cell">
+      <div class="arb-volume-row"><span class="label">${t('arb_volume')}</span> <span>${fmtInt(w.maxVolume)} ${w.crypto}</span></div>
+      <div class="arb-volume-row"><span class="label">${t('arb_max_profit')}</span> <span class="arb-max-profit">¥${fmtInt(w.maxProfitJPY)}</span></div>
+      <div class="arb-volume-row"><span class="label">${t('arb_buy_limit')}</span> <span>¥${fmtInt(w.buyMinLimit)}-¥${fmtInt(w.buyMaxLimit)}</span></div>
+      <div class="arb-volume-row"><span class="label">${t('arb_sell_limit')}</span> <span>¥${fmtInt(w.sellMinLimit)}-¥${fmtInt(w.sellMaxLimit)}</span></div>
     </div>
     <div class="arb-profit-cell">
       <div class="arb-profit-big">+${fmt(w.profitPercent,2)}%</div>
@@ -162,3 +171,9 @@ function renderTable(tid,cid,orders,side,spot){
 async function refresh(){document.getElementById('refreshBtn').textContent='...';await loadData();document.getElementById('refreshBtn').textContent=t('refresh');countdown=30;}
 setInterval(()=>{countdown--;document.getElementById('countdown').textContent=countdown;if(countdown<=0){countdown=30;loadData();}},1000);
 loadData();
+
+function toggleArbPanel(){
+  const p=document.getElementById('arbPanel');
+  p.classList.toggle('collapsed');
+  if(!p.classList.contains('collapsed')) loadArbitrage();
+}

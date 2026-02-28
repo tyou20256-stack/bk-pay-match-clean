@@ -11,10 +11,10 @@ const I18N = {
     th_avail: '在庫', th_limit: '取引範囲', th_merchant: '業者',
     th_comp: '完了率', th_pay: '決済',
     no_orders: '該当する注文なし',
-    buy_title: (c) => `円で購入 (JPY → ${c})`,
-    sell_title: (c) => `円に換金 (${c} → JPY)`,
-    buy_desc: '日本円を支払って暗号資産を受け取る',
-    sell_desc: '暗号資産を支払って日本円を受け取る',
+    buy_title: (c) => `購入（円 → ${c}）`,
+    sell_title: (c) => `売却（${c} → 円）`,
+    buy_desc: '円を支払い、暗号資産を受け取る',
+    sell_desc: '暗号資産を支払い、円を受け取る',
     spread_prem: 'プレミアム',
     arb_buy: 'で購入', arb_sell: 'で売却', arb_unit: '/枚',
     filter_placeholder: '例: 100000',
@@ -37,7 +37,7 @@ const I18N = {
     arb_status_open: '発生中',
     arb_status_closed: '終了',
     arb_ago: '前',
-    arb_now: '継続中',
+    arb_now: '継続中', arb_volume: '取引可能量', arb_max_profit: '最大利益', arb_buy_limit: '購入範囲', arb_sell_limit: '売却範囲',
   },
   en: {
     subtitle: 'P2P Cross-Exchange Rate Monitor',
@@ -76,7 +76,7 @@ const I18N = {
     arb_status_open: 'LIVE',
     arb_status_closed: 'CLOSED',
     arb_ago: 'ago',
-    arb_now: 'ongoing',
+    arb_now: 'ongoing', arb_volume: 'Max Volume', arb_max_profit: 'Max Profit', arb_buy_limit: 'Buy Limit', arb_sell_limit: 'Sell Limit',
   }
 };
 let currentLang = localStorage.getItem('lang') || 'ja';
