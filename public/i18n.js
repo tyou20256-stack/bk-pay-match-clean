@@ -16,10 +16,28 @@ const I18N = {
     buy_desc: '日本円を支払って暗号資産を受け取る',
     sell_desc: '暗号資産を支払って日本円を受け取る',
     spread_prem: 'プレミアム',
-    arb_buy: 'で購入',
-    arb_sell: 'で売却',
-    arb_unit: '/枚',
+    arb_buy: 'で購入', arb_sell: 'で売却', arb_unit: '/枚',
     filter_placeholder: '例: 100000',
+    // Arbitrage panel
+    arb_panel_title: 'アービトラージ モニター',
+    arb_active: '発生中',
+    arb_history: '履歴',
+    arb_route: 'ルート',
+    arb_profit: '利益率',
+    arb_buy_at: '購入価格',
+    arb_sell_at: '売却価格',
+    arb_per_unit: '枚あたり',
+    arb_duration: '継続時間',
+    arb_peak: 'ピーク',
+    arb_trend: '推移',
+    arb_opened: '開始',
+    arb_closed: '終了',
+    arb_none_active: '現在アービトラージ機会なし',
+    arb_none_history: '履歴なし',
+    arb_status_open: '発生中',
+    arb_status_closed: '終了',
+    arb_ago: '前',
+    arb_now: '継続中',
   },
   en: {
     subtitle: 'P2P Cross-Exchange Rate Monitor',
@@ -38,33 +56,36 @@ const I18N = {
     buy_desc: 'Pay JPY, receive crypto',
     sell_desc: 'Pay crypto, receive JPY',
     spread_prem: 'Premium',
-    arb_buy: 'Buy at',
-    arb_sell: 'Sell at',
-    arb_unit: '/unit',
+    arb_buy: 'Buy at', arb_sell: 'Sell at', arb_unit: '/unit',
     filter_placeholder: 'e.g. 100000',
+    arb_panel_title: 'Arbitrage Monitor',
+    arb_active: 'Active',
+    arb_history: 'History',
+    arb_route: 'Route',
+    arb_profit: 'Profit',
+    arb_buy_at: 'Buy Price',
+    arb_sell_at: 'Sell Price',
+    arb_per_unit: 'per unit',
+    arb_duration: 'Duration',
+    arb_peak: 'Peak',
+    arb_trend: 'Trend',
+    arb_opened: 'Opened',
+    arb_closed: 'Closed',
+    arb_none_active: 'No active arbitrage opportunities',
+    arb_none_history: 'No history yet',
+    arb_status_open: 'LIVE',
+    arb_status_closed: 'CLOSED',
+    arb_ago: 'ago',
+    arb_now: 'ongoing',
   }
 };
-
 let currentLang = localStorage.getItem('lang') || 'ja';
-
 function t(key) { return I18N[currentLang]?.[key] || I18N.ja[key] || key; }
 function tf(key, ...args) { const v = I18N[currentLang]?.[key] || I18N.ja[key]; return typeof v === 'function' ? v(...args) : v || key; }
-
 function applyI18n() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    const val = t(key);
-    if (val) el.textContent = val;
-  });
+  document.querySelectorAll('[data-i18n]').forEach(el => { const k=el.getAttribute('data-i18n'); const v=t(k); if(v) el.textContent=v; });
   document.getElementById('filterAmount').placeholder = t('filter_placeholder');
   document.getElementById('langToggle').textContent = currentLang === 'ja' ? 'EN' : 'JA';
 }
-
-function toggleLang() {
-  currentLang = currentLang === 'ja' ? 'en' : 'ja';
-  localStorage.setItem('lang', currentLang);
-  applyI18n();
-  if (typeof render === 'function') render();
-}
-
+function toggleLang() { currentLang = currentLang === 'ja' ? 'en' : 'ja'; localStorage.setItem('lang', currentLang); applyI18n(); if(typeof render==='function') render(); if(typeof loadArbitrage==='function') loadArbitrage(); }
 document.addEventListener('DOMContentLoaded', applyI18n);

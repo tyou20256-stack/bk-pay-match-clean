@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getCachedRates, fetchAllRates } from '../services/aggregator';
+import { getAllWindows } from '../services/arbitrage';
 import { AggregatedRates } from '../types';
 import { CONFIG } from '../config';
 
@@ -21,30 +22,20 @@ router.get('/rates/:crypto', (req: Request, res: Response) => {
 router.get('/best', (_req: Request, res: Response) => {
   const all = getCachedRates() as Map<string, AggregatedRates>;
   const result: Record<string, any> = {};
-  all.forEach((v, k) => {
-    result[k] = { bestBuy: v.bestBuyExchange, bestSell: v.bestSellExchange, spot: v.spotPrices[k] };
-  });
+  all.forEach((v, k) => { result[k] = { bestBuy: v.bestBuyExchange, bestSell: v.bestSellExchange, spot: v.spotPrices[k] }; });
   res.json({ success: true, data: result });
 });
 
 router.get('/spread', (_req: Request, res: Response) => {
   const all = getCachedRates() as Map<string, AggregatedRates>;
   const result: Record<string, any> = {};
-  all.forEach((v, k) => {
-    result[k] = v.rates.map(r => ({
-      exchange: r.exchange, spread: r.spread, bestBuy: r.bestBuy, bestSell: r.bestSell,
-      buyPremium: r.buyPremium, sellPremium: r.sellPremium,
-    }));
-  });
+  all.forEach((v, k) => { result[k] = v.rates.map(r => ({ exchange: r.exchange, spread: r.spread, bestBuy: r.bestBuy, bestSell: r.bestSell, buyPremium: r.buyPremium, sellPremium: r.sellPremium })); });
   res.json({ success: true, data: result });
 });
 
 router.get('/arbitrage', (_req: Request, res: Response) => {
-  const all = getCachedRates() as Map<string, AggregatedRates>;
-  const opps: any[] = [];
-  all.forEach((v) => { opps.push(...v.arbitrageOpportunities); });
-  opps.sort((a, b) => b.profitPercent - a.profitPercent);
-  res.json({ success: true, data: opps });
+  const windows = getAllWindows();
+  res.json({ success: true, data: windows });
 });
 
 router.post('/refresh', async (_req: Request, res: Response) => {
@@ -56,14 +47,14 @@ router.post('/refresh', async (_req: Request, res: Response) => {
 router.get('/status', (_req: Request, res: Response) => {
   const all = getCachedRates() as Map<string, AggregatedRates>;
   res.json({
-    success: true,
-    uptime: process.uptime(),
-    exchanges: ['Bybit', 'Binance', 'OKX'],
-    cryptos: CONFIG.cryptos,
+    success: true, uptime: process.uptime(),
+    exchanges: fetchers(), cryptos: CONFIG.cryptos,
     updateInterval: CONFIG.updateIntervalMs,
     cachedCryptos: Array.from(all.keys()),
     lastUpdated: Array.from(all.values()).map(v => ({ crypto: v.rates[0]?.crypto, time: new Date(v.lastUpdated).toISOString() })),
   });
 });
+
+function fetchers() { return ['Bybit', 'Binance', 'OKX', 'HTX']; }
 
 export default router;

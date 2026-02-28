@@ -3,6 +3,7 @@ import { BinanceFetcher } from '../fetchers/binance';
 import { OKXFetcher } from '../fetchers/okx';
 import { HTXFetcher } from '../fetchers/htx';
 import { getAllSpotPrices } from './spot';
+import { processArbitrage } from './arbitrage';
 import { CONFIG } from '../config';
 import { ExchangeRates, AggregatedRates, ArbitrageOpp, FetcherInterface } from '../types';
 
@@ -60,6 +61,10 @@ export async function fetchAllRates(crypto: string): Promise<AggregatedRates> {
     bestSellExchange: bestSellExchange ? { exchange: bestSellExchange.exchange, price: bestSellExchange.bestSell! } : null,
     arbitrageOpportunities, spotPrices, lastUpdated: Date.now(),
   };
+
+  // Track arbitrage windows
+  processArbitrage(result, crypto);
+
   cachedRates.set(crypto, result);
   return result;
 }
