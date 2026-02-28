@@ -128,3 +128,4 @@ footer{text-align:center;padding:12px;color:var(--dim);font-size:10px;border-top
 .ob-desc{font-size:10px;padding:4px 12px;color:var(--dim);border-left:1px solid var(--border);border-right:1px solid var(--border);background:var(--card)}
 .buy-desc{border-color:var(--green-border);color:var(--green);opacity:.7}
 .sell-desc{border-color:var(--red-border);color:var(--red);opacity:.7}
+.exchange-HTX{background:color-mix(in srgb,#2354e6 12%,transparent);color:#5b8def}
