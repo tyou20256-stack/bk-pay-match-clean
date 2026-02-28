@@ -7,26 +7,50 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Top Bar -->
   <header>
     <div class="header-left">
-      <h1>BK P2P Aggregator</h1>
-      <span class="subtitle" data-i18n="subtitle">P2P取引所 横断レート監視</span>
-      <button class="arb-header-btn" id="arbHeaderBtn" onclick="toggleArbPanel()">
-        <span data-i18n="arb_panel_title">アービトラージ</span>
-        <span class="arb-header-badge" id="arbActiveBadge">0</span>
-      </button>
+      <h1>BK P2P</h1>
+    </div>
+    <div class="header-center">
+      <div class="crypto-switcher">
+        <button class="crypto-btn active" data-crypto="USDT">USDT</button>
+        <button class="crypto-btn" data-crypto="BTC">BTC</button>
+        <button class="crypto-btn" data-crypto="ETH">ETH</button>
+      </div>
     </div>
     <div class="header-right">
-      <div class="spot-prices" id="spotPrices"></div>
-      <div class="update-info">
-        <span id="countdown">--</span>s
-        <button id="refreshBtn" onclick="refresh()" data-i18n="refresh">更新</button>
-      </div>
-      <button class="toggle-btn" id="langToggle" onclick="toggleLang()">EN</button>
-      <button class="toggle-btn" id="themeToggle" onclick="toggleTheme()">Light</button>
+      <div class="spot-badge" id="spotPrices"></div>
+      <div class="auto-update"><span class="pulse-dot"></span><span id="countdown">30</span>s</div>
+      <button class="icon-btn" onclick="refresh()" id="refreshBtn" title="更新">&#x21bb;</button>
+      <button class="icon-btn" onclick="toggleLang()" id="langToggle">EN</button>
+      <button class="icon-btn" onclick="toggleTheme()" id="themeToggle">&#x263E;</button>
     </div>
   </header>
 
+  <!-- Hero: Best Rates -->
+  <section class="hero">
+    <div class="hero-card buy-card">
+      <div class="hero-label" data-i18n="best_buy_label">一番安く買える</div>
+      <div class="hero-price" id="bestBuyPrice">--</div>
+      <div class="hero-sub"><span class="hero-exchange" id="bestBuyExchange">--</span> <span class="hero-unit">JPY/<span class="current-crypto">USDT</span></span></div>
+    </div>
+    <div class="hero-divider">
+      <div class="hero-spread-label" data-i18n="spread_label">差額</div>
+      <div class="hero-spread-value" id="bestSpread">--</div>
+      <button class="arb-trigger" id="arbHeaderBtn" onclick="toggleArbPanel()">
+        <span data-i18n="arb_btn">アービトラージ</span>
+        <span class="arb-count" id="arbActiveBadge">0</span>
+      </button>
+    </div>
+    <div class="hero-card sell-card">
+      <div class="hero-label" data-i18n="best_sell_label">一番高く売れる</div>
+      <div class="hero-price" id="bestSellPrice">--</div>
+      <div class="hero-sub"><span class="hero-exchange" id="bestSellExchange">--</span> <span class="hero-unit"><span class="current-crypto">USDT</span>/JPY</span></div>
+    </div>
+  </section>
+
+  <!-- Arbitrage Dropdown -->
   <div class="arb-dropdown collapsed" id="arbPanel">
     <div class="arb-dropdown-bar">
       <div class="arb-tabs">
@@ -34,58 +58,42 @@
         <button class="arb-tab" onclick="event.stopPropagation();switchArbTab('history')" id="arbTabHistory" data-i18n="arb_history">履歴</button>
       </div>
     </div>
-    <div id="arbActivePanel" class="arb-content">
-      <div id="arbActiveList"></div>
+    <div id="arbActivePanel" class="arb-content"><div id="arbActiveList"></div></div>
+    <div id="arbHistoryPanel" class="arb-content" style="display:none"><div id="arbHistoryList"></div></div>
+  </div>
+
+  <!-- Exchange Comparison -->
+  <section class="exchange-compare" id="exchangeCompare"></section>
+
+  <!-- Filters (collapsible) -->
+  <div class="filter-toggle" onclick="document.getElementById('filterBar').classList.toggle('open')">
+    <span data-i18n="filter_btn">フィルター</span>
+    <span class="filter-active-count" id="filterCount"></span>
+  </div>
+  <div class="filter-bar" id="filterBar">
+    <div class="filter-row">
+      <div class="filter-group"><label data-i18n="f_payment">決済方法</label><div id="paymentFilters" class="filter-chips"></div></div>
+      <div class="filter-group"><label data-i18n="f_exchange">取引所</label><div id="exchangeFilters" class="filter-chips"></div></div>
     </div>
-    <div id="arbHistoryPanel" class="arb-content" style="display:none">
-      <div id="arbHistoryList"></div>
+    <div class="filter-row">
+      <div class="filter-group"><label data-i18n="f_amount">取引金額</label><input type="number" id="filterAmount" placeholder="例: 100,000" class="filter-input"></div>
+      <div class="filter-group"><label data-i18n="f_completion">完了率</label><select id="filterCompletion" class="filter-select"><option value="0">全て</option><option value="80">80%+</option><option value="90">90%+</option><option value="95" selected>95%+</option><option value="98">98%+</option></select></div>
+      <div class="filter-group"><label data-i18n="f_stock">最低在庫</label><select id="filterMinAvail" class="filter-select"><option value="0">全て</option><option value="100">100+</option><option value="1000">1K+</option><option value="5000">5K+</option></select></div>
+      <div class="filter-group"><label data-i18n="f_status">状態</label><select id="filterOnline" class="filter-select"><option value="all">全て</option><option value="online">オンラインのみ</option></select></div>
+      <button class="filter-reset-btn" onclick="resetFilters()" data-i18n="reset">リセット</button>
     </div>
   </div>
 
-  <nav class="crypto-tabs">
-    <button class="tab active" data-crypto="USDT">USDT / JPY</button>
-    <button class="tab" data-crypto="BTC">BTC / JPY</button>
-    <button class="tab" data-crypto="ETH">ETH / JPY</button>
-  </nav>
-
-  <div class="filter-bar">
-    <div class="filter-group"><label data-i18n="f_payment">決済方法</label><div id="paymentFilters" class="filter-chips"></div></div>
-    <div class="filter-group"><label data-i18n="f_exchange">取引所</label><div id="exchangeFilters" class="filter-chips"></div></div>
-    <div class="filter-group"><label data-i18n="f_amount">金額 (JPY)</label><input type="number" id="filterAmount" placeholder="例: 100000" class="filter-input"></div>
-    <div class="filter-group"><label data-i18n="f_completion">完了率</label><select id="filterCompletion" class="filter-select"><option value="0" data-i18n="all">全て</option><option value="80">80%+</option><option value="90">90%+</option><option value="95" selected>95%+</option><option value="98">98%+</option></select></div>
-    <div class="filter-group"><label data-i18n="f_stock">最低在庫</label><select id="filterMinAvail" class="filter-select"><option value="0" data-i18n="all">全て</option><option value="100">100+</option><option value="1000">1,000+</option><option value="5000">5,000+</option><option value="10000">10,000+</option></select></div>
-    <div class="filter-group"><label data-i18n="f_status">状態</label><select id="filterOnline" class="filter-select"><option value="all" data-i18n="all">全て</option><option value="online" data-i18n="online_only">オンラインのみ</option></select></div>
-    <button class="filter-reset" onclick="resetFilters()" data-i18n="reset">リセット</button>
-    <div class="filter-count" id="filterCount"></div>
-  </div>
-
+  <!-- Order Book: Side by Side -->
   <main>
-    <!-- Summary Row -->
-    <div class="summary-row">
-      <div class="summary-card buy">
-        <div class="summary-label" data-i18n="best_buy">最安値（購入）</div>
-        <div class="summary-price" id="bestBuyPrice">--</div>
-        <div class="summary-detail" id="bestBuyExchange">--</div>
-      </div>
-      <div class="summary-card spread-card">
-        <div class="spread-grid" id="spreadBars"></div>
-      </div>
-      <div class="summary-card sell">
-        <div class="summary-label" data-i18n="best_sell">最高値（売却）</div>
-        <div class="summary-price" id="bestSellPrice">--</div>
-        <div class="summary-detail" id="bestSellExchange">--</div>
-      </div>
-    </div>
-
-    <!-- Two Column Order Book -->
     <div class="orderbook">
       <div class="orderbook-side">
-        <div class="orderbook-header buy-header">
-          <span class="ob-title" id="buyTitle">円で購入 (JPY → <span class="current-crypto">USDT</span>)</span>
-          <span class="order-count" id="buyCount"></span>
+        <div class="ob-header buy-bg">
+          <span class="ob-title" id="buyTitle">購入（円 → USDT）</span>
+          <span class="ob-count" id="buyCount">0</span>
         </div>
-        <div class="ob-desc buy-desc" id="buyDesc">日本円を支払って暗号資産を受け取る</div>
-        <div class="table-wrapper">
+        <div class="ob-subtitle" id="buyDesc">円を支払い、暗号資産を受け取る</div>
+        <div class="table-scroll">
           <table id="buyTable"><thead><tr>
             <th>#</th><th data-i18n="th_exchange">取引所</th><th data-i18n="th_rate">レート</th><th data-i18n="th_premium">乖離率</th>
             <th data-i18n="th_avail">在庫</th><th data-i18n="th_limit">取引範囲</th><th data-i18n="th_merchant">業者</th><th data-i18n="th_comp">完了率</th><th data-i18n="th_pay">決済</th>
@@ -93,12 +101,12 @@
         </div>
       </div>
       <div class="orderbook-side">
-        <div class="orderbook-header sell-header">
-          <span class="ob-title" id="sellTitle">円に換金 (<span class="current-crypto">USDT</span> → JPY)</span>
-          <span class="order-count" id="sellCount"></span>
+        <div class="ob-header sell-bg">
+          <span class="ob-title" id="sellTitle">売却（USDT → 円）</span>
+          <span class="ob-count" id="sellCount">0</span>
         </div>
-        <div class="ob-desc sell-desc" id="sellDesc">暗号資産を支払って日本円を受け取る</div>
-        <div class="table-wrapper">
+        <div class="ob-subtitle sell-sub" id="sellDesc">暗号資産を支払い、円を受け取る</div>
+        <div class="table-scroll">
           <table id="sellTable"><thead><tr>
             <th>#</th><th data-i18n="th_exchange">取引所</th><th data-i18n="th_rate">レート</th><th data-i18n="th_premium">乖離率</th>
             <th data-i18n="th_avail">在庫</th><th data-i18n="th_limit">取引範囲</th><th data-i18n="th_merchant">業者</th><th data-i18n="th_comp">完了率</th><th data-i18n="th_pay">決済</th>
@@ -108,7 +116,7 @@
     </div>
   </main>
 
-  <footer><span>BK P2P Aggregator v1.3 &mdash; Bybit / Binance / OKX / HTX &mdash; Powered by ccxt</span></footer>
+  <footer><span>BK P2P Aggregator &mdash; Bybit / Binance / OKX / HTX</span></footer>
   <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
