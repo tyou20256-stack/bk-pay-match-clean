@@ -1,3 +1,18 @@
+/**
+ * @file database.ts — データベース操作・認証・暗号化
+ * @description SQLite(better-sqlite3)による永続化層。以下を管理:
+ *   - orders: 注文データ
+ *   - bank_accounts: 銀行口座（ローテーション用）
+ *   - epay_config: 電子決済設定
+ *   - exchange_credentials: 取引所認証情報（AES-256暗号化）
+ *   - wallet_config: USDTウォレットアドレス
+ *   - settings: システム設定（KVS）
+ *   - admin_users: 管理ユーザー（SHA-256ハッシュ）
+ *   - sessions: ログインセッション（24時間有効）
+ * 
+ *   初回起動時にデフォルト管理者(admin/bkpay2026)を自動作成。
+ *   暗号化キーは環境変数 BK_ENC_KEY で設定（本番では必須）。
+ */
 import Database from 'better-sqlite3';
 import { resolve } from 'path';
 import crypto from 'crypto';

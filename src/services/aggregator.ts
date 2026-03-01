@@ -1,3 +1,10 @@
+/**
+ * @file aggregator.ts — レート集約エンジン
+ * @description 全取引所のP2Pレートを30秒間隔で取得・集約する中核モジュール。
+ *   スポットレートからの乖離率フィルター（±maxDeviationPct%超を除外）、
+ *   アービトラージ検出、キャッシュ管理を行う。
+ *   データフロー: Fetchers → 乖離率フィルター → 集約 → キャッシュ → API
+ */
 import { BybitFetcher } from '../fetchers/bybit';
 import { BinanceFetcher } from '../fetchers/binance';
 import { OKXFetcher } from '../fetchers/okx';

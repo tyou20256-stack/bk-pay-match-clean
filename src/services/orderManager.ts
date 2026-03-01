@@ -1,3 +1,16 @@
+/**
+ * @file orderManager.ts — 注文管理
+ * @description BK Payの注文ライフサイクルを管理する中核モジュール。
+ *   注文作成時に3取引所のP2Pレートを検索し、条件に合うマーチャントを
+ *   自動マッチング（AUTO MODE）。マッチ失敗時はAccount RouterまたはDB口座から
+ *   自社口座を割当（SELF MODE）。15分のタイムアウトで自動キャンセル。
+ * 
+ *   マッチング条件:
+ *   - 支払方法が一致
+ *   - minLimit <= amount <= maxLimit
+ *   - completionRate >= 90%
+ *   - isOnline === true
+ */
 import notifier from './notifier.js';
 import * as dbSvc from './database.js';
 

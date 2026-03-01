@@ -1,3 +1,10 @@
+/**
+ * @file htx.ts — HTX P2P APIフェッチャー（無効化済み）
+ * @description currency=11がJPYではなくRUB（ロシアルーブル）であることが判明。
+ *   全通貨ID(1-30)をスキャンし、JPY市場が存在しないことを確認。
+ *   aggregator.tsでimportをコメントアウトして無効化。
+ * @deprecated JPY非対応のため使用不可
+ */
 import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
 import { CONFIG } from '../config';

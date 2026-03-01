@@ -1,3 +1,8 @@
+/**
+ * @file okx.ts — OKX P2P APIフェッチャー
+ * @description OKXのC2C APIからJPY建ての売買オーダーを取得。
+ *   GETメソッド（他の取引所はPOST）。sideの解釈が他と逆な場合あり。
+ */
 import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
 import { CONFIG } from '../config';

@@ -1,3 +1,9 @@
+/**
+ * @file index.ts — エントリーポイント
+ * @description Expressサーバーの初期化、認証ルート、ミドルウェア設定、
+ *   レート更新スケジューラー、TronMonitorの起動を行う。
+ *   公開/保護ルートの境界もここで定義。
+ */
 import express from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';

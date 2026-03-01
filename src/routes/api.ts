@@ -1,3 +1,8 @@
+/**
+ * @file api.ts — APIルーター
+ * @description 全APIエンドポイントを定義。レート取得（公開）、注文管理、
+ *   口座管理、電子決済、ウォレット、設定（保護）のルートを含む。
+ */
 import { Router, Request, Response } from 'express';
 import { getCachedRates, fetchAllRates } from '../services/aggregator';
 import { getAllWindows } from '../services/arbitrage';

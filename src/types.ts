@@ -1,3 +1,8 @@
+/**
+ * @file types.ts — 型定義
+ * @description P2Pオーダー、取引所レート、アービトラージ機会などの
+ *   TypeScriptインターフェースを定義。全モジュールから参照される。
+ */
 export interface P2POrder {
   exchange: string;
   side: 'buy' | 'sell';

@@ -1,3 +1,9 @@
+/**
+ * @file binance.ts — Binance P2P APIフェッチャー
+ * @description BinanceのC2C APIからJPY建ての売買オーダーを取得。
+ *   注意: 日本IPからブロックされることがある。
+ *   レスポンスがgzip圧縮される場合がある。
+ */
 import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
 import { CONFIG } from '../config';

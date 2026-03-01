@@ -1,3 +1,10 @@
+/**
+ * @file notifier.ts — Telegram通知サービス
+ * @description 注文イベント（新規/振込完了/完了/キャンセル/期限切れ）を
+ *   Telegram botでスタッフに即時通知。
+ *   ENABLED = false で無効化可能。
+ *   使用bot: @BKnewsmanagerbot
+ */
 // Telegram notification service for BK Pay
 const ENABLED = false; // Set to true to enable Telegram notifications
 const BOT_TOKEN = '8447506670:AAGY2bcpbZxTe9OL3Jzxpdo86CHkb47XIig';

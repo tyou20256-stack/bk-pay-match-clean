@@ -1,3 +1,9 @@
+/**
+ * @file arbitrage.ts — アービトラージ検出・追跡
+ * @description 取引所間の価格差を監視し、利益機会を検出。
+ *   開始/終了タイムスタンプ、持続時間、推定利益額を追跡。
+ *   閾値(CONFIG.arbitrageThreshold %)以上の利益率で機会を記録。
+ */
 import { AggregatedRates, ArbitrageOpp, P2POrder } from '../types';
 
 export interface ArbitrageWindow {

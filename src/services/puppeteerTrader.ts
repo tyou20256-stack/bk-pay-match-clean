@@ -1,3 +1,13 @@
+/**
+ * @file puppeteerTrader.ts — Puppeteer自動取引フレームワーク
+ * @description ヘッドレスブラウザで取引所にログインし、P2P注文を自動作成する。
+ *   現在はフレームワークのみ実装済み。実際の取引実行には認証情報の設定が必要。
+ *   対応取引所: Bybit, OKX
+ * 
+ *   背景: 4取引所ともP2P注文作成の公開APIが存在しないため、
+ *   ブラウザ自動化（Puppeteer）が唯一の自動化手段。
+ * @status 未稼働（フレームワークのみ）
+ */
 // Puppeteer Auto-Trader - Experimental
 // Creates P2P orders on exchanges via browser automation
 // Status: Framework ready, requires exchange credentials to activate

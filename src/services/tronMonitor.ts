@@ -1,3 +1,10 @@
+/**
+ * @file tronMonitor.ts — USDT着金自動検知
+ * @description TronGrid APIでUSDT(TRC-20)ウォレットへの入金を30秒間隔で監視。
+ *   着金額がconfirming状態の注文のcryptoAmountと一致（±0.01 USDT）した場合、
+ *   自動的に注文をcompleted状態に更新。不一致の場合はTelegram通知。
+ *   ウォレットアドレスが設定されていない場合は非アクティブ。
+ */
 // TronGrid USDT deposit monitor
 import * as dbSvc from './database.js';
 import notifier from './notifier.js';

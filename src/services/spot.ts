@@ -1,3 +1,9 @@
+/**
+ * @file spot.ts — スポットレート取得
+ * @description CoinGecko APIから暗号通貨のスポット（市場基準）レートを取得。
+ *   乖離率フィルターとボリューム閾値計算の基準値として使用。
+ *   無料枠制限(月10,000回)あり。エラー時は前回の値をキャッシュして返却。
+ */
 import ccxt from 'ccxt';
 
 const exchange = new ccxt.binance({ enableRateLimit: true });

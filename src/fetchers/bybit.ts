@@ -1,3 +1,9 @@
+/**
+ * @file bybit.ts — Bybit P2P APIフェッチャー
+ * @description Bybitの P2P OTC APIからJPY建ての売買オーダーを取得。
+ *   POSTリクエストで買い/売りオーダーを取得し、統一フォーマットに変換。
+ *   支払方法コード: 1=銀行振込, 2=PayPay, 22=LINE Pay
+ */
 import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
 import { CONFIG } from '../config';
