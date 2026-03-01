@@ -142,20 +142,21 @@ async function fetchCurrentRates(): Promise<{ usdt?: any; btc?: any; eth?: any }
     try {
       const res = await fetch(`${API_BASE}/api/rates/${crypto}`);
       const data = await res.json();
-      if (data.success) {
-        const rates = data.rates || data.data || [];
-        if (Array.isArray(rates) && rates.length > 0) {
-          const sorted = [...rates].sort((a: any, b: any) => Number(a.price) - Number(b.price));
+      if (data.success && data.data) {
+        const exchanges = data.data.rates || [];
+        const allBuy: any[] = [];
+        const allSell: any[] = [];
+        for (const ex of exchanges) {
+          for (const o of (ex.buyOrders || [])) allBuy.push(o);
+          for (const o of (ex.sellOrders || [])) allSell.push(o);
+        }
+        allBuy.sort((a: any, b: any) => Number(a.price) - Number(b.price));
+        allSell.sort((a: any, b: any) => Number(b.price) - Number(a.price));
+        if (allBuy.length > 0 || allSell.length > 0) {
           result[crypto.toLowerCase()] = {
-            bestBuy: sorted[0],
-            bestSell: sorted[sorted.length - 1],
-            rates: sorted,
-          };
-        } else if (data.bestRate) {
-          result[crypto.toLowerCase()] = {
-            bestBuy: { price: data.bestRate, exchange: 'Best' },
-            bestSell: { price: data.bestRate, exchange: 'Best' },
-            rates: [],
+            bestBuy: allBuy[0] || { price: 0, exchange: '-' },
+            bestSell: allSell[0] || { price: 0, exchange: '-' },
+            spread: allBuy[0] && allSell[0] ? (Number(allBuy[0].price) - Number(allSell[0].price)).toFixed(2) : '0',
           };
         }
       }
