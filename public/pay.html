@@ -402,84 +402,17 @@
       document.getElementById('matchingScreen').style.display='none';
       document.getElementById('fallbackScreen').style.display='block';
     }
-    function useFallback(){isFallback=true;matchedOrder={exchange:'BK Pay（自社）',price:0,merchant:{name:'BK Stock',completionRate:100}};showPayment();}
+    function useFallback(){currentOrder={id:'SELF',mode:'self',status:'pending_payment',amount:amount,crypto:'USDT',cryptoAmount:0,rate:0,payMethod:payMethod,exchange:'BK Pay（自社決済）',merchantName:'BK Stock',merchantCompletionRate:100,paymentInfo:null,createdAt:Date.now(),expiresAt:Date.now()+900000};fetchPreview().then(function(){showPaymentFromOrder();});}};showPayment();}
 
     // Step 3: Payment
-    function showPayment(){
-      go(3);
-      var badge=document.getElementById('modeBadge');
-      if(isFallback){
-        badge.className='mode-badge manual';badge.textContent='SELF MERCHANT';
-        renderFallbackPayment();
-        if(matchedOrder.price===0)fetchPreview().then(function(){
-          var cvr=document.getElementById('cvRate').textContent;
-          var m=cvr.match(/[\d,.]+/);
-          if(m)matchedOrder.price=parseFloat(m[0].replace(/,/g,''));
-          fillSummary();
-        });
-      }else{
-        badge.className='mode-badge auto';badge.textContent='AUTO MATCH';
-        renderMatchedPayment();
-      }
-      fillSummary();
-      startTimer();
-    }
-    function renderMatchedPayment(){
-      var info=document.getElementById('paymentInfo');
-      var methods=matchedOrder.paymentMethods||[];
-      if(payMethod==='bank'||methods.some(function(m){return m.indexOf('銀行')>-1||m.indexOf('Bank')>-1;})){
-        var mBanks=[{bank:'みずほ銀行',branch:'渋谷支店',type:'普通',number:'3058271',holder:'タナカ タロウ'},{bank:'三井住友銀行',branch:'新橋支店',type:'普通',number:'7742190',holder:'サトウ ユウキ'},{bank:'楽天銀行',branch:'第一営業支店',type:'普通',number:'4491823',holder:'ヤマモト ケンジ'},{bank:'住信SBIネット銀行',branch:'法人第一支店',type:'普通',number:'2287654',holder:'スズキ アヤカ'}];
-        var mBank=mBanks[Math.floor(Math.random()*mBanks.length)];
-        info.innerHTML='<div class="pi-card"><div class="pi-label">振込先口座</div>'
-          +'<div class="pi-row"><span class="pi-row-label">銀行名</span><span class="pi-row-val">'+mBank.bank+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">支店名</span><span class="pi-row-val">'+mBank.branch+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">口座種別</span><span class="pi-row-val">'+mBank.type+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">口座番号</span><span class="pi-row-val" style="font-size:18px;letter-spacing:2px;font-weight:800">'+mBank.number+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">口座名義</span><span class="pi-row-val">'+mBank.holder+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">振込金額</span><span class="pi-row-val" style="color:var(--green);font-size:18px;font-weight:800">¥'+amount.toLocaleString()+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">取引所</span><span class="pi-row-val">'+matchedOrder.exchange+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+matchedOrder.merchant.name+' (完了率'+matchedOrder.merchant.completionRate.toFixed(0)+'%)</span></div></div>'
-          +'<button class="copy-btn" onclick="copyText(\''+mBank.number+'\')">口座番号をコピー</button>';
-      }else{
-        var payNames={paypay:'PayPay',linepay:'LINE Pay',aupay:'au PAY'};
-        var payIds={paypay:'tanaka-t-2891',linepay:'sato_yuki_88',aupay:'yamamoto-k'};
-        var pName=payNames[payMethod]||payMethod;
-        var pId=payIds[payMethod]||'merchant-id';
-        info.innerHTML='<div class="pi-card"><div class="pi-label">'+pName+' で支払い</div>'
-          +'<div class="pi-qr">'+pName+' QRコード<br>(スキャンして送金)</div>'
-          +'<div class="pi-row"><span class="pi-row-label">'+pName+' ID</span><span class="pi-row-val" style="font-weight:800">'+pId+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">支払金額</span><span class="pi-row-val" style="color:var(--green);font-size:18px;font-weight:800">¥'+amount.toLocaleString()+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+matchedOrder.merchant.name+'</span></div></div>';
-      }
-    }
-    function renderFallbackPayment(){
-      var info=document.getElementById('paymentInfo');
-      var fb=FALLBACK_ACCOUNTS[payMethod];
-      if(payMethod==='bank'){
-        info.innerHTML='<div class="pi-card"><div class="pi-label">振込先口座</div>'
-          +'<div class="pi-row"><span class="pi-row-label">銀行名</span><span class="pi-row-val">'+fb.bank+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">支店名</span><span class="pi-row-val">'+fb.branch+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">口座種別</span><span class="pi-row-val">'+fb.type+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">口座番号</span><span class="pi-row-val" style="font-size:16px;letter-spacing:2px">'+fb.number+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">名義</span><span class="pi-row-val">'+fb.holder+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">振込金額</span><span class="pi-row-val" style="color:var(--green);font-size:16px;font-weight:800">¥'+amount.toLocaleString()+'</span></div></div>'
-          +'<button class="copy-btn" onclick="copyText(\''+fb.number+'\')">口座番号をコピー</button>';
-      }else if(payMethod==='paypay'){
-        info.innerHTML='<div class="pi-card"><div class="pi-label">PayPay で支払い</div>'
-          +'<div class="pi-qr">PayPay QRコード</div>'
-          +'<div class="pi-row"><span class="pi-row-label">PayPay ID</span><span class="pi-row-val">'+fb.id+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">支払金額</span><span class="pi-row-val" style="color:var(--green);font-size:16px;font-weight:800">¥'+amount.toLocaleString()+'</span></div></div>';
-      }else{
-        info.innerHTML='<div class="pi-card"><div class="pi-label">'+payMethod+' で支払い</div>'
-          +'<div class="pi-qr">QRコード / 送金リンク</div>'
-          +'<div class="pi-row"><span class="pi-row-label">支払金額</span><span class="pi-row-val" style="color:var(--green);font-size:16px;font-weight:800">¥'+amount.toLocaleString()+'</span></div></div>';
-      }
-    }
+    
+    
+    
     function fillSummary(){
       document.getElementById('sumAmt').textContent='¥'+amount.toLocaleString();
-      document.getElementById('sumRate').textContent=matchedOrder.price?'¥'+fmt(matchedOrder.price)+' / USDT':'計算中...';
-      document.getElementById('sumExch').textContent=matchedOrder.exchange;
-      document.getElementById('sumUsdt').textContent=matchedOrder.price?(amount/matchedOrder.price).toFixed(2)+' USDT':'--';
+      document.getElementById('sumRate').textContent=currentOrder.price?'¥'+fmt(currentOrder.price)+' / USDT':'計算中...';
+      document.getElementById('sumExch').textContent=currentOrder.exchange;
+      document.getElementById('sumUsdt').textContent=currentOrder.price?(amount/currentOrder.price).toFixed(2)+' USDT':'--';
     }
     function startTimer(){
       timerSec=900;clearInterval(timerInterval);
