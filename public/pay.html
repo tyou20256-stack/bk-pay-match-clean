@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>USDT入金 - 簡単3ステップ</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    [data-theme="dark"]{--bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;--border:#243049;--text:#edf0f7;--text2:#a0aec0;--dim:#5a6a85;--green:#34d399;--green2:#10b981;--green-soft:rgba(52,211,153,.1);--green-border:rgba(52,211,153,.25);--red:#f87171;--blue:#60a5fa;--blue-soft:rgba(96,165,250,.08);--yellow:#fbbf24;--purple:#a78bfa;--input-bg:#0f1520;--shadow:0 2px 12px rgba(0,0,0,.3)}
+    [data-theme="light"]{--bg:#f5f7fa;--bg2:#fff;--card:#fff;--card2:#f8fafc;--border:#e2e8f0;--text:#1a202c;--text2:#4a5568;--dim:#a0aec0;--green:#059669;--green2:#047857;--green-soft:rgba(5,150,105,.08);--green-border:rgba(5,150,105,.2);--red:#dc2626;--blue:#2563eb;--blue-soft:rgba(37,99,235,.06);--yellow:#d97706;--purple:#7c3aed;--input-bg:#f1f5f9;--shadow:0 2px 12px rgba(0,0,0,.06)}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Segoe UI',sans-serif;font-size:14px;line-height:1.6;min-height:100vh;display:flex;flex-direction:column}
+
+    /* Header */
+    .pay-header{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--card)}
+    .pay-logo{font-size:16px;font-weight:800;letter-spacing:-.5px}
+    .pay-logo span{color:var(--green)}
+    .pay-header-right{display:flex;gap:6px}
+    .pay-icon-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+
+    /* Main container */
+    .pay-container{max-width:480px;margin:0 auto;padding:20px 16px;flex:1;width:100%}
+
+    /* Steps indicator */
+    .steps{display:flex;gap:0;margin-bottom:24px}
+    .step-ind{flex:1;text-align:center;padding:10px 0;position:relative;font-size:11px;font-weight:600;color:var(--dim)}
+    .step-ind .step-num{display:block;width:28px;height:28px;border-radius:50%;border:2px solid var(--border);margin:0 auto 4px;line-height:24px;font-size:12px;font-weight:800;transition:all .2s}
+    .step-ind.active{color:var(--green)}
+    .step-ind.active .step-num{border-color:var(--green);background:var(--green);color:#fff}
+    .step-ind.done{color:var(--text2)}
+    .step-ind.done .step-num{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+    .step-ind:not(:last-child)::after{content:'';position:absolute;top:23px;left:calc(50% + 20px);right:calc(-50% + 20px);height:2px;background:var(--border)}
+    .step-ind.done:not(:last-child)::after{background:var(--green)}
+
+    /* Panels */
+    .panel{display:none}
+    .panel.active{display:block}
+
+    /* Step 1: Amount */
+    .amount-section{text-align:center;margin-bottom:20px}
+    .amount-title{font-size:18px;font-weight:700;margin-bottom:4px}
+    .amount-desc{font-size:12px;color:var(--text2);margin-bottom:20px}
+    .amount-input-wrap{position:relative;margin-bottom:16px}
+    .amount-prefix{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:20px;font-weight:700;color:var(--dim)}
+    .amount-input{width:100%;padding:16px 16px 16px 36px;font-size:24px;font-weight:700;background:var(--input-bg);border:2px solid var(--border);border-radius:12px;color:var(--text);font-family:inherit;text-align:center;transition:border-color .2s}
+    .amount-input:focus{outline:none;border-color:var(--green)}
+    .amount-input::placeholder{color:var(--dim);font-weight:400;font-size:16px}
+    .quick-amounts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:20px}
+    .quick-btn{padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+    .quick-btn:hover,.quick-btn.active{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+    .amount-convert{padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--border);margin-bottom:20px}
+    .convert-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
+    .convert-label{color:var(--dim)}
+    .convert-val{font-weight:600}
+    .convert-val.highlight{color:var(--green);font-size:14px}
+
+    /* Step 2: Best rates */
+    .rate-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+    .rate-card{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--card);border:2px solid var(--border);border-radius:12px;cursor:pointer;transition:all .15s}
+    .rate-card:hover,.rate-card.selected{border-color:var(--green);background:var(--green-soft)}
+    .rate-card.selected::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);margin-left:auto;flex-shrink:0}
+    .rate-rank{width:24px;height:24px;border-radius:6px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--dim);flex-shrink:0}
+    .rate-card:first-child .rate-rank{background:var(--green);color:#fff}
+    .rate-info{flex:1;min-width:0}
+    .rate-exchange{font-size:13px;font-weight:700}
+    .rate-meta{font-size:10px;color:var(--dim);margin-top:2px}
+    .rate-price-col{text-align:right}
+    .rate-price{font-size:16px;font-weight:800}
+    .rate-you-get{font-size:10px;color:var(--green);margin-top:2px}
+    .rate-payments{display:flex;gap:3px;margin-top:6px;flex-wrap:wrap}
+    .rate-pay-tag{font-size:9px;padding:2px 6px;border-radius:4px;background:var(--bg);color:var(--text2);border:1px solid var(--border)}
+    .best-label{font-size:9px;padding:2px 6px;border-radius:4px;background:var(--green);color:#fff;font-weight:700;margin-left:6px}
+
+    /* Step 3: Send */
+    .send-section{text-align:center}
+    .send-title{font-size:16px;font-weight:700;margin-bottom:16px}
+    .wallet-box{padding:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:16px}
+    .wallet-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600}
+    .wallet-addr{font-size:13px;font-weight:600;word-break:break-all;color:var(--green);background:var(--input-bg);padding:10px;border-radius:8px;margin-bottom:8px;font-family:'SF Mono',Monaco,monospace}
+    .wallet-network{font-size:11px;color:var(--text2)}
+    .wallet-network strong{color:var(--yellow)}
+    .copy-btn{width:100%;padding:10px;border-radius:8px;border:1px solid var(--green-border);background:var(--green-soft);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+    .copy-btn:hover{background:var(--green);color:#fff}
+    .send-steps{text-align:left;margin-bottom:16px}
+    .send-step{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .send-step:last-child{border-bottom:none}
+    .send-step-num{width:22px;height:22px;border-radius:50%;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;margin-top:2px}
+    .send-step-text{font-size:12px;color:var(--text2)}
+    .send-step-text strong{color:var(--text)}
+    .send-summary{padding:14px;background:var(--card);border-radius:12px;border:1px solid var(--border);margin-bottom:16px}
+    .summary-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}
+    .summary-label{color:var(--dim)}
+    .summary-val{font-weight:600}
+    .summary-val.big{font-size:16px;color:var(--green)}
+
+    /* Buttons */
+    .btn-primary{width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn-primary:hover{background:var(--green2)}
+    .btn-primary:disabled{opacity:.4;cursor:not-allowed}
+    .btn-secondary{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:none;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px}
+    .btn-secondary:hover{border-color:var(--text);color:var(--text)}
+
+    /* Exchange link button */
+    .exchange-link{display:block;width:100%;padding:14px;border-radius:12px;border:2px solid var(--green);background:var(--green-soft);color:var(--green);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;text-align:center;transition:all .15s;margin-bottom:8px}
+    .exchange-link:hover{background:var(--green);color:#fff}
+
+    /* Trust badges */
+    .trust-bar{display:flex;gap:12px;justify-content:center;padding:16px 0;margin-top:16px;border-top:1px solid var(--border)}
+    .trust-item{display:flex;flex-direction:column;align-items:center;gap:3px}
+    .trust-icon{font-size:16px}
+    .trust-text{font-size:9px;color:var(--dim);text-align:center}
+
+    /* Loading shimmer */
+    .shimmer{background:linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;height:70px;margin-bottom:8px}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    /* Footer */
+    .pay-footer{text-align:center;padding:16px;font-size:10px;color:var(--dim);border-top:1px solid var(--border)}
+
+    /* Embed mode */
+    .embed .pay-header,.embed .pay-footer{display:none}
+    .embed .pay-container{padding:12px}
+
+    @media(max-width:380px){
+      .quick-amounts{grid-template-columns:repeat(3,1fr)}
+      .amount-input{font-size:20px}
+    }
+  </style>
+</head>
+<body>
+  <div class="pay-header">
+    <div class="pay-logo">BK <span>Pay</span></div>
+    <div class="pay-header-right">
+      <button class="pay-icon-btn" onclick="togglePayTheme()" id="payThemeBtn">D</button>
+    </div>
+  </div>
+
+  <div class="pay-container">
+    <!-- Steps -->
+    <div class="steps">
+      <div class="step-ind active" id="stepInd1"><span class="step-num">1</span>金額入力</div>
+      <div class="step-ind" id="stepInd2"><span class="step-num">2</span>購入先を選択</div>
+      <div class="step-ind" id="stepInd3"><span class="step-num">3</span>送金</div>
+    </div>
+
+    <!-- Panel 1: Amount -->
+    <div class="panel active" id="panel1">
+      <div class="amount-section">
+        <div class="amount-title">入金額を入力</div>
+        <div class="amount-desc">日本円で入金したい金額を入力してください</div>
+      </div>
+      <div class="amount-input-wrap">
+        <span class="amount-prefix">¥</span>
+        <input type="number" class="amount-input" id="payAmount" placeholder="10,000" oninput="calcConvert()">
+      </div>
+      <div class="quick-amounts">
+        <button class="quick-btn" onclick="setAmount(5000)">¥5,000</button>
+        <button class="quick-btn" onclick="setAmount(10000)">¥10,000</button>
+        <button class="quick-btn" onclick="setAmount(30000)">¥30,000</button>
+        <button class="quick-btn" onclick="setAmount(50000)">¥50,000</button>
+        <button class="quick-btn" onclick="setAmount(100000)">¥100,000</button>
+        <button class="quick-btn" onclick="setAmount(300000)">¥300,000</button>
+        <button class="quick-btn" onclick="setAmount(500000)">¥500,000</button>
+        <button class="quick-btn" onclick="setAmount(1000000)">¥1,000,000</button>
+      </div>
+      <div class="amount-convert" id="convertBox" style="display:none">
+        <div class="convert-row"><span class="convert-label">現在の最安レート</span><span class="convert-val" id="cvRate">--</span></div>
+        <div class="convert-row"><span class="convert-label">受取り予定額</span><span class="convert-val highlight" id="cvUsdt">-- USDT</span></div>
+        <div class="convert-row"><span class="convert-label">手数料</span><span class="convert-val">無料</span></div>
+      </div>
+      <button class="btn-primary" id="btnStep1" onclick="goStep(2)" disabled>次へ -- 購入先を選ぶ</button>
+      
+      <div class="trust-bar">
+        <div class="trust-item"><div class="trust-icon">&#x1F512;</div><div class="trust-text">エスクロー保護</div></div>
+        <div class="trust-item"><div class="trust-icon">&#x26A1;</div><div class="trust-text">5〜15分で完了</div></div>
+        <div class="trust-item"><div class="trust-icon">&#x1F4B0;</div><div class="trust-text">手数料 0円</div></div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Select Exchange -->
+    <div class="panel" id="panel2">
+      <div class="amount-section">
+        <div class="amount-title">購入先を選ぶ</div>
+        <div class="amount-desc">レートが良い順に表示しています</div>
+      </div>
+      <div class="rate-cards" id="rateCards">
+        <div class="shimmer"></div>
+        <div class="shimmer"></div>
+        <div class="shimmer"></div>
+      </div>
+      <button class="btn-primary" id="btnStep2" onclick="goStep(3)" disabled>次へ -- 送金情報を確認</button>
+      <button class="btn-secondary" onclick="goStep(1)">戻る</button>
+    </div>
+
+    <!-- Panel 3: Send -->
+    <div class="panel" id="panel3">
+      <div class="send-section">
+        <div class="send-title">USDTを送金してください</div>
+        
+        <div class="send-summary">
+          <div class="summary-row"><span class="summary-label">入金額</span><span class="summary-val" id="sumAmount">--</span></div>
+          <div class="summary-row"><span class="summary-label">購入先</span><span class="summary-val" id="sumExchange">--</span></div>
+          <div class="summary-row"><span class="summary-label">レート</span><span class="summary-val" id="sumRate">--</span></div>
+          <div class="summary-row"><span class="summary-label">受取り予定額</span><span class="summary-val big" id="sumUsdt">--</span></div>
+        </div>
+
+        <div class="send-steps">
+          <div class="send-step">
+            <div class="send-step-num">1</div>
+            <div class="send-step-text"><strong>取引所でUSDTを購入</strong><br>下のボタンから取引所のP2Pページに移動し、表示金額分のUSDTを購入してください</div>
+          </div>
+          <div class="send-step">
+            <div class="send-step-num">2</div>
+            <div class="send-step-text"><strong>下のアドレスにUSDTを送金</strong><br>購入したUSDTを、下記のウォレットアドレスに送金してください</div>
+          </div>
+          <div class="send-step">
+            <div class="send-step-num">3</div>
+            <div class="send-step-text"><strong>自動反映を待つ</strong><br>通常1〜5分で自動的に残高に反映されます</div>
+          </div>
+        </div>
+
+        <a class="exchange-link" id="exchangeLink" href="#" target="_blank" rel="noopener">取引所のP2Pページを開く</a>
+
+        <div class="wallet-box">
+          <div class="wallet-label">送金先アドレス（USDT）</div>
+          <div class="wallet-addr" id="walletAddr">TXxx...設定してください</div>
+          <div class="wallet-network">ネットワーク: <strong>TRC-20 (TRON)</strong> -- 手数料 約1 USDT</div>
+          <button class="copy-btn" onclick="copyAddr()">アドレスをコピー</button>
+        </div>
+
+        <button class="btn-secondary" onclick="goStep(2)">戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pay-footer">BK Pay -- P2P取引は各取引所の規約に従います</div>
+
+  <script>
+    var payAmount=0,selectedRate=null,allRates=[],walletAddress='TXxx...設定してください';
+
+    // Theme
+    function togglePayTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);document.getElementById('payThemeBtn').textContent=n==='dark'?'D':'L';localStorage.setItem('theme',n);}
+    (function(){var s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
+
+    // Embed mode
+    if(window.location.search.indexOf('embed')>-1)document.body.classList.add('embed');
+
+    // Steps
+    function goStep(n){
+      document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+      document.getElementById('panel'+n).classList.add('active');
+      for(var i=1;i<=3;i++){
+        var el=document.getElementById('stepInd'+i);
+        el.classList.remove('active','done');
+        if(i<n)el.classList.add('done');
+        if(i===n)el.classList.add('active');
+      }
+      if(n===2)loadRates();
+      if(n===3)showSummary();
+      window.scrollTo(0,0);
+    }
+
+    // Amount
+    function setAmount(v){
+      payAmount=v;
+      document.getElementById('payAmount').value=v;
+      document.querySelectorAll('.quick-btn').forEach(function(b){b.classList.remove('active');});
+      event.target.classList.add('active');
+      calcConvert();
+    }
+    function calcConvert(){
+      payAmount=parseInt(document.getElementById('payAmount').value)||0;
+      var box=document.getElementById('convertBox');
+      var btn=document.getElementById('btnStep1');
+      if(payAmount>=500){
+        box.style.display='block';
+        btn.disabled=false;
+        fetchQuickRate();
+      }else{
+        box.style.display='none';
+        btn.disabled=true;
+      }
+    }
+    async function fetchQuickRate(){
+      try{
+        var r=await fetch('/api/rates/USDT');
+        var j=await r.json();
+        if(!j.success)return;
+        var best=null;
+        j.data.rates.forEach(function(ex){
+          ex.buyOrders.forEach(function(o){
+            if(o.minLimit<=payAmount&&(o.maxLimit===0||o.maxLimit>=payAmount)){
+              if(!best||o.price<best.price)best=o;
+            }
+          });
+        });
+        if(best){
+          document.getElementById('cvRate').textContent='¥'+Number(best.price).toLocaleString('ja-JP',{minimumFractionDigits:1,maximumFractionDigits:1})+' / USDT';
+          document.getElementById('cvUsdt').textContent=(payAmount/best.price).toFixed(2)+' USDT';
+        }
+      }catch(e){}
+    }
+
+    // Rates
+    async function loadRates(){
+      var container=document.getElementById('rateCards');
+      container.innerHTML='<div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div>';
+      try{
+        var r=await fetch('/api/rates/USDT');
+        var j=await r.json();
+        if(!j.success)return;
+        allRates=[];
+        j.data.rates.forEach(function(ex){
+          ex.buyOrders.forEach(function(o){
+            if(o.minLimit<=payAmount&&(o.maxLimit===0||o.maxLimit>=payAmount)&&o.merchant.completionRate>=90){
+              allRates.push(o);
+            }
+          });
+        });
+        allRates.sort(function(a,b){return a.price-b.price;});
+        renderRates();
+      }catch(e){container.innerHTML='<p style="text-align:center;color:var(--dim)">データを取得できませんでした</p>';}
+    }
+    function renderRates(){
+      var container=document.getElementById('rateCards');
+      var show=allRates.slice(0,8);
+      if(!show.length){container.innerHTML='<p style="text-align:center;color:var(--dim);padding:20px">該当する注文がありません。金額を変更してください。</p>';return;}
+      container.innerHTML=show.map(function(o,i){
+        var usdt=(payAmount/o.price).toFixed(2);
+        var pays=o.paymentMethods.slice(0,4).map(function(p){return'<span class="rate-pay-tag">'+p+'</span>';}).join('');
+        var bestTag=i===0?'<span class="best-label">BEST</span>':'';
+        var sel=selectedRate&&selectedRate.price===o.price&&selectedRate.exchange===o.exchange?'selected':'';
+        return'<div class="rate-card '+sel+'" onclick="selectRate('+i+')">'
+          +'<div class="rate-rank">'+(i+1)+'</div>'
+          +'<div class="rate-info"><div class="rate-exchange">'+o.exchange+bestTag+'</div>'
+          +'<div class="rate-meta">完了率 '+o.merchant.completionRate.toFixed(0)+'% / '+o.merchant.name+'</div>'
+          +'<div class="rate-payments">'+pays+'</div></div>'
+          +'<div class="rate-price-col"><div class="rate-price">¥'+Number(o.price).toLocaleString('ja-JP',{minimumFractionDigits:1,maximumFractionDigits:1})+'</div>'
+          +'<div class="rate-you-get">'+usdt+' USDT</div></div></div>';
+      }).join('');
+    }
+    function selectRate(i){
+      selectedRate=allRates[i];
+      document.getElementById('btnStep2').disabled=false;
+      renderRates();
+    }
+
+    // Summary
+    function showSummary(){
+      if(!selectedRate)return;
+      var usdt=(payAmount/selectedRate.price).toFixed(2);
+      document.getElementById('sumAmount').textContent='¥'+payAmount.toLocaleString('ja-JP');
+      document.getElementById('sumExchange').textContent=selectedRate.exchange;
+      document.getElementById('sumRate').textContent='¥'+Number(selectedRate.price).toLocaleString('ja-JP',{minimumFractionDigits:1,maximumFractionDigits:1})+' / USDT';
+      document.getElementById('sumUsdt').textContent=usdt+' USDT';
+      // Exchange P2P links
+      var links={Bybit:'https://www.bybit.com/fiat/trade/otc/?actionType=1&token=USDT&fiat=JPY',Binance:'https://p2p.binance.com/trade/buy/USDT?fiat=JPY',OKX:'https://www.okx.com/p2p-markets/jpy/buy-usdt',HTX:'https://www.htx.com/fiat-crypto/trade/buy-usdt-jpy/'};
+      var link=links[selectedRate.exchange]||'#';
+      document.getElementById('exchangeLink').href=link;
+      document.getElementById('exchangeLink').textContent=selectedRate.exchange+' のP2Pページを開く';
+      document.getElementById('walletAddr').textContent=walletAddress;
+    }
+    function copyAddr(){
+      navigator.clipboard.writeText(walletAddress).then(function(){
+        var btn=event.target;btn.textContent='コピーしました';setTimeout(function(){btn.textContent='アドレスをコピー';},2000);
+      });
+    }
+  </script>
+</body>
+</html>
