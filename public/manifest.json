@@ -1,7 +1,7 @@
 {
   "name": "Pay Match",
   "short_name": "Pay Match",
-  "description": "日本円で暗号通貨を簡単購入",
+  "description": "振り込むだけ。暗号通貨が届く。",
   "start_url": "/pay.html",
   "display": "standalone",
   "background_color": "#0c1017",
@@ -9,7 +9,15 @@
   "orientation": "portrait",
   "lang": "ja",
   "icons": [
-    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }

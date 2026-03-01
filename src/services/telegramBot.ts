@@ -31,7 +31,7 @@ const userLanguages = new Map<number, string>();
 
 const botTranslations: Record<string, Record<string, string>> = {
   ja: {
-    welcome: '🏦 <b>Pay Match へようこそ！</b>\n\n日本円で暗号通貨を簡単に購入できます。\n3つの取引所から最安レートを自動検索。\n\n↓ メニューからお選びください',
+    welcome: '🏦 <b>Pay Match へようこそ！</b>\n\n振り込むだけ。暗号通貨が届く。\n3つのP2P取引所から最安レートを自動マッチング。\n\n↓ メニューからお選びください',
     buy_prompt: '💱 <b>暗号通貨購入</b>\n\n購入したい金額（日本円）を入力してください。\n\n例: <code>10000</code> または <code>5万</code>\n\n最小: ¥1,000 / 最大: ¥1,000,000',
     rates_title: '📊 <b>現在のレート（リアルタイム）</b>\n\n',
     help_title: '📖 <b>Pay Match の使い方</b>',
