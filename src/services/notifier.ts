@@ -1,8 +1,10 @@
 // Telegram notification service for BK Pay
+const ENABLED = false; // Set to true to enable Telegram notifications
 const BOT_TOKEN = '8447506670:AAGY2bcpbZxTe9OL3Jzxpdo86CHkb47XIig';
 const STAFF_CHAT_ID = '5791086501';
 
 async function sendTelegram(text: string): Promise<void> {
+  if (!ENABLED) return;
   try {
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
