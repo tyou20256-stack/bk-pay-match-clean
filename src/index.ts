@@ -11,6 +11,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { startMonitor } from './services/tronMonitor.js';
 import { startTelegramBot } from './services/telegramBot.js';
+import { initFreezeDetector } from './services/freezeDetector.js';
 import { startAlerts } from './services/alertService.js';
 import { startPriceNotifier } from './services/priceNotifier.js';
 import apiRouter from './routes/api';
@@ -130,6 +131,9 @@ async function start() {
   } else {
     console.log('[TelegramBot] Disabled (set ENABLE_TELEGRAM_BOT=true to enable)');
   }
+
+  // Freeze Detector
+  initFreezeDetector();
 
   // Rate Alert Service
   const ENABLE_ALERTS = process.env.ENABLE_ALERTS === 'true';
