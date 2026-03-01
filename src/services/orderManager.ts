@@ -1,3 +1,5 @@
+import * as dbSvc from './database.js';
+
 // Order Manager - Handles both Auto-Match (Puppeteer) and Self-Merchant (Account Router) modes
 
 interface Order {
@@ -135,6 +137,7 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
   };
 
   orders.set(id, order);
+  // Will save to DB after matching
 
   // Try auto-match first
   const match = await tryAutoMatch(amount, payMethod, crypto);
@@ -218,15 +221,17 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
     order.merchantCompletionRate = 100;
   }
 
+  dbSvc.saveOrder(order);
   return order;
 }
 
 // Mark order as paid
 export function markPaid(orderId: string): Order | null {
-  const order = orders.get(orderId);
+  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
   if (!order) return null;
   order.status = 'confirming';
   order.paidAt = Date.now();
+  dbSvc.updateOrderStatus(orderId, 'confirming', { paidAt: order.paidAt });
   
   // Simulate confirmation (in prod: check bank API / TronGrid)
   setTimeout(() => {
@@ -234,6 +239,7 @@ export function markPaid(orderId: string): Order | null {
     if (o && o.status === 'confirming') {
       o.status = 'completed';
       o.completedAt = Date.now();
+      dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: o.completedAt });
     }
   }, 5000); // Auto-confirm after 5s for demo
 
@@ -242,20 +248,21 @@ export function markPaid(orderId: string): Order | null {
 
 // Cancel order
 export function cancelOrder(orderId: string): Order | null {
-  const order = orders.get(orderId);
+  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
   if (!order) return null;
   order.status = 'cancelled';
+  dbSvc.updateOrderStatus(orderId, 'cancelled');
   return order;
 }
 
 // Get order
 export function getOrder(orderId: string): Order | null {
-  return orders.get(orderId) || null;
+  return orders.get(orderId) || dbSvc.getOrder(orderId);
 }
 
 // Get all orders
 export function getAllOrders(): Order[] {
-  return Array.from(orders.values()).sort((a, b) => b.createdAt - a.createdAt);
+  return dbSvc.getAllOrders();
 }
 
 // Cleanup expired orders

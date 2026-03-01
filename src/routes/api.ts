@@ -108,3 +108,70 @@ router.post('/trader/credentials', (req, res) => {
   trader.setCredentials({ exchange, email, password, apiKey, apiSecret, totpSecret });
   res.json({ success: true, message: `Credentials set for ${exchange}` });
 });
+
+// === DB-backed APIs ===
+import * as dbSvc from '../services/database.js';
+
+// Bank Accounts
+router.get('/accounts', (req, res) => {
+  res.json({ success: true, accounts: dbSvc.getBankAccounts() });
+});
+router.post('/accounts', (req, res) => {
+  try {
+    const id = dbSvc.addBankAccount(req.body);
+    res.json({ success: true, id });
+  } catch (e: any) { res.json({ success: false, error: e.message }); }
+});
+router.put('/accounts/:id', (req, res) => {
+  dbSvc.updateBankAccount(parseInt(req.params.id), req.body);
+  res.json({ success: true });
+});
+router.delete('/accounts/:id', (req, res) => {
+  dbSvc.deleteBankAccount(parseInt(req.params.id));
+  res.json({ success: true });
+});
+
+// E-Pay
+router.get('/epay', (req, res) => {
+  res.json({ success: true, configs: dbSvc.getAllEpayConfig() });
+});
+router.post('/epay/:type', (req, res) => {
+  dbSvc.saveEpayConfig(req.params.type, req.body);
+  res.json({ success: true });
+});
+
+// Wallet
+router.get('/wallet', (req, res) => {
+  res.json({ success: true, wallet: dbSvc.getWalletConfig() });
+});
+router.post('/wallet', (req, res) => {
+  dbSvc.saveWalletConfig(req.body.address, req.body.label || '');
+  res.json({ success: true });
+});
+
+// Settings
+router.get('/settings', (req, res) => {
+  const keys = ['minCompletion', 'orderTimeout', 'minAmount', 'maxAmount', 'onlineOnly', 'fallbackMode'];
+  const settings: any = {};
+  keys.forEach(k => { settings[k] = dbSvc.getSetting(k); });
+  res.json({ success: true, settings });
+});
+router.post('/settings', (req, res) => {
+  for (const [k, v] of Object.entries(req.body)) {
+    dbSvc.setSetting(k, String(v));
+  }
+  res.json({ success: true });
+});
+
+// Exchange credentials (save to DB)
+router.post('/exchange-creds', (req, res) => {
+  const { exchange, ...data } = req.body;
+  if (!exchange) return res.json({ success: false, error: 'exchange required' });
+  dbSvc.saveExchangeCreds(exchange, data);
+  res.json({ success: true, message: `${exchange} credentials saved` });
+});
+router.get('/exchange-creds', (req, res) => {
+  const exchanges = ['Bybit', 'OKX'];
+  const creds = exchanges.map(ex => dbSvc.getExchangeCreds(ex)).filter(Boolean);
+  res.json({ success: true, credentials: creds });
+});
