@@ -105,6 +105,7 @@
         <button class="nav-btn" onclick="showTab('exchange')">取引所API</button>
         <button class="nav-btn" onclick="showTab('wallet')">ウォレット</button>
         <button class="nav-btn" onclick="showTab('settings')">設定</button>
+        <button class="nav-btn" onclick="showTab('reports')">レポート</button>
       </div>
     </div>
     <div class="admin-right">
@@ -121,6 +122,20 @@
       <div class="sec-header">
         <div><div class="sec-title">注文管理</div><div class="sec-desc">BK Payからの注文一覧</div></div>
         <button class="btn btn-outline" onclick="loadOrders()">更新</button>
+      </div>
+      
+      <!-- Order Search/Filter -->
+      <div class="card" style="padding:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="gap:2px"><label class="form-label">注文ID</label><input class="form-input" id="filterOrderId" placeholder="ORD-..." style="width:140px" oninput="applyFilters()"></div>
+          <div class="form-group" style="gap:2px"><label class="form-label">ステータス</label>
+            <select class="form-select" id="filterStatus" onchange="applyFilters()" style="width:110px"><option value="">全て</option><option value="pending_payment">支払待ち</option><option value="confirming">確認中</option><option value="completed">完了</option><option value="cancelled">キャンセル</option><option value="expired">期限切れ</option></select></div>
+          <div class="form-group" style="gap:2px"><label class="form-label">支払方法</label>
+            <select class="form-select" id="filterMethod" onchange="applyFilters()" style="width:100px"><option value="">全て</option><option value="bank">銀行</option><option value="paypay">PayPay</option><option value="linepay">LINE Pay</option><option value="aupay">au PAY</option></select></div>
+          <div class="form-group" style="gap:2px"><label class="form-label">開始日</label><input class="form-input" type="date" id="filterFrom" onchange="applyFilters()" style="width:130px"></div>
+          <div class="form-group" style="gap:2px"><label class="form-label">終了日</label><input class="form-input" type="date" id="filterTo" onchange="applyFilters()" style="width:130px"></div>
+          <button class="btn btn-outline" onclick="clearFilters()" style="height:33px">クリア</button>
+        </div>
       </div>
       <div class="stats-grid" id="orderStats">
         <div class="stat-card"><div class="stat-val blue" id="statTotal">0</div><div class="stat-label">全注文</div></div>
@@ -140,7 +155,7 @@
     <div class="tab-panel" id="tab-accounts">
       <div class="sec-header">
         <div><div class="sec-title">銀行口座管理</div><div class="sec-desc">自社決済フォールバック用の口座</div></div>
-        <button class="btn btn-green" onclick="showAddAccount()">+ 口座を追加</button>
+        <div style="display:flex;gap:6px"><button class="btn btn-green" onclick="showAddAccount()">+ 口座を追加</button><button class="btn btn-outline" onclick="showBulkImport()">CSV一括登録</button></div>
       </div>
       <!-- Add form -->
       <div class="card" id="addAccountForm" style="display:none">
@@ -166,6 +181,20 @@
           <button class="btn btn-green" onclick="saveAccount()">保存</button>
           <button class="btn btn-outline" onclick="hideAddAccount()">キャンセル</button>
         </div>
+      </div>
+
+      <div class="card" id="bulkImportForm" style="display:none">
+        <div class="card-title">CSV一括登録</div>
+        <div class="form-group full">
+          <label class="form-label">CSVデータ（1行1口座: 銀行名,支店名,口座種別,口座番号,名義,上限額,優先度）</label>
+          <textarea class="form-input" id="csvData" style="min-height:120px;font-family:monospace;font-size:11px" placeholder="みずほ銀行,渋谷支店,普通,1234567,タナカ タロウ,3000000,high&#10;三井住友銀行,新橋支店,普通,7742190,サトウ ユウキ,2000000,medium"></textarea>
+        </div>
+        <div style="font-size:10px;color:var(--dim);margin:6px 0">優先度: high / medium / low（省略時はmedium）</div>
+        <div class="btn-group">
+          <button class="btn btn-green" onclick="importCsv()">一括登録</button>
+          <button class="btn btn-outline" onclick="hideBulkImport()">キャンセル</button>
+        </div>
+        <div id="csvResult" style="margin-top:8px;font-size:11px;display:none"></div>
       </div>
       <!-- Account list -->
       <div class="card" style="padding:0;overflow-x:auto">
@@ -325,6 +354,37 @@
       </div>
     </div>
 
+    <!-- TAB: Reports -->
+    <div class="tab-panel" id="tab-reports">
+      <div class="sec-header">
+        <div><div class="sec-title">売上レポート</div><div class="sec-desc">注文の集計データ</div></div>
+        <button class="btn btn-outline" onclick="loadReports()">更新</button>
+      </div>
+      <div class="stats-grid" id="reportStats">
+        <div class="stat-card"><div class="stat-val green" id="rpTotal">0</div><div class="stat-label">今日の注文数</div></div>
+        <div class="stat-card"><div class="stat-val green" id="rpCompleted">0</div><div class="stat-label">完了数</div></div>
+        <div class="stat-card"><div class="stat-val blue" id="rpVolume">¥0</div><div class="stat-label">取引額(JPY)</div></div>
+        <div class="stat-card"><div class="stat-val purple" id="rpUsdt">0</div><div class="stat-label">USDT量</div></div>
+      </div>
+      <div class="card" style="padding:0;overflow-x:auto">
+        <table>
+          <thead><tr><th>日付</th><th>注文数</th><th>完了数</th><th>完了率</th><th>取引額(JPY)</th><th>USDT量</th><th>平均レート</th></tr></thead>
+          <tbody id="reportTableBody"><tr><td colspan="7" class="empty-state">読み込み中...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+
+      <div class="card">
+        <div class="card-title">パスワード変更</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">現在のパスワード</label><input class="form-input" type="password" id="pwCurrent"></div>
+          <div class="form-group"><label class="form-label">新しいパスワード</label><input class="form-input" type="password" id="pwNew"></div>
+          <div class="form-group"><label class="form-label">確認（再入力）</label><input class="form-input" type="password" id="pwConfirm"></div>
+        </div>
+        <div class="btn-group"><button class="btn btn-green" onclick="changePassword()">変更</button></div>
+      </div>
+
   </div>
 
   <script>
@@ -341,6 +401,7 @@
       if(t==='orders')loadOrders();
       if(t==='accounts')loadAccounts();
       if(t==='exchange')loadTraderStatus();
+      if(t==='reports')loadReports();
     }
 
     // Orders
@@ -348,28 +409,8 @@
       try{
         var r=await fetch('/api/orders');var d=await r.json();
         if(!d.success)return;
-        var orders=d.orders;
-        document.getElementById('statTotal').textContent=orders.length;
-        document.getElementById('statPending').textContent=orders.filter(function(o){return o.status==='pending_payment';}).length;
-        document.getElementById('statCompleted').textContent=orders.filter(function(o){return o.status==='completed';}).length;
-        document.getElementById('statCancelled').textContent=orders.filter(function(o){return o.status==='cancelled'||o.status==='expired';}).length;
-        var tbody=document.getElementById('orderTableBody');
-        if(!orders.length){tbody.innerHTML='<tr><td colspan="10" class="empty-state">注文がありません</td></tr>';return;}
-        tbody.innerHTML=orders.map(function(o){
-          var sc={'matching':'os-matching','pending_payment':'os-pending','confirming':'os-confirming','completed':'os-completed','cancelled':'os-cancelled','expired':'os-expired'};
-          var sl={'matching':'検索中','pending_payment':'支払待ち','confirming':'確認中','completed':'完了','cancelled':'キャンセル','expired':'期限切れ','paid':'支払済'};
-          var dt=new Date(o.createdAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
-          return'<tr><td style="font-family:monospace;font-size:10px">'+o.id+'</td>'
-            +'<td><span class="badge '+(o.mode==='auto'?'badge-green':'badge-yellow')+'">'+o.mode.toUpperCase()+'</span></td>'
-            +'<td>¥'+o.amount.toLocaleString()+'</td>'
-            +'<td>'+o.cryptoAmount+'</td>'
-            +'<td>¥'+(o.rate||0).toFixed(1)+'</td>'
-            +'<td>'+(o.exchange||'--')+'</td>'
-            +'<td>'+o.payMethod+'</td>'
-            +'<td><span class="order-status '+(sc[o.status]||'')+'">'+(sl[o.status]||o.status)+'</span></td>'
-            +'<td>'+dt+'</td>'
-            +'<td>'+(o.status==='pending_payment'?'<button class="btn btn-green" style="padding:3px 8px;font-size:9px" onclick="confirmOrder(\''+o.id+'\')">承認</button> <button class="btn btn-red" style="padding:3px 8px;font-size:9px" onclick="cancelOrderAdmin(\''+o.id+'\')">却下</button>':'--')+'</td></tr>';
-        }).join('');
+        allOrders=d.orders;
+        applyFilters();
       }catch(e){}
     }
     async function confirmOrder(id){await fetch('/api/orders/'+id+'/paid',{method:'POST'});loadOrders();}
@@ -472,6 +513,112 @@
       var data={minCompletion:document.getElementById('setMinCompletion').value,orderTimeout:document.getElementById('setTimeout').value,minAmount:document.getElementById('setMinAmount').value,maxAmount:document.getElementById('setMaxAmount').value,onlineOnly:document.getElementById('setOnlineOnly').value,fallbackMode:document.getElementById('setFallback').value};
       await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
       alert('設定を保存しました');
+    }
+
+
+    // Order Filters
+    var allOrders = [];
+    function applyFilters(){
+      var fId = document.getElementById('filterOrderId').value.toLowerCase();
+      var fStatus = document.getElementById('filterStatus').value;
+      var fMethod = document.getElementById('filterMethod').value;
+      var fFrom = document.getElementById('filterFrom').value;
+      var fTo = document.getElementById('filterTo').value;
+      var filtered = allOrders.filter(function(o){
+        if(fId && !o.id.toLowerCase().includes(fId)) return false;
+        if(fStatus && o.status !== fStatus) return false;
+        if(fMethod && o.payMethod !== fMethod) return false;
+        if(fFrom && o.createdAt < fFrom) return false;
+        if(fTo && o.createdAt > fTo + 'T23:59:59') return false;
+        return true;
+      });
+      renderOrders(filtered);
+    }
+    function clearFilters(){
+      ['filterOrderId','filterFrom','filterTo'].forEach(function(id){document.getElementById(id).value='';});
+      ['filterStatus','filterMethod'].forEach(function(id){document.getElementById(id).value='';});
+      renderOrders(allOrders);
+    }
+    function renderOrders(orders){
+      document.getElementById('statTotal').textContent=orders.length;
+      document.getElementById('statPending').textContent=orders.filter(function(o){return o.status==='pending_payment';}).length;
+      document.getElementById('statCompleted').textContent=orders.filter(function(o){return o.status==='completed';}).length;
+      document.getElementById('statCancelled').textContent=orders.filter(function(o){return o.status==='cancelled'||o.status==='expired';}).length;
+      var tbody=document.getElementById('orderTableBody');
+      if(!orders.length){tbody.innerHTML='<tr><td colspan="10" class="empty-state">該当する注文がありません</td></tr>';return;}
+      var sc={'matching':'os-matching','pending_payment':'os-pending','confirming':'os-confirming','completed':'os-completed','cancelled':'os-cancelled','expired':'os-expired'};
+      var sl={'matching':'検索中','pending_payment':'支払待ち','confirming':'確認中','completed':'完了','cancelled':'キャンセル','expired':'期限切れ','paid':'支払済'};
+      tbody.innerHTML=orders.map(function(o){
+        var dt=new Date(o.createdAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        return'<tr><td style="font-family:monospace;font-size:10px">'+o.id+'</td>'
+          +'<td><span class="badge '+(o.mode==='auto'?'badge-green':'badge-yellow')+'">'+o.mode.toUpperCase()+'</span></td>'
+          +'<td>¥'+o.amount.toLocaleString()+'</td>'
+          +'<td>'+o.cryptoAmount+'</td>'
+          +'<td>¥'+(o.rate||0).toFixed(1)+'</td>'
+          +'<td>'+(o.exchange||'--')+'</td>'
+          +'<td>'+o.payMethod+'</td>'
+          +'<td><span class="order-status '+(sc[o.status]||'')+'">'+(sl[o.status]||o.status)+'</span></td>'
+          +'<td>'+dt+'</td>'
+          +'<td>'+(o.status==='pending_payment'?'<button class="btn btn-green" style="padding:3px 8px;font-size:9px" onclick="confirmOrder(\''+o.id+'\')">承認</button> <button class="btn btn-red" style="padding:3px 8px;font-size:9px" onclick="cancelOrderAdmin(\''+o.id+'\')">却下</button>':'--')+'</td></tr>';
+      }).join('');
+    }
+
+    // CSV Import
+    function showBulkImport(){document.getElementById('bulkImportForm').style.display='block';}
+    function hideBulkImport(){document.getElementById('bulkImportForm').style.display='none';document.getElementById('csvResult').style.display='none';}
+    async function importCsv(){
+      var csv=document.getElementById('csvData').value.trim();
+      if(!csv){alert('CSVデータを入力してください');return;}
+      var lines=csv.split('\n').filter(function(l){return l.trim();});
+      var accounts=lines.map(function(line){
+        var cols=line.split(',').map(function(c){return c.trim();});
+        return{bankName:cols[0]||'',branchName:cols[1]||'',accountType:cols[2]||'普通',accountNumber:cols[3]||'',accountHolder:cols[4]||'',dailyLimit:parseInt(cols[5])||3000000,priority:cols[6]||'medium'};
+      });
+      try{
+        var r=await fetch('/api/accounts/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(accounts)});
+        var d=await r.json();
+        var el=document.getElementById('csvResult');
+        el.style.display='block';
+        if(d.success){el.innerHTML='<span style="color:var(--green)">'+d.count+'件の口座を登録しました</span>';loadAccounts();}
+        else{el.innerHTML='<span style="color:var(--red)">エラー: '+(d.error||'不明')+'</span>';}
+      }catch(e){alert('通信エラー');}
+    }
+
+    // Reports
+    async function loadReports(){
+      try{
+        var r=await fetch('/api/reports/summary');var d=await r.json();
+        if(!d.success)return;
+        var today=d.today||{};
+        document.getElementById('rpTotal').textContent=today.totalOrders||0;
+        document.getElementById('rpCompleted').textContent=today.completedOrders||0;
+        document.getElementById('rpVolume').textContent='¥'+((today.totalJpy||0)).toLocaleString();
+        document.getElementById('rpUsdt').textContent=(today.totalUsdt||0).toFixed(2);
+        var days=d.days||[];
+        var tbody=document.getElementById('reportTableBody');
+        if(!days.length){tbody.innerHTML='<tr><td colspan="7" class="empty-state">データがありません</td></tr>';return;}
+        tbody.innerHTML=days.map(function(day){
+          var rate=day.completedOrders>0?(day.totalJpy/day.totalUsdt).toFixed(1):'--';
+          var pct=day.totalOrders>0?Math.round(day.completedOrders/day.totalOrders*100)+'%':'--';
+          return'<tr><td>'+day.date+'</td><td>'+day.totalOrders+'</td><td>'+day.completedOrders+'</td><td>'+pct+'</td><td>¥'+(day.totalJpy||0).toLocaleString()+'</td><td>'+(day.totalUsdt||0).toFixed(2)+'</td><td>'+(rate==='--'?'--':'¥'+rate)+'</td></tr>';
+        }).join('');
+      }catch(e){}
+    }
+
+    // Password Change
+    async function changePassword(){
+      var cur=document.getElementById('pwCurrent').value;
+      var nw=document.getElementById('pwNew').value;
+      var cf=document.getElementById('pwConfirm').value;
+      if(!cur||!nw){alert('パスワードを入力してください');return;}
+      if(nw!==cf){alert('新しいパスワードが一致しません');return;}
+      if(nw.length<6){alert('パスワードは6文字以上にしてください');return;}
+      try{
+        var r=await fetch('/api/auth/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword:cur,newPassword:nw})});
+        var d=await r.json();
+        if(d.success){alert('パスワードを変更しました');['pwCurrent','pwNew','pwConfirm'].forEach(function(id){document.getElementById(id).value='';});}
+        else{alert('エラー: '+(d.error||'変更できませんでした'));}
+      }catch(e){alert('通信エラー');}
     }
 
     // Init
