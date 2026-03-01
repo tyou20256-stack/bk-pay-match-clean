@@ -9,6 +9,8 @@ import path from 'path';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { startMonitor } from './services/tronMonitor.js';
+import { startTelegramBot } from './services/telegramBot.js';
+import { startAlerts } from './services/alertService.js';
 import apiRouter from './routes/api';
 import { updateAllCryptos } from './services/aggregator';
 import { CONFIG } from './config';
@@ -116,6 +118,22 @@ async function start() {
 
   // A3: Start USDT deposit monitor
   startMonitor();
+
+  // Telegram Bot
+  const ENABLE_TELEGRAM_BOT = process.env.ENABLE_TELEGRAM_BOT === 'true';
+  if (ENABLE_TELEGRAM_BOT) {
+    try { startTelegramBot(); } catch (e) { console.error('[TelegramBot] Failed to start:', e); }
+  } else {
+    console.log('[TelegramBot] Disabled (set ENABLE_TELEGRAM_BOT=true to enable)');
+  }
+
+  // Rate Alert Service
+  const ENABLE_ALERTS = process.env.ENABLE_ALERTS === 'true';
+  if (ENABLE_ALERTS) {
+    try { startAlerts(); } catch (e) { console.error('[AlertService] Failed to start:', e); }
+  } else {
+    console.log('[AlertService] Disabled (set ENABLE_ALERTS=true to enable)');
+  }
 
   app.listen(CONFIG.port, '0.0.0.0', () => {
     console.log(`\n✅ Dashboard: http://localhost:${CONFIG.port}`);
