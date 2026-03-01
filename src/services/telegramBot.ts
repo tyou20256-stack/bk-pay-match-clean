@@ -25,6 +25,122 @@ interface AlertSetting {
 }
 
 const conversations = new Map<number, ChatState>();
+
+// ━━━━━━━━━━━━━━━━━━ Multi-language Support ━━━━━━━━━━━━━━━━━━
+const userLanguages = new Map<number, string>();
+
+const botTranslations: Record<string, Record<string, string>> = {
+  ja: {
+    welcome: '🏦 <b>BK Pay へようこそ！</b>\n\n日本円で暗号通貨を簡単に購入できます。\n3つの取引所から最安レートを自動検索。\n\n↓ メニューからお選びください',
+    buy_prompt: '💱 <b>暗号通貨購入</b>\n\n購入したい金額（日本円）を入力してください。\n\n例: <code>10000</code> または <code>5万</code>\n\n最小: ¥1,000 / 最大: ¥1,000,000',
+    rates_title: '📊 <b>現在のレート（リアルタイム）</b>\n\n',
+    help_title: '📖 <b>BK Pay の使い方</b>',
+    lang_title: '🌐 <b>言語設定 / Language</b>\n\n現在の言語: 日本語\n\n言語を選択してください:',
+    lang_set: '✅ 言語を日本語に設定しました。',
+    buy_btn: '💰 USDT購入',
+    sell_btn: '💱 暗号通貨売却',
+    rates_btn: '📊 レート確認',
+    status_btn: '🔍 注文確認',
+    history_btn: '📋 注文履歴',
+    calc_btn: '🧮 金額計算',
+    alert_btn: '⏰ アラート設定',
+    notify_btn: '🔔 通知設定',
+    help_btn: '📖 使い方ガイド',
+    open_btn: '🌐 BK Payを開く',
+    mypage_btn: '📊 マイページ',
+  },
+  en: {
+    welcome: '🏦 <b>Welcome to BK Pay!</b>\n\nEasily buy cryptocurrency with Japanese Yen.\nAutomatically finds the best rates from 3 exchanges.\n\n↓ Select from the menu below',
+    buy_prompt: '💱 <b>Buy Cryptocurrency</b>\n\nEnter the amount in JPY you want to spend.\n\nExample: <code>10000</code> or <code>5万</code>\n\nMin: ¥1,000 / Max: ¥1,000,000',
+    rates_title: '📊 <b>Current Rates (Real-time)</b>\n\n',
+    help_title: '📖 <b>How to use BK Pay</b>',
+    lang_title: '🌐 <b>Language Settings</b>\n\nCurrent: English\n\nSelect your language:',
+    lang_set: '✅ Language set to English.',
+    buy_btn: '💰 Buy USDT',
+    sell_btn: '💱 Sell Crypto',
+    rates_btn: '📊 Check Rates',
+    status_btn: '🔍 Order Status',
+    history_btn: '📋 Order History',
+    calc_btn: '🧮 Calculator',
+    alert_btn: '⏰ Price Alerts',
+    notify_btn: '🔔 Notifications',
+    help_btn: '📖 User Guide',
+    open_btn: '🌐 Open BK Pay',
+    mypage_btn: '📊 My Page',
+  },
+  zh: {
+    welcome: '🏦 <b>欢迎使用 BK Pay！</b>\n\n用日元轻松购买加密货币。\n自动从3个交易所搜索最优汇率。\n\n↓ 请从菜单中选择',
+    buy_prompt: '💱 <b>购买加密货币</b>\n\n请输入您想购买的日元金额。\n\n例: <code>10000</code> 或 <code>5万</code>\n\n最低: ¥1,000 / 最高: ¥1,000,000',
+    rates_title: '📊 <b>当前汇率（实时）</b>\n\n',
+    help_title: '📖 <b>BK Pay 使用方法</b>',
+    lang_title: '🌐 <b>语言设置</b>\n\n当前语言: 中文\n\n选择语言:',
+    lang_set: '✅ 语言已设置为中文。',
+    buy_btn: '💰 购买USDT',
+    sell_btn: '💱 出售加密货币',
+    rates_btn: '📊 查看汇率',
+    status_btn: '🔍 订单查询',
+    history_btn: '📋 订单历史',
+    calc_btn: '🧮 金额计算',
+    alert_btn: '⏰ 价格提醒',
+    notify_btn: '🔔 通知设置',
+    help_btn: '📖 使用指南',
+    open_btn: '🌐 打开BK Pay',
+    mypage_btn: '📊 我的页面',
+  },
+  vi: {
+    welcome: '🏦 <b>Chào mừng đến BK Pay!</b>\n\nMua tiền mã hóa dễ dàng bằng Yên Nhật.\nTự động tìm tỷ giá tốt nhất từ 3 sàn giao dịch.\n\n↓ Chọn từ menu bên dưới',
+    buy_prompt: '💱 <b>Mua tiền mã hóa</b>\n\nNhập số tiền JPY bạn muốn chi.\n\nVí dụ: <code>10000</code> hoặc <code>5万</code>\n\nTối thiểu: ¥1,000 / Tối đa: ¥1,000,000',
+    rates_title: '📊 <b>Tỷ giá hiện tại (Thời gian thực)</b>\n\n',
+    help_title: '📖 <b>Cách sử dụng BK Pay</b>',
+    lang_title: '🌐 <b>Cài đặt ngôn ngữ</b>\n\nHiện tại: Tiếng Việt\n\nChọn ngôn ngữ:',
+    lang_set: '✅ Đã đặt ngôn ngữ thành Tiếng Việt.',
+    buy_btn: '💰 Mua USDT',
+    sell_btn: '💱 Bán Crypto',
+    rates_btn: '📊 Xem tỷ giá',
+    status_btn: '🔍 Tra cứu đơn',
+    history_btn: '📋 Lịch sử đơn',
+    calc_btn: '🧮 Tính toán',
+    alert_btn: '⏰ Cảnh báo giá',
+    notify_btn: '🔔 Thông báo',
+    help_btn: '📖 Hướng dẫn',
+    open_btn: '🌐 Mở BK Pay',
+    mypage_btn: '📊 Trang cá nhân',
+  },
+};
+
+function getBotLang(chatId: number): string {
+  return userLanguages.get(chatId) || 'ja';
+}
+
+function bt(chatId: number, key: string): string {
+  const lang = getBotLang(chatId);
+  return botTranslations[lang]?.[key] || botTranslations['ja']?.[key] || key;
+}
+
+async function handleLang(chatId: number) {
+  const lang = getBotLang(chatId);
+  const titles: Record<string, string> = {
+    ja: '🌐 <b>言語設定 / Language</b>\n\n現在: 日本語',
+    en: '🌐 <b>Language Settings</b>\n\nCurrent: English',
+    zh: '🌐 <b>语言设置</b>\n\n当前: 中文',
+    vi: '🌐 <b>Cài đặt ngôn ngữ</b>\n\nHiện tại: Tiếng Việt',
+  };
+  await sendMessage(chatId, titles[lang] || titles['ja'], {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '🇯🇵 日本語', callback_data: 'lang_ja' },
+          { text: '🇬🇧 English', callback_data: 'lang_en' },
+        ],
+        [
+          { text: '🇨🇳 中文', callback_data: 'lang_zh' },
+          { text: '🇻🇳 Tiếng Việt', callback_data: 'lang_vi' },
+        ],
+      ],
+    },
+  });
+}
+
 const userAlerts = new Map<number, AlertSetting>();
 let updateOffset = 0;
 let running = false;
@@ -89,35 +205,32 @@ async function handleStart(chatId: number) {
   getNotificationPreferences(chatId);
   await sendMessage(chatId,
     `━━━━━━━━━━━━━━\n` +
-    `🏦 <b>BK Pay へようこそ！</b>\n\n` +
-    `日本円で暗号通貨を簡単に購入できます。\n` +
-    `3つの取引所から最安レートを自動検索。\n\n` +
-    `↓ メニューからお選びください\n` +
-    `━━━━━━━━━━━━━━`,
+    bt(chatId, 'welcome') +
+    `\n━━━━━━━━━━━━━━`,
     {
       reply_markup: {
         inline_keyboard: [
           [
             { text: '💰 USDT購入', callback_data: 'cb_buy' },
-            { text: '💱 暗号通貨売却', callback_data: 'cb_sell' },
+            { text: bt(chatId, 'sell_btn'), callback_data: 'cb_sell' },
           ],
           [
-            { text: '📊 レート確認', callback_data: 'cb_rates' },
+            { text: bt(chatId, 'rates_btn'), callback_data: 'cb_rates' },
           ],
           [
-            { text: '🔍 注文確認', callback_data: 'cb_status' },
-            { text: '📋 注文履歴', callback_data: 'cb_history' },
+            { text: bt(chatId, 'status_btn'), callback_data: 'cb_status' },
+            { text: bt(chatId, 'history_btn'), callback_data: 'cb_history' },
           ],
           [
-            { text: '🧮 金額計算', callback_data: 'cb_calc' },
-            { text: '⏰ アラート設定', callback_data: 'cb_alert' },
+            { text: bt(chatId, 'calc_btn'), callback_data: 'cb_calc' },
+            { text: bt(chatId, 'alert_btn'), callback_data: 'cb_alert' },
           ],
           [
-            { text: '🔔 通知設定', callback_data: 'cb_notify' },
-            { text: '📖 使い方ガイド', callback_data: 'cb_help' },
+            { text: bt(chatId, 'notify_btn'), callback_data: 'cb_notify' },
+            { text: bt(chatId, 'help_btn'), callback_data: 'cb_help' },
           ],
-          [{ text: '🌐 BK Payを開く', web_app: { url: MINIAPP_URL } }],
-          [{ text: '📊 マイページ', web_app: { url: MYPAGE_URL } }],
+          [{ text: bt(chatId, 'open_btn'), web_app: { url: MINIAPP_URL } }],
+          [{ text: bt(chatId, 'mypage_btn'), web_app: { url: MYPAGE_URL } }],
         ],
       },
     }
@@ -877,6 +990,7 @@ async function processUpdate(update: any) {
     if (data === 'cb_calc') return handleCalc(chatId);
     if (data === 'cb_alert') return handleAlert(chatId);
     if (data === 'cb_notify') return handleNotify(chatId);
+    if (data.startsWith('lang_')) { const lang = data.slice(5); userLanguages.set(chatId, lang); const msgs: Record<string,string> = { ja: '✅ 日本語に設定しました', en: '✅ Language set to English', zh: '✅ 语言已设置为中文', vi: '✅ Đã đặt ngôn ngữ Tiếng Việt' }; await sendMessage(chatId, msgs[lang] || msgs['ja']); return handleStart(chatId); }
     if (data === 'cb_help') return handleHelp(chatId);
     if (data === 'cb_referral') return handleReferral(chatId);
     if (data === 'cb_mypage') return handleMypage(chatId);
@@ -1007,6 +1121,7 @@ async function processUpdate(update: any) {
   }
 
   if (text === '/notify') return handleNotify(chatId);
+  if (text === '/lang') return handleLang(chatId);
   if (text === '/support') return handleSupport(chatId);
 
   if (text === '/referral') return handleReferral(chatId);
