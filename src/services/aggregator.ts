@@ -1,7 +1,7 @@
 import { BybitFetcher } from '../fetchers/bybit';
 import { BinanceFetcher } from '../fetchers/binance';
 import { OKXFetcher } from '../fetchers/okx';
-import { HTXFetcher } from '../fetchers/htx';
+// import { HTXFetcher } from '../fetchers/htx'; // Disabled: currency=11 is RUB not JPY
 import { getAllSpotPrices } from './spot';
 import { processArbitrage } from './arbitrage';
 import { CONFIG } from '../config';
@@ -11,7 +11,7 @@ const fetchers: FetcherInterface[] = [
   new BybitFetcher(),
   new BinanceFetcher(),
   new OKXFetcher(),
-  new HTXFetcher(),
+  // new HTXFetcher(), // Disabled: no JPY market on HTX
 ];
 
 let cachedRates: Map<string, AggregatedRates> = new Map();
