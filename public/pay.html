@@ -402,7 +402,7 @@
       document.getElementById('matchingScreen').style.display='none';
       document.getElementById('fallbackScreen').style.display='block';
     }
-    function useFallback(){currentOrder={id:'SELF',mode:'self',status:'pending_payment',amount:amount,crypto:'USDT',cryptoAmount:0,rate:0,payMethod:payMethod,exchange:'BK Pay（自社決済）',merchantName:'BK Stock',merchantCompletionRate:100,paymentInfo:null,createdAt:Date.now(),expiresAt:Date.now()+900000};fetchPreview().then(function(){showPaymentFromOrder();});}};showPayment();}
+    function useFallback(){currentOrder={id:'SELF',mode:'self',status:'pending_payment',amount:amount,crypto:'USDT',cryptoAmount:0,rate:0,payMethod:payMethod,exchange:'BK Pay（自社決済）',merchantName:'BK Stock',merchantCompletionRate:100,paymentInfo:null,createdAt:Date.now(),expiresAt:Date.now()+900000};fetchPreview().then(function(){showPaymentFromOrder();});}
 
     // Step 3: Payment
     
