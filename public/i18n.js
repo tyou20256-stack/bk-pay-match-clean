@@ -1,8 +1,8 @@
 const I18N = {
   ja: {
     subtitle: 'P2P取引所 横断レート監視', refresh: '更新',
-    best_buy_label: '一番安く買える', best_sell_label: '一番高く売れる',
-    spread_label: '差額', arb_btn: 'アービトラージ',
+    best_buy_label: '購入 平均価格', best_sell_label: '売却 平均価格',
+    spread_label: '平均スプレッド', arb_btn: 'アービトラージ',
     filter_btn: 'フィルター', f_payment: '決済方法', f_exchange: '取引所',
     f_amount: '取引金額', f_completion: '完了率', f_stock: '最低在庫', f_status: '状態',
     all: '全て', online_only: 'オンラインのみ', reset: 'リセット',
@@ -24,7 +24,7 @@ const I18N = {
   },
   en: {
     subtitle: 'P2P Cross-Exchange Rate Monitor', refresh: 'Refresh',
-    best_buy_label: 'Best Price to Buy', best_sell_label: 'Best Price to Sell',
+    best_buy_label: 'Avg Buy Price', best_sell_label: 'Avg Sell Price',
     spread_label: 'Spread', arb_btn: 'Arbitrage',
     filter_btn: 'Filters', f_payment: 'Payment', f_exchange: 'Exchange',
     f_amount: 'Amount', f_completion: 'Completion', f_stock: 'Min. Stock', f_status: 'Status',

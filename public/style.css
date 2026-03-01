@@ -41,8 +41,6 @@ header{display:flex;justify-content:space-between;align-items:center;padding:10p
 
 /* Hero Section */
 
-.hero-card{padding:24px 28px;border-radius:var(--radius);text-align:center;transition:transform .2s}
-.hero-card:hover{transform:translateY(-2px)}
 .buy-card{background:var(--green-soft);border:1px solid var(--green-border)}
 .sell-card{background:var(--red-soft);border:1px solid var(--red-border)}
 .hero-label{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;letter-spacing:.3px}
@@ -220,8 +218,6 @@ footer{text-align:center;padding:14px;color:var(--dim);font-size:10px;border-top
   .spot-badge{font-size:9px;padding:3px 6px}
   .auto-update{font-size:9px;gap:3px;padding:3px 6px}
   .crypto-btn{padding:5px 14px;font-size:11px}
-  .hero-card{padding:16px}
-  .hero-price{font-size:22px}
   .hero-label{font-size:10px}
   .exchange-compare{grid-template-columns:1fr 1fr}
   .ex-card{padding:10px}
@@ -245,8 +241,6 @@ footer{text-align:center;padding:14px;color:var(--dim);font-size:10px;border-top
   header{padding:8px 10px}
   .header-left h1{font-size:13px}
   .header-right{flex-wrap:wrap}
-  .hero-card{padding:12px}
-  .hero-price{font-size:20px}
   .hero-divider{padding:8px 0}
   .exchange-compare{grid-template-columns:1fr;gap:8px;padding:0 10px}
   .filter-bar{padding:8px 10px}
@@ -284,7 +278,6 @@ footer{text-align:center;padding:14px;color:var(--dim);font-size:10px;border-top
   .filter-input{width:80px;padding:4px 6px;font-size:10px}
   .filter-select{padding:4px 4px;font-size:10px}
   .filter-reset-btn{padding:4px 10px;font-size:9px}
-  .hero-card{padding:10px}
   .hero-price{font-size:18px}
   .hero-label{font-size:9px}
   .hero-sub{font-size:10px}
@@ -352,8 +345,6 @@ footer{text-align:center;padding:14px;color:var(--dim);font-size:10px;border-top
 .sell-vol .hero-vol-val{color:var(--red)}
 @media(max-width:768px){
   .hero{grid-template-columns:1fr auto 1fr;padding:12px}
-  .hero-card{padding:12px}
-  .hero-price{font-size:20px}
   .hero-divider{padding:0 10px}
   .hero-volume-bar{gap:6px}
   .hero-vol-item{padding:6px 12px}
