@@ -141,7 +141,7 @@
       <div class="section-desc">日本円で入金したい金額を入力してください</div>
       <div class="amount-input-wrap">
         <span class="amount-prefix">¥</span>
-        <input type="number" class="amount-input" id="inAmount" placeholder="10,000" oninput="onAmountChange()">
+        <input type="tel" class="amount-input" id="inAmount" placeholder="10000" inputmode="numeric" pattern="[0-9]*" oninput="onAmountChange()">
       </div>
       <div class="quick-amounts">
         <button class="quick-btn" onclick="setAmt(5000,this)">¥5,000</button>
