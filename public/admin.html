@@ -376,33 +376,41 @@
     async function cancelOrderAdmin(id){await fetch('/api/orders/'+id+'/cancel',{method:'POST'});loadOrders();}
 
     // Accounts
-    var accounts=JSON.parse(localStorage.getItem('bkpay_accounts')||'[]');
     function showAddAccount(){document.getElementById('addAccountForm').style.display='block';}
     function hideAddAccount(){document.getElementById('addAccountForm').style.display='none';}
-    function saveAccount(){
-      var acc={id:Date.now(),bank:document.getElementById('accBank').value,branch:document.getElementById('accBranch').value,type:document.getElementById('accType').value,number:document.getElementById('accNumber').value,holder:document.getElementById('accHolder').value,limit:parseInt(document.getElementById('accLimit').value)||3000000,priority:document.getElementById('accPriority').value,status:document.getElementById('accStatus').value,memo:document.getElementById('accMemo').value,usedToday:0};
-      if(!acc.bank||!acc.number||!acc.holder){alert('銀行名、口座番号、名義は必須です');return;}
-      accounts.push(acc);localStorage.setItem('bkpay_accounts',JSON.stringify(accounts));
+    async function saveAccount(){
+      var acc={bankName:document.getElementById('accBank').value,branchName:document.getElementById('accBranch').value,accountType:document.getElementById('accType').value,accountNumber:document.getElementById('accNumber').value,accountHolder:document.getElementById('accHolder').value,dailyLimit:parseInt(document.getElementById('accLimit').value)||3000000,priority:document.getElementById('accPriority').value,status:document.getElementById('accStatus').value,memo:document.getElementById('accMemo').value};
+      if(!acc.bankName||!acc.accountNumber||!acc.accountHolder){alert('銀行名、口座番号、名義は必須です');return;}
+      await fetch('/api/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(acc)});
       hideAddAccount();loadAccounts();
       ['accBank','accBranch','accNumber','accHolder','accMemo'].forEach(function(id){document.getElementById(id).value='';});
     }
-    function deleteAccount(id){accounts=accounts.filter(function(a){return a.id!==id;});localStorage.setItem('bkpay_accounts',JSON.stringify(accounts));loadAccounts();}
-    function toggleAccountStatus(id){var a=accounts.find(function(a){return a.id===id;});if(a){a.status=a.status==='active'?'rest':'active';localStorage.setItem('bkpay_accounts',JSON.stringify(accounts));loadAccounts();}}
-    function loadAccounts(){
-      var tbody=document.getElementById('accountTableBody');
-      if(!accounts.length){tbody.innerHTML='<tr><td colspan="9" class="empty-state">口座が登録されていません</td></tr>';return;}
-      tbody.innerHTML=accounts.map(function(a){
-        var sc=a.status==='active'?'on':a.status==='rest'?'rest':'off';
-        var sl=a.status==='active'?'稼働中':a.status==='rest'?'休止中':'凍結';
-        return'<tr><td><span class="status-dot '+sc+'"></span>'+sl+'</td>'
-          +'<td>'+a.bank+'</td><td>'+a.branch+'</td>'
-          +'<td style="font-family:monospace;letter-spacing:1px">'+a.number+'</td>'
-          +'<td>'+a.holder+'</td>'
-          +'<td>¥'+(a.limit||0).toLocaleString()+'</td>'
-          +'<td>¥'+(a.usedToday||0).toLocaleString()+'</td>'
-          +'<td>'+a.priority+'</td>'
-          +'<td><button class="btn btn-outline" style="padding:2px 8px;font-size:9px" onclick="toggleAccountStatus('+a.id+')">'+(a.status==='active'?'休止':'稼働')+'</button> <button class="btn btn-red" style="padding:2px 8px;font-size:9px" onclick="deleteAccount('+a.id+')">削除</button></td></tr>';
-      }).join('');
+    async function deleteAccount(id){await fetch('/api/accounts/'+id,{method:'DELETE'});loadAccounts();}
+    async function toggleAccountStatus(id,current){
+      var newStatus=current==='active'?'rest':'active';
+      await fetch('/api/accounts/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:newStatus})});
+      loadAccounts();
+    }
+    async function loadAccounts(){
+      try{
+        var r=await fetch('/api/accounts');var d=await r.json();
+        if(!d.success)return;
+        var accounts=d.accounts;
+        var tbody=document.getElementById('accountTableBody');
+        if(!accounts.length){tbody.innerHTML='<tr><td colspan="9" class="empty-state">口座が登録されていません</td></tr>';return;}
+        tbody.innerHTML=accounts.map(function(a){
+          var sc=a.status==='active'?'on':a.status==='rest'?'rest':'off';
+          var sl=a.status==='active'?'稼働中':a.status==='rest'?'休止中':'凍結';
+          return'<tr><td><span class="status-dot '+sc+'"></span>'+sl+'</td>'
+            +'<td>'+(a.bank_name||'')+'</td><td>'+(a.branch_name||'')+'</td>'
+            +'<td style="font-family:monospace;letter-spacing:1px">'+(a.account_number||'')+'</td>'
+            +'<td>'+(a.account_holder||'')+'</td>'
+            +'<td>¥'+(a.daily_limit||0).toLocaleString()+'</td>'
+            +'<td>¥'+(a.used_today||0).toLocaleString()+'</td>'
+            +'<td>'+(a.priority||'')+'</td>'
+            +'<td><button class="btn btn-outline" style="padding:2px 8px;font-size:9px" onclick="toggleAccountStatus('+a.id+',\''+a.status+'\')">'+(a.status==='active'?'休止':'稼働')+'</button> <button class="btn btn-red" style="padding:2px 8px;font-size:9px" onclick="deleteAccount('+a.id+')">削除</button></td></tr>';
+        }).join('');
+      }catch(e){}
     }
 
     // E-pay
@@ -416,12 +424,12 @@
       };
       reader.readAsDataURL(file);
     }
-    function saveEpay(type){
+    async function saveEpay(type){
       var data={};
-      if(type==='paypay'){data={id:document.getElementById('paypayId').value,name:document.getElementById('paypayName').value};}
-      if(type==='linepay'){data={id:document.getElementById('linepayId').value,url:document.getElementById('linepayUrl').value};}
-      if(type==='aupay'){data={id:document.getElementById('aupayId').value,name:document.getElementById('aupayName').value};}
-      localStorage.setItem('bkpay_epay_'+type,JSON.stringify(data));
+      if(type==='paypay'){data={payId:document.getElementById('paypayId').value,displayName:document.getElementById('paypayName').value,qrImage:localStorage.getItem('bkpay_qr_paypay')||''};}
+      if(type==='linepay'){data={payId:document.getElementById('linepayId').value,linkUrl:document.getElementById('linepayUrl').value,qrImage:localStorage.getItem('bkpay_qr_linepay')||''};}
+      if(type==='aupay'){data={payId:document.getElementById('aupayId').value,displayName:document.getElementById('aupayName').value,qrImage:localStorage.getItem('bkpay_qr_aupay')||''};}
+      await fetch('/api/epay/'+type,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
       alert(type+' の設定を保存しました');
     }
 
@@ -433,6 +441,7 @@
       if(document.getElementById(prefix+'ApiSecret'))body.apiSecret=document.getElementById(prefix+'ApiSecret').value;
       if(document.getElementById(prefix+'Totp'))body.totpSecret=document.getElementById(prefix+'Totp').value;
       if(document.getElementById(prefix+'Passphrase'))body.passphrase=document.getElementById(prefix+'Passphrase').value;
+      await fetch('/api/exchange-creds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       var r=await fetch('/api/trader/credentials',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       var d=await r.json();
       if(d.success){document.getElementById(prefix+'Status').className='badge badge-green';document.getElementById(prefix+'Status').textContent='設定済み';}
@@ -451,15 +460,19 @@
     }
 
     // Wallet
-    function saveWallet(){
+    async function saveWallet(){
       var addr=document.getElementById('walletAddr').value;
       var label=document.getElementById('walletLabel').value;
-      localStorage.setItem('bkpay_wallet',JSON.stringify({address:addr,label:label}));
+      await fetch('/api/wallet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:addr,label:label})});
       alert('ウォレットアドレスを保存しました');
     }
 
     // Settings
-    function saveSettings(){alert('設定を保存しました');}
+    async function saveSettings(){
+      var data={minCompletion:document.getElementById('setMinCompletion').value,orderTimeout:document.getElementById('setTimeout').value,minAmount:document.getElementById('setMinAmount').value,maxAmount:document.getElementById('setMaxAmount').value,onlineOnly:document.getElementById('setOnlineOnly').value,fallbackMode:document.getElementById('setFallback').value};
+      await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      alert('設定を保存しました');
+    }
 
     // Init
     loadOrders();

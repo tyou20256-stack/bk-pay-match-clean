@@ -1,3 +1,4 @@
+import notifier from './notifier.js';
 import * as dbSvc from './database.js';
 
 // Order Manager - Handles both Auto-Match (Puppeteer) and Self-Merchant (Account Router) modes
@@ -70,15 +71,19 @@ async function getAccountFromRouter(amount: number, payMethod: string): Promise<
     // Account Router not available, use fallback
   }
 
-  // Fallback accounts when Router is unavailable
-  const fallbacks = [
-    { id: 'fb1', bankName: 'みずほ銀行', branchName: '渋谷支店', accountType: '普通', accountNumber: '3058271', accountHolder: 'タナカ タロウ' },
-    { id: 'fb2', bankName: '三井住友銀行', branchName: '新橋支店', accountType: '普通', accountNumber: '7742190', accountHolder: 'サトウ ユウキ' },
-    { id: 'fb3', bankName: '楽天銀行', branchName: '第一営業支店', accountType: '普通', accountNumber: '4491823', accountHolder: 'ヤマモト ケンジ' },
-    { id: 'fb4', bankName: '住信SBIネット銀行', branchName: '法人第一支店', accountType: '普通', accountNumber: '2287654', accountHolder: 'スズキ アヤカ' },
-  ];
-  const acc = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-  return { success: true, account: acc };
+  // Fallback: use DB accounts directly
+  const dbAcc = dbSvc.getRoutableAccount(amount);
+  if (dbAcc) {
+    return { success: true, account: {
+      id: String(dbAcc.id),
+      bankName: dbAcc.bank_name,
+      branchName: dbAcc.branch_name,
+      accountType: dbAcc.account_type,
+      accountNumber: dbAcc.account_number,
+      accountHolder: dbAcc.account_holder
+    }};
+  }
+  return { success: false, error: 'No available accounts' };
 }
 
 // Try auto-match via P2P exchanges
@@ -155,14 +160,14 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
     // For auto mode, payment info comes from exchange (simulated for now)
     // In production: Puppeteer creates order on exchange and retrieves merchant's payment info
     if (payMethod === 'bank') {
-      // Simulate merchant's bank info (in prod: scraped from exchange after order creation)
-      const mBanks = [
-        { bankName: 'みずほ銀行', branchName: '渋谷支店', accountType: '普通', accountNumber: '3058271', accountHolder: 'タナカ タロウ' },
-        { bankName: '三井住友銀行', branchName: '新橋支店', accountType: '普通', accountNumber: '7742190', accountHolder: 'サトウ ユウキ' },
-        { bankName: '楽天銀行', branchName: '第一営業支店', accountType: '普通', accountNumber: '4491823', accountHolder: 'ヤマモト ケンジ' },
-      ];
-      const mb = mBanks[Math.floor(Math.random() * mBanks.length)];
-      order.paymentInfo = { type: 'bank', ...mb, amount };
+      // Auto mode: payment info comes from exchange via Puppeteer (not yet active)
+      // For now, use DB account as placeholder
+      const autoAcc = dbSvc.getRoutableAccount(amount);
+      if (autoAcc) {
+        order.paymentInfo = { type: 'bank', bankName: autoAcc.bank_name, branchName: autoAcc.branch_name, accountType: autoAcc.account_type, accountNumber: autoAcc.account_number, accountHolder: autoAcc.account_holder, amount };
+      } else {
+        order.paymentInfo = { type: 'bank', bankName: '（口座未登録）', branchName: '-', accountType: '-', accountNumber: '-', accountHolder: '-', amount };
+      }
     } else {
       const payIds: Record<string, string> = { paypay: 'tanaka-t-2891', linepay: 'sato_yuki_88', aupay: 'yamamoto-k' };
       order.paymentInfo = { type: payMethod as any, payId: payIds[payMethod] || 'merchant-id', amount };
@@ -222,6 +227,7 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
   }
 
   dbSvc.saveOrder(order);
+  notifier.notifyNewOrder(order);
   return order;
 }
 
@@ -232,6 +238,7 @@ export function markPaid(orderId: string): Order | null {
   order.status = 'confirming';
   order.paidAt = Date.now();
   dbSvc.updateOrderStatus(orderId, 'confirming', { paidAt: order.paidAt });
+  notifier.notifyPaid(order);
   
   // Simulate confirmation (in prod: check bank API / TronGrid)
   setTimeout(() => {
@@ -240,6 +247,7 @@ export function markPaid(orderId: string): Order | null {
       o.status = 'completed';
       o.completedAt = Date.now();
       dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: o.completedAt });
+      notifier.notifyCompleted(o);
     }
   }, 5000); // Auto-confirm after 5s for demo
 
@@ -252,6 +260,7 @@ export function cancelOrder(orderId: string): Order | null {
   if (!order) return null;
   order.status = 'cancelled';
   dbSvc.updateOrderStatus(orderId, 'cancelled');
+  notifier.notifyCancelled(order);
   return order;
 }
 
@@ -271,6 +280,8 @@ setInterval(() => {
   orders.forEach((order, id) => {
     if (order.status === 'pending_payment' && now > order.expiresAt) {
       order.status = 'expired';
+      dbSvc.updateOrderStatus(id, 'expired');
+      notifier.notifyExpired(order);
     }
   });
 }, 10000);

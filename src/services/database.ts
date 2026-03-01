@@ -289,4 +289,14 @@ setInterval(() => {
   db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now());
 }, 60 * 60 * 1000);
 
+
+export function changePassword(token: string, currentPassword: string, newPassword: string): boolean {
+  const session = db.prepare('SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?').get(token, Date.now()) as any;
+  if (!session) return false;
+  const user = db.prepare('SELECT id, password_hash FROM admin_users WHERE id = ?').get(session.user_id) as any;
+  if (!user || user.password_hash !== hashPassword(currentPassword)) return false;
+  db.prepare('UPDATE admin_users SET password_hash = ? WHERE id = ?').run(hashPassword(newPassword), user.id);
+  return true;
+}
+
 export default db;

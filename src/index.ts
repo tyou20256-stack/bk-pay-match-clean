@@ -1,18 +1,25 @@
 import express from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
+import { startMonitor } from './services/tronMonitor.js';
 import apiRouter from './routes/api';
 import { updateAllCryptos } from './services/aggregator';
 import { CONFIG } from './config';
 import { authRequired } from './middleware/auth';
-import { authenticateUser, deleteSession, validateSession } from './services/database';
+import { authenticateUser, deleteSession, validateSession, changePassword } from './services/database';
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 
+// A5: Rate limiting
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { success: false, error: 'Too many login attempts. Try again later.' } });
+const orderLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { success: false, error: 'Too many requests. Please wait.' } });
+
+
 // Auth routes (no auth required)
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
   const result = authenticateUser(username, password);
   if (!result) return res.json({ success: false, error: 'Invalid credentials' });
@@ -25,6 +32,19 @@ app.post('/api/auth/logout', (req, res) => {
   if (token) deleteSession(token);
   res.clearCookie('bkpay_token');
   res.json({ success: true });
+});
+
+// A4: Password change
+app.post('/api/auth/change-password', (req, res) => {
+  const token = req.cookies?.bkpay_token;
+  if (!token || !validateSession(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.json({ success: false, error: 'Both passwords required' });
+  if (newPassword.length < 6) return res.json({ success: false, error: 'Password must be at least 6 characters' });
+  // Get user from session
+  const changed = changePassword(token, currentPassword, newPassword);
+  if (!changed) return res.json({ success: false, error: 'Current password incorrect' });
+  res.json({ success: true, message: 'Password changed successfully' });
 });
 
 app.get('/api/auth/check', (req, res) => {
@@ -60,6 +80,7 @@ app.use('/api/wallet', authRequired);
 app.use('/api/settings', authRequired);
 
 // Public API routes (rates, pay orders)
+app.use('/api/orders', orderLimiter);
 app.use('/api', apiRouter);
 
 app.get('/', (_req, res) => {
@@ -79,6 +100,9 @@ async function start() {
   setInterval(() => {
     updateAllCryptos().catch(err => console.error('Update error:', err.message));
   }, CONFIG.updateIntervalMs);
+
+  // A3: Start USDT deposit monitor
+  startMonitor();
 
   app.listen(CONFIG.port, '0.0.0.0', () => {
     console.log(`\n✅ Dashboard: http://localhost:${CONFIG.port}`);
