@@ -30,7 +30,7 @@
       <div class="spot-badge" id="spotPrices"></div>
       <div class="auto-update"><span class="status-dot"></span><span id="countdown">30</span>s</div>
       <button class="icon-btn" onclick="refresh()" id="refreshBtn" title="更新">&#x21bb;</button>
-      <button class="icon-btn" onclick="toggleLang()" id="langToggle">EN</button>
+      <div class="lang-selector" style="display:inline-flex;gap:2px"><button class="lang-btn active" data-lang="ja" onclick="setLanguage('ja')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">JP</button><button class="lang-btn" data-lang="en" onclick="setLanguage('en')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">EN</button><button class="lang-btn" data-lang="zh" onclick="setLanguage('zh')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">中</button><button class="lang-btn" data-lang="vi" onclick="setLanguage('vi')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">VI</button></div>
       <a href="/chart.html" class="icon-btn" title="チャート" style="text-decoration:none;font-size:11px">Chart</a><a href="/guide.html" class="icon-btn" title="ガイド" style="text-decoration:none;font-size:11px">Guide</a><button class="icon-btn" onclick="toggleTheme()" id="themeToggle">&#x263E;</button>
     </div>
   </header>

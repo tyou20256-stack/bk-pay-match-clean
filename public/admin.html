@@ -304,25 +304,32 @@
           <div class="form-group"><label class="form-label">API Secret（任意）</label><input class="form-input" id="bybitApiSecret" type="password" placeholder="API Secret"></div>
           <div class="form-group"><label class="form-label">2FA TOTP Secret（任意）</label><input class="form-input" id="bybitTotp" placeholder="Base32 secret"></div>
         </div>
-        <div class="btn-group"><button class="btn btn-green" onclick="saveExchange('Bybit')">保存</button><button class="btn btn-outline" onclick="testExchange('Bybit')">接続テスト</button></div>
+        <div class="btn-group"><button class="btn btn-green" onclick="saveExchange('Bybit')">保存</button><button class="btn btn-outline" onclick="traderLogin('Bybit')">ログイン</button></div>
       </div>
 
       <div class="card">
-        <div class="card-title">OKX <span class="badge badge-yellow" id="okxStatus">未設定</span></div>
+        <div class="card-title">Binance <span class="badge badge-yellow" id="binanceStatus">未設定</span></div>
         <div class="form-grid">
-          <div class="form-group"><label class="form-label">メールアドレス</label><input class="form-input" id="okxEmail" type="email" placeholder="example@email.com"></div>
-          <div class="form-group"><label class="form-label">パスワード</label><input class="form-input" id="okxPass" type="password" placeholder="********"></div>
-          <div class="form-group"><label class="form-label">API Key（任意）</label><input class="form-input" id="okxApiKey" placeholder="API Key"></div>
-          <div class="form-group"><label class="form-label">API Secret（任意）</label><input class="form-input" id="okxApiSecret" type="password" placeholder="API Secret"></div>
-          <div class="form-group"><label class="form-label">Passphrase（任意）</label><input class="form-input" id="okxPassphrase" type="password" placeholder="Passphrase"></div>
-          <div class="form-group"><label class="form-label">2FA TOTP Secret（任意）</label><input class="form-input" id="okxTotp" placeholder="Base32 secret"></div>
+          <div class="form-group"><label class="form-label">メールアドレス</label><input class="form-input" id="binanceEmail" type="email" placeholder="example@email.com"></div>
+          <div class="form-group"><label class="form-label">パスワード</label><input class="form-input" id="binancePass" type="password" placeholder="********"></div>
+          <div class="form-group"><label class="form-label">API Key（任意）</label><input class="form-input" id="binanceApiKey" placeholder="API Key"></div>
+          <div class="form-group"><label class="form-label">API Secret（任意）</label><input class="form-input" id="binanceApiSecret" type="password" placeholder="API Secret"></div>
+          <div class="form-group"><label class="form-label">2FA TOTP Secret（任意）</label><input class="form-input" id="binanceTotp" placeholder="Base32 secret"></div>
         </div>
-        <div class="btn-group"><button class="btn btn-green" onclick="saveExchange('OKX')">保存</button><button class="btn btn-outline" onclick="testExchange('OKX')">接続テスト</button></div>
+        <div class="btn-group"><button class="btn btn-green" onclick="saveExchange('Binance')">保存</button><button class="btn btn-outline" onclick="traderLogin('Binance')">ログイン</button></div>
       </div>
 
       <div class="card" style="border-left:3px solid var(--blue)">
         <div class="card-title" style="color:var(--blue)">Puppeteer自動取引ステータス</div>
         <div id="traderStatus" style="font-size:12px;color:var(--text2)">読み込み中...</div>
+      </div>
+
+      <div class="card" style="border-left:3px solid var(--red)">
+        <div class="card-title" style="color:var(--red)">エラースクリーンショット</div>
+        <div id="screenshotViewer" style="font-size:12px;color:var(--text2)">
+          <button class="btn btn-outline" onclick="loadScreenshot()">最新のスクリーンショットを表示</button>
+          <div id="screenshotContainer" style="margin-top:8px"></div>
+        </div>
       </div>
     </div>
 
@@ -587,15 +594,46 @@
       if(d.success){document.getElementById(prefix+'Status').className='badge badge-green';document.getElementById(prefix+'Status').textContent='設定済み';}
       alert(d.message||d.error);
     }
-    function testExchange(ex){alert(ex+' の接続テストは準備中です');}
+    async function traderLogin(ex){
+      var btn=event.target;btn.disabled=true;btn.textContent='ログイン中...';
+      try{
+        var r=await fetch('/api/trader/login/'+ex,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+        var d=await r.json();
+        alert(d.message||d.error);
+        loadTraderStatus();
+      }catch(e){alert('Login error: '+e.message);}
+      btn.disabled=false;btn.textContent='ログイン';
+    }
+    async function loadScreenshot(){
+      var container=document.getElementById('screenshotContainer');
+      try{
+        var r=await fetch('/api/trader/screenshot');
+        if(r.headers.get('content-type')?.includes('image')){
+          var blob=await r.blob();
+          var url=URL.createObjectURL(blob);
+          container.innerHTML='<img src="'+url+'" style="max-width:100%;border:1px solid var(--border);border-radius:8px;margin-top:4px">';
+        }else{
+          var d=await r.json();
+          container.innerHTML='<span style="color:var(--text2)">'+( d.error||'スクリーンショットなし')+'</span>';
+        }
+      }catch(e){container.innerHTML='<span style="color:var(--red)">取得失敗</span>';}
+    }
     async function loadTraderStatus(){
       try{var r=await fetch('/api/trader/status');var d=await r.json();
         var s=d.status;
-        document.getElementById('traderStatus').innerHTML=
-          '<div>ブラウザ: '+(s.browserReady?'<span style="color:var(--green)">起動中</span>':'<span style="color:var(--red)">停止中</span>')+'</div>'
-          +'<div>設定済み取引所: '+(s.configuredExchanges.length?s.configuredExchanges.join(', '):'なし')+'</div>'
+        var html='<div>ブラウザ: '+(s.browserReady?'<span style="color:var(--green)">起動中</span>':'<span style="color:var(--red)">停止中</span>')+'</div>'
           +'<div>対応取引所: '+s.supported.join(', ')+'</div>';
-        s.configuredExchanges.forEach(function(ex){var el=document.getElementById(ex.toLowerCase()+'Status');if(el){el.className='badge badge-green';el.textContent='設定済み';}});
+        if(s.loginStatus){
+          for(var ex of s.supported){
+            var ls=s.loginStatus[ex]||{};
+            var statusEl=document.getElementById(ex.toLowerCase()+'Status');
+            html+='<div style="margin-top:4px">'+ex+': '+(ls.loggedIn?'<span style="color:var(--green)">ログイン済み</span>':'<span style="color:var(--yellow)">未ログイン</span>');
+            if(ls.lastActivity)html+=' (最終: '+new Date(ls.lastActivity).toLocaleString('ja-JP')+')';
+            html+='</div>';
+            if(statusEl){statusEl.className='badge badge-'+(ls.loggedIn?'green':'yellow');statusEl.textContent=ls.loggedIn?'ログイン済み':'未設定';}
+          }
+        }
+        document.getElementById('traderStatus').innerHTML=html;
       }catch(e){}
     }
 

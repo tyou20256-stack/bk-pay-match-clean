@@ -140,11 +140,11 @@
 <body>
   <div class="topbar">
     <div class="topbar-left">
-      <a href="/">Dashboard</a>
-      <span class="topbar-title">利用ガイド</span>
+      <a href="/" data-i18n="dashboard">Dashboard</a>
+      <span class="topbar-title" data-i18n="guide_title">利用ガイド</span>
     </div>
     <div class="topbar-right">
-      <button class="topbar-btn" onclick="toggleTheme()" id="themeToggle">D</button>
+      <div class="lang-selector" style="display:inline-flex;gap:2px"><button class="lang-btn active" data-lang="ja" onclick="setLanguage('ja')" style="padding:2px 5px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">JP</button><button class="lang-btn" data-lang="en" onclick="setLanguage('en')" style="padding:2px 5px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">EN</button><button class="lang-btn" data-lang="zh" onclick="setLanguage('zh')" style="padding:2px 5px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">中</button><button class="lang-btn" data-lang="vi" onclick="setLanguage('vi')" style="padding:2px 5px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">VI</button></div><button class="topbar-btn" onclick="toggleTheme()" id="themeToggle">D</button>
     </div>
   </div>
 
@@ -447,5 +447,6 @@
     (function(){const s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
 </script>
+<script src="i18n.js"></script>
 </body>
 </html>

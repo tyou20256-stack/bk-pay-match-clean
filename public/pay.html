@@ -144,7 +144,7 @@
 <body>
   <div class="pay-header">
     <div class="pay-logo">BK <span>Pay</span></div>
-    <div class="pay-header-right"><button class="pay-icon-btn" onclick="toggleTheme()" id="themeBtn">D</button></div>
+    <div class="pay-header-right"><div class="lang-selector" style="display:inline-flex;gap:2px"><button class="lang-btn active" data-lang="ja" onclick="setLanguage('ja')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">JP</button><button class="lang-btn" data-lang="en" onclick="setLanguage('en')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">EN</button><button class="lang-btn" data-lang="zh" onclick="setLanguage('zh')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">中</button><button class="lang-btn" data-lang="vi" onclick="setLanguage('vi')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">VI</button></div><button class="pay-icon-btn" onclick="toggleTheme()" id="themeBtn">D</button></div>
   </div>
 
   <div class="pay-container">
@@ -155,15 +155,15 @@
     </div>
 
     <div class="steps" id="buySteps">
-      <div class="step-ind active" id="s1"><span class="step-num">1</span>金額・方法</div>
-      <div class="step-ind" id="s2"><span class="step-num">2</span>マッチング</div>
-      <div class="step-ind" id="s3"><span class="step-num">3</span>お支払い</div>
-      <div class="step-ind" id="s4"><span class="step-num">4</span>完了</div>
+      <div class="step-ind active" id="s1"><span class="step-num">1</span data-i18n="step1">金額・方法</div>
+      <div class="step-ind" id="s2"><span class="step-num">2</span data-i18n="matching">マッチング</div>
+      <div class="step-ind" id="s3"><span class="step-num">3</span data-i18n="confirm_payment">お支払い</div>
+      <div class="step-ind" id="s4"><span class="step-num">4</span data-i18n="completed">完了</div>
     </div>
 
     <!-- STEP 1: Amount & Payment Method -->
     <div class="panel active" id="p1">
-      <div class="section-title">入金額と支払方法</div>
+      <div class="section-title" data-i18n="enter_amount">入金額と支払方法</div>
       <div class="section-desc">購入する暗号資産と日本円の金額を選択してください</div>
       <div style="display:flex;gap:6px;margin-bottom:14px;justify-content:center" id="cryptoSelector">
         <button class="quick-btn active" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selCrypto('USDT',this)">USDT</button>
@@ -230,7 +230,7 @@
       <div style="text-align:center;margin-bottom:10px">
         <span class="mode-badge auto" id="modeBadge">AUTO MATCH</span>
       </div>
-      <div class="section-title">お支払い</div>
+      <div class="section-title" data-i18n="confirm_payment">お支払い</div>
       <div class="section-desc">以下の情報に振り込んでください</div>
 
       <!-- Timer -->
@@ -728,5 +728,6 @@ function dismissInstall() {
   localStorage.setItem('pwa_dismissed', '1');
 }
 </script>
+<script src="i18n.js"></script>
 </body>
 </html>
