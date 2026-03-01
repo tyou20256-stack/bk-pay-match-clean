@@ -16,6 +16,7 @@
 import Database from 'better-sqlite3';
 import { resolve } from 'path';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 const DB_PATH = resolve(process.cwd(), 'data/bkpay.db');
 
@@ -132,8 +133,12 @@ function decrypt(text: string): string {
 }
 
 // === Auth ===
-function hashPassword(pw: string): string {
+function legacySha256Hash(pw: string): string {
   return crypto.createHash('sha256').update(pw + 'bkpay-salt').digest('hex');
+}
+
+function hashPassword(pw: string): string {
+  return bcrypt.hashSync(pw, 10);
 }
 
 export function createAdminUser(username: string, password: string): boolean {
@@ -145,7 +150,21 @@ export function createAdminUser(username: string, password: string): boolean {
 
 export function authenticateUser(username: string, password: string): { token: string; userId: number } | null {
   const user = db.prepare('SELECT id, password_hash FROM admin_users WHERE username = ?').get(username) as any;
-  if (!user || user.password_hash !== hashPassword(password)) return null;
+  if (!user) return null;
+
+  let valid = false;
+  if (user.password_hash.length === 64) {
+    // Legacy SHA-256 hash — verify and auto-upgrade to bcrypt
+    if (legacySha256Hash(password) === user.password_hash) {
+      valid = true;
+      const bcryptHash = bcrypt.hashSync(password, 10);
+      db.prepare('UPDATE admin_users SET password_hash = ? WHERE id = ?').run(bcryptHash, user.id);
+    }
+  } else {
+    valid = bcrypt.compareSync(password, user.password_hash);
+  }
+
+  if (!valid) return null;
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24h
   db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(token, user.id, expiresAt);
@@ -309,8 +328,15 @@ export function changePassword(token: string, currentPassword: string, newPasswo
   const session = db.prepare('SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?').get(token, Date.now()) as any;
   if (!session) return false;
   const user = db.prepare('SELECT id, password_hash FROM admin_users WHERE id = ?').get(session.user_id) as any;
-  if (!user || user.password_hash !== hashPassword(currentPassword)) return false;
-  db.prepare('UPDATE admin_users SET password_hash = ? WHERE id = ?').run(hashPassword(newPassword), user.id);
+  if (!user) return false;
+  let currentValid = false;
+  if (user.password_hash.length === 64) {
+    currentValid = legacySha256Hash(currentPassword) === user.password_hash;
+  } else {
+    currentValid = bcrypt.compareSync(currentPassword, user.password_hash);
+  }
+  if (!currentValid) return false;
+  db.prepare('UPDATE admin_users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(newPassword, 10), user.id);
   return true;
 }
 
