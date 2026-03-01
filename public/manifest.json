@@ -1,6 +1,6 @@
 {
-  "name": "BK Pay",
-  "short_name": "BK Pay",
+  "name": "Pay Match",
+  "short_name": "Pay Match",
   "description": "日本円で暗号通貨を簡単購入",
   "start_url": "/pay.html",
   "display": "standalone",

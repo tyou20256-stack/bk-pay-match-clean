@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BK Pay - 管理画面</title>
+  <title>Pay Match - 管理画面</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     [data-theme="dark"]{--bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;--border:#243049;--text:#edf0f7;--text2:#a0aec0;--dim:#5a6a85;--green:#34d399;--green-soft:rgba(52,211,153,.1);--green-border:rgba(52,211,153,.25);--red:#f87171;--red-soft:rgba(248,113,113,.08);--blue:#60a5fa;--blue-soft:rgba(96,165,250,.08);--yellow:#fbbf24;--yellow-soft:rgba(251,191,36,.08);--purple:#a78bfa;--input-bg:#0f1520;--shadow:0 2px 12px rgba(0,0,0,.3)}
@@ -97,7 +97,7 @@
 <body>
   <div class="admin-header">
     <div style="display:flex;align-items:center;gap:16px">
-      <div class="admin-logo">BK <span>Pay</span> Admin</div>
+      <div class="admin-logo">Pay <span>Match</span> Admin</div>
       <div class="admin-nav">
         <button class="nav-btn active" onclick="showTab('orders')">注文管理</button>
         <button class="nav-btn" onclick="showTab('accounts')">銀行口座</button>
@@ -124,7 +124,7 @@
     <!-- TAB: Orders -->
     <div class="tab-panel active" id="tab-orders">
       <div class="sec-header">
-        <div><div class="sec-title">注文管理</div><div class="sec-desc">BK Payからの注文一覧</div></div>
+        <div><div class="sec-title">注文管理</div><div class="sec-desc">Pay Matchからの注文一覧</div></div>
         <button class="btn btn-outline" onclick="loadOrders()">更新</button>
       </div>
       
@@ -348,14 +348,14 @@
       </div>
       <div class="card" style="border-left:3px solid var(--yellow)">
         <div class="card-title" style="color:var(--yellow)">注意</div>
-        <p style="font-size:11px;color:var(--text2)">ここで設定したアドレスがBK Payの送金先として顧客に表示されます。アドレスを間違えると資金を失います。必ずテスト送金で確認してください。</p>
+        <p style="font-size:11px;color:var(--text2)">ここで設定したアドレスがPay Matchの送金先として顧客に表示されます。アドレスを間違えると資金を失います。必ずテスト送金で確認してください。</p>
       </div>
     </div>
 
     <!-- TAB: Settings -->
     <div class="tab-panel" id="tab-settings">
       <div class="sec-header">
-        <div><div class="sec-title">一般設定</div><div class="sec-desc">BK Payの動作設定</div></div>
+        <div><div class="sec-title">一般設定</div><div class="sec-desc">Pay Matchの動作設定</div></div>
       </div>
       <div class="card">
         <div class="card-title">マッチング設定</div>

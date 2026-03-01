@@ -119,7 +119,7 @@ async function sendDailySummary() {
   const now = new Date();
   const dateStr = `${now.getMonth() + 1}/${now.getDate()}`;
 
-  let text = `📊 <b>BK Pay 本日のレート（${dateStr}）</b>\n\n`;
+  let text = `📊 <b>Pay Match 本日のレート（${dateStr}）</b>\n\n`;
   let recommendation = '';
 
   for (const crypto of ['USDT', 'BTC', 'ETH']) {
@@ -260,7 +260,7 @@ async function sendWeeklySummary() {
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
 
-  let text = `📈 <b>BK Pay 週間レポート（${fmt(weekAgo)}-${fmt(now)}）</b>\n\n`;
+  let text = `📈 <b>Pay Match 週間レポート（${fmt(weekAgo)}-${fmt(now)}）</b>\n\n`;
 
   const usdtStats = getWeeklyStats('USDT');
   if (usdtStats) {

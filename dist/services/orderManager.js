@@ -59,7 +59,11 @@ exports.markWithdrawalComplete = markWithdrawalComplete;
  */
 const notifier_js_1 = __importDefault(require("./notifier.js"));
 const dbSvc = __importStar(require("./database.js"));
+const database_js_1 = require("./database.js");
 const websocket_js_1 = require("./websocket.js");
+const spreadOptimizer_js_1 = require("./spreadOptimizer.js");
+const profitTracker_js_1 = require("./profitTracker.js");
+const aggregator_js_1 = require("./aggregator.js");
 const orders = new Map();
 function generateId() {
     return 'ORD-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -228,6 +232,25 @@ async function createOrder(amount, payMethod, crypto = 'USDT') {
         order.merchantName = 'BK Stock';
         order.merchantCompletionRate = 100;
     }
+    // Fee calculation
+    const feeRate = (0, database_js_1.getFeeRateForRank)('bronze'); // default rank; no telegram context here
+    order.feeRate = feeRate;
+    order.feeJpy = Math.round(order.amount * feeRate);
+    order.feeCrypto = 0;
+    // Adjust crypto amount: customer pays full amount but receives crypto for (amount - fee)
+    if (order.rate > 0) {
+        order.cryptoAmount = parseFloat(((order.amount - order.feeJpy) / order.rate).toFixed(4));
+    }
+    // Apply spread optimization
+    try {
+        const spread = await (0, spreadOptimizer_js_1.getOptimalSpread)(crypto, 'buy');
+        if (order.rate > 0 && spread.finalSpread > 0) {
+            order.rate = Math.round(order.rate * (1 + spread.finalSpread) * 10) / 10;
+            order.cryptoAmount = parseFloat((amount / order.rate).toFixed(4));
+        }
+        (0, spreadOptimizer_js_1.recordOrder)(crypto, amount);
+    }
+    catch (e) { /* spread optimizer not critical */ }
     dbSvc.saveOrder(order);
     notifier_js_1.default.notifyNewOrder(order);
     (0, websocket_js_1.broadcast)('order', { id: order.id, status: order.status, amount: order.amount, crypto: order.crypto });
@@ -250,6 +273,13 @@ function markPaid(orderId) {
             o.status = 'completed';
             o.completedAt = Date.now();
             dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: o.completedAt });
+            // Record profit
+            try {
+                const rates = (0, aggregator_js_1.getCachedRates)(o.crypto);
+                const marketRate = rates?.spotPrices?.[o.crypto] || o.rate;
+                (0, profitTracker_js_1.recordProfit)(o, marketRate);
+            }
+            catch { }
             notifier_js_1.default.notifyCompleted(o);
             (0, websocket_js_1.broadcast)('order', { id: o.id, status: o.status, amount: o.amount });
         }
@@ -310,8 +340,21 @@ async function createSellOrder(params) {
     catch { }
     if (sellRate === 0)
         throw new Error('売却レートを取得できませんでした');
-    const jpyAmount = Math.floor(params.cryptoAmount * sellRate);
+    // Apply sell spread
+    try {
+        const sellSpread = await (0, spreadOptimizer_js_1.getOptimalSpread)(params.crypto, 'sell');
+        if (sellSpread.finalSpread > 0) {
+            sellRate = Math.round(sellRate * (1 - sellSpread.finalSpread) * 10) / 10;
+        }
+    }
+    catch (e) { /* spread optimizer not critical */ }
+    const jpyAmount = Math.floor(params.cryptoAmount * sellRate); // gross before fee
     const wallet = dbSvc.getWalletConfig();
+    // Fee calculation for sell
+    const sellFeeRate = (0, database_js_1.getFeeRateForRank)('bronze');
+    const feeCrypto = parseFloat((params.cryptoAmount * sellFeeRate).toFixed(6));
+    const effectiveCrypto = params.cryptoAmount - feeCrypto;
+    const jpyAmountAfterFee = Math.floor(effectiveCrypto * sellRate);
     dbSvc.createSellOrder({
         id,
         cryptoAmount: params.cryptoAmount,
@@ -328,7 +371,11 @@ async function createSellOrder(params) {
         cryptoAmount: params.cryptoAmount,
         crypto: params.crypto,
         rate: sellRate,
-        jpyAmount,
+        jpyAmount: jpyAmountAfterFee,
+        jpyGross: jpyAmount,
+        feeRate: sellFeeRate,
+        feeCrypto,
+        feeJpy: Math.round(jpyAmount - jpyAmountAfterFee),
         customerBankInfo: params.customerBankInfo,
         depositAddress: wallet?.address || '（ウォレット未設定）',
         depositNetwork: wallet?.network || 'TRC-20',
@@ -361,6 +408,13 @@ function markWithdrawalComplete(orderId) {
         order.status = 'completed';
         order.completedAt = Date.now();
     }
+    // Record profit
+    try {
+        const rates = (0, aggregator_js_1.getCachedRates)(order.crypto);
+        const marketRate = rates?.spotPrices?.[order.crypto] || order.rate;
+        (0, profitTracker_js_1.recordProfit)(order, marketRate);
+    }
+    catch { }
     notifier_js_1.default.notifyCompleted({ ...order, status: 'completed', completedAt: Date.now() });
     (0, websocket_js_1.broadcast)('order', { id: orderId, status: 'completed' });
     return order;

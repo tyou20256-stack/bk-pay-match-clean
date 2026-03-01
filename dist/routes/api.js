@@ -279,6 +279,34 @@ router.get('/reports/monthly', (req, res) => {
 router.get('/reports/summary', (_req, res) => {
     res.json({ success: true, report: (0, reportService_js_1.getSummaryReport)() });
 });
+// === Fee Settings API ===
+router.get('/fees/settings', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token;
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: '認証が必要です' });
+    res.json({ success: true, data: dbSvc.getFeeSettings() });
+});
+router.post('/fees/settings', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token;
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: '認証が必要です' });
+    dbSvc.updateFeeSettings(req.body);
+    res.json({ success: true });
+});
+router.get('/fees/report', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token;
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: '認証が必要です' });
+    const from = req.query.from || new Date().toISOString().slice(0, 10);
+    const to = req.query.to || new Date().toISOString().slice(0, 10);
+    res.json({ success: true, data: dbSvc.getFeeReport(from, to) });
+});
+// Public: get fee rate for preview (no auth)
+router.get('/fees/rate', (req, res) => {
+    const rank = req.query.rank || 'bronze';
+    const rate = dbSvc.getFeeRateForRank(rank);
+    res.json({ success: true, rate });
+});
 // === Customer & Referral API ===
 // Public: customer stats
 router.get('/customer/:telegramId/stats', (req, res) => {
@@ -310,4 +338,201 @@ router.get('/admin/referrals', (req, res) => {
 // Admin: all customers
 router.get('/admin/customers', (req, res) => {
     res.json({ success: true, data: dbSvc.getAllCustomers() });
+});
+// === Spread Optimizer API ===
+const spreadOptimizer_js_1 = __importStar(require("../services/spreadOptimizer.js"));
+router.get('/spread/config', (req, res) => {
+    const token = req.cookies?.bkpay_token || req.headers.authorization?.replace('Bearer ', '');
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.json({ success: true, data: (0, spreadOptimizer_js_1.getSpreadConfig)() });
+});
+router.post('/spread/config', (req, res) => {
+    const token = req.cookies?.bkpay_token || req.headers.authorization?.replace('Bearer ', '');
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    const { crypto, ...data } = req.body;
+    if (!crypto)
+        return res.json({ success: false, error: 'crypto required' });
+    (0, spreadOptimizer_js_1.updateSpreadConfig)(crypto, data);
+    res.json({ success: true });
+});
+router.get('/spread/stats', (req, res) => {
+    const token = req.cookies?.bkpay_token || req.headers.authorization?.replace('Bearer ', '');
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    res.json({ success: true, data: (0, spreadOptimizer_js_1.get24hStats)() });
+});
+router.get('/spread/recommendation', async (req, res) => {
+    const token = req.cookies?.bkpay_token || req.headers.authorization?.replace('Bearer ', '');
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    try {
+        const report = await spreadOptimizer_js_1.default.getSpreadReport();
+        res.json({ success: true, data: report });
+    }
+    catch (e) {
+        res.json({ success: false, error: e.message });
+    }
+});
+// === CSV Export API ===
+const csvExporter_js_1 = require("../services/csvExporter.js");
+function sendCSV(res, csv, filename) {
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv);
+}
+router.get('/export/orders', (req, res) => {
+    const { from, to, format } = req.query;
+    const csv = (0, csvExporter_js_1.exportOrders)(from, to, format || 'standard');
+    sendCSV(res, csv, `orders_${from || 'all'}_${to || 'all'}.csv`);
+});
+router.get('/export/orders/freee', (req, res) => {
+    const { from, to } = req.query;
+    const csv = (0, csvExporter_js_1.exportFreee)(from, to);
+    sendCSV(res, csv, `orders_freee_${from || 'all'}_${to || 'all'}.csv`);
+});
+router.get('/export/orders/yayoi', (req, res) => {
+    const { from, to } = req.query;
+    const csv = (0, csvExporter_js_1.exportYayoi)(from, to);
+    sendCSV(res, csv, `orders_yayoi_${from || 'all'}_${to || 'all'}.csv`);
+});
+router.get('/export/accounts', (_req, res) => {
+    const csv = (0, csvExporter_js_1.exportAccounts)();
+    sendCSV(res, csv, 'bank_accounts.csv');
+});
+router.get('/export/fees', (req, res) => {
+    const { from, to } = req.query;
+    const csv = (0, csvExporter_js_1.exportFeeReport)(from, to);
+    sendCSV(res, csv, `fee_report_${from || 'all'}_${to || 'all'}.csv`);
+});
+// === Profit Tracking API ===
+const profitTracker_js_1 = require("../services/profitTracker.js");
+router.get('/profit/summary', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: '認証が必要です' });
+    const summary = (0, profitTracker_js_1.getProfitSummary)();
+    const goal = (0, profitTracker_js_1.getProfitGoal)();
+    res.json({ success: true, data: { ...summary, goal } });
+});
+router.get('/profit/daily', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: '認証が必要です' });
+    const date = req.query.date || new Date().toISOString().slice(0, 10);
+    const hourly = (0, profitTracker_js_1.getHourlyProfit)(date);
+    const daily = (0, profitTracker_js_1.getDailyProfit)(date);
+    res.json({ success: true, data: { ...daily, hourly } });
+});
+router.get('/profit/monthly', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: '認証が必要です' });
+    const now = new Date();
+    const year = parseInt(req.query.year) || now.getFullYear();
+    const month = parseInt(req.query.month) || (now.getMonth() + 1);
+    res.json({ success: true, data: (0, profitTracker_js_1.getMonthlyProfit)(year, month) });
+});
+router.get('/profit/goal', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: '認証が必要です' });
+    res.json({ success: true, data: { amount: (0, profitTracker_js_1.getProfitGoal)() } });
+});
+router.post('/profit/goal', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: '認証が必要です' });
+    const { amount } = req.body;
+    if (!amount || amount <= 0)
+        return res.json({ success: false, error: '有効な金額を指定してください' });
+    (0, profitTracker_js_1.setProfitGoal)(amount);
+    res.json({ success: true });
+});
+router.get('/profit/trend', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+    if (!token || !dbSvc.validateSession(token))
+        return res.status(401).json({ success: false, error: '認証が必要です' });
+    res.json({ success: true, data: (0, profitTracker_js_1.get7DayTrend)() });
+});
+// === Account Health / Freeze Detection API ===
+const freezeDetector_js_1 = require("../services/freezeDetector.js");
+router.get('/accounts/health', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+    if (!token || !dbSvc.validateSession(token)) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    const dashboard = (0, freezeDetector_js_1.getHealthDashboard)();
+    res.json({ success: true, data: dashboard });
+});
+router.post('/accounts/health/check-all', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+    if (!token || !dbSvc.validateSession(token)) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    const result = (0, freezeDetector_js_1.autoRestUnhealthyAccounts)();
+    res.json({ success: true, ...result });
+});
+router.post('/orders/:id/transfer-failed', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+    if (!token || !dbSvc.validateSession(token)) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+    const order = orderManager_js_1.default.getOrder(req.params.id);
+    if (!order)
+        return res.json({ success: false, error: 'Order not found' });
+    // Find the account used for this order and mark transfer failed
+    const paymentInfo = order.paymentInfo;
+    if (paymentInfo?.accountId) {
+        (0, freezeDetector_js_1.markTransferFailed)(paymentInfo.accountId);
+    }
+    orderManager_js_1.default.cancelOrder(req.params.id);
+    res.json({ success: true, message: 'Order marked as transfer failed' });
+});
+// === Puppeteer Trader Login/Screenshot/Test API ===
+const fs_1 = __importDefault(require("fs"));
+router.post('/trader/login/:exchange', async (req, res) => {
+    const exchange = req.params.exchange;
+    if (!['Bybit', 'Binance'].includes(exchange))
+        return res.json({ success: false, error: 'Unsupported exchange' });
+    try {
+        const { email, password, totpSecret } = req.body || {};
+        const result = await puppeteerTrader_js_1.default.login(exchange, email, password, totpSecret);
+        res.json({ success: result, message: result ? `${exchange} login successful` : `${exchange} login failed` });
+    }
+    catch (e) {
+        res.json({ success: false, error: e.message });
+    }
+});
+router.get('/trader/screenshot', (req, res) => {
+    const screenshotPath = puppeteerTrader_js_1.default.getScreenshotPath();
+    if (!screenshotPath)
+        return res.json({ success: false, error: 'No screenshot available' });
+    try {
+        res.setHeader('Content-Type', 'image/png');
+        res.send(fs_1.default.readFileSync(screenshotPath));
+    }
+    catch (e) {
+        res.json({ success: false, error: e.message });
+    }
+});
+router.post('/trader/test-order', async (req, res) => {
+    const { exchange, crypto, amount, payMethod } = req.body;
+    if (!exchange || !amount)
+        return res.json({ success: false, error: 'exchange and amount required' });
+    console.log(`[API] Test order: ${exchange} ${crypto || 'USDT'} ${amount} JPY via ${payMethod || 'bank'} (dry-run)`);
+    // Dry run - just check login status and return
+    const status = puppeteerTrader_js_1.default.getStatus();
+    const loginInfo = status.loginStatus?.[exchange];
+    res.json({
+        success: true,
+        dryRun: true,
+        exchange,
+        crypto: crypto || 'USDT',
+        amount,
+        payMethod: payMethod || 'bank',
+        loginStatus: loginInfo || { loggedIn: false },
+        message: loginInfo?.loggedIn ? 'Ready to trade (dry-run, no order placed)' : `Not logged in to ${exchange}. Login first.`,
+    });
 });

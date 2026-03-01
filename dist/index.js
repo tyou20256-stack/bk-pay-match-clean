@@ -16,6 +16,7 @@ const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const tronMonitor_js_1 = require("./services/tronMonitor.js");
 const telegramBot_js_1 = require("./services/telegramBot.js");
+const freezeDetector_js_1 = require("./services/freezeDetector.js");
 const alertService_js_1 = require("./services/alertService.js");
 const priceNotifier_js_1 = require("./services/priceNotifier.js");
 const api_1 = __importDefault(require("./routes/api"));
@@ -91,6 +92,7 @@ app.use('/api/trader', auth_1.authRequired);
 app.use('/api/wallet', auth_1.authRequired);
 app.use('/api/settings', auth_1.authRequired);
 app.use('/api/reports', auth_1.authRequired);
+app.use('/api/export', auth_1.authRequired);
 // Public API routes (rates, pay orders)
 app.use('/api/orders', orderLimiter);
 app.use('/api', api_1.default);
@@ -128,6 +130,8 @@ async function start() {
     else {
         console.log('[TelegramBot] Disabled (set ENABLE_TELEGRAM_BOT=true to enable)');
     }
+    // Freeze Detector
+    (0, freezeDetector_js_1.initFreezeDetector)();
     // Rate Alert Service
     const ENABLE_ALERTS = process.env.ENABLE_ALERTS === 'true';
     if (ENABLE_ALERTS) {

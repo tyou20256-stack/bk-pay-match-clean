@@ -5,7 +5,7 @@
  *   ENABLED = false で無効化可能。
  *   使用bot: @BKnewsmanagerbot
  */
-// Telegram notification service for BK Pay
+// Telegram notification service for Pay Match
 const ENABLED = false; // Set to true to enable Telegram notifications
 const BOT_TOKEN = '8447506670:AAGY2bcpbZxTe9OL3Jzxpdo86CHkb47XIig';
 const STAFF_CHAT_ID = '5791086501';

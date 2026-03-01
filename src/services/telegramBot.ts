@@ -31,10 +31,10 @@ const userLanguages = new Map<number, string>();
 
 const botTranslations: Record<string, Record<string, string>> = {
   ja: {
-    welcome: '🏦 <b>BK Pay へようこそ！</b>\n\n日本円で暗号通貨を簡単に購入できます。\n3つの取引所から最安レートを自動検索。\n\n↓ メニューからお選びください',
+    welcome: '🏦 <b>Pay Match へようこそ！</b>\n\n日本円で暗号通貨を簡単に購入できます。\n3つの取引所から最安レートを自動検索。\n\n↓ メニューからお選びください',
     buy_prompt: '💱 <b>暗号通貨購入</b>\n\n購入したい金額（日本円）を入力してください。\n\n例: <code>10000</code> または <code>5万</code>\n\n最小: ¥1,000 / 最大: ¥1,000,000',
     rates_title: '📊 <b>現在のレート（リアルタイム）</b>\n\n',
-    help_title: '📖 <b>BK Pay の使い方</b>',
+    help_title: '📖 <b>Pay Match の使い方</b>',
     lang_title: '🌐 <b>言語設定 / Language</b>\n\n現在の言語: 日本語\n\n言語を選択してください:',
     lang_set: '✅ 言語を日本語に設定しました。',
     buy_btn: '💰 USDT購入',
@@ -46,14 +46,14 @@ const botTranslations: Record<string, Record<string, string>> = {
     alert_btn: '⏰ アラート設定',
     notify_btn: '🔔 通知設定',
     help_btn: '📖 使い方ガイド',
-    open_btn: '🌐 BK Payを開く',
+    open_btn: '🌐 Pay Matchを開く',
     mypage_btn: '📊 マイページ',
   },
   en: {
-    welcome: '🏦 <b>Welcome to BK Pay!</b>\n\nEasily buy cryptocurrency with Japanese Yen.\nAutomatically finds the best rates from 3 exchanges.\n\n↓ Select from the menu below',
+    welcome: '🏦 <b>Welcome to Pay Match!</b>\n\nEasily buy cryptocurrency with Japanese Yen.\nAutomatically finds the best rates from 3 exchanges.\n\n↓ Select from the menu below',
     buy_prompt: '💱 <b>Buy Cryptocurrency</b>\n\nEnter the amount in JPY you want to spend.\n\nExample: <code>10000</code> or <code>5万</code>\n\nMin: ¥1,000 / Max: ¥1,000,000',
     rates_title: '📊 <b>Current Rates (Real-time)</b>\n\n',
-    help_title: '📖 <b>How to use BK Pay</b>',
+    help_title: '📖 <b>How to use Pay Match</b>',
     lang_title: '🌐 <b>Language Settings</b>\n\nCurrent: English\n\nSelect your language:',
     lang_set: '✅ Language set to English.',
     buy_btn: '💰 Buy USDT',
@@ -65,14 +65,14 @@ const botTranslations: Record<string, Record<string, string>> = {
     alert_btn: '⏰ Price Alerts',
     notify_btn: '🔔 Notifications',
     help_btn: '📖 User Guide',
-    open_btn: '🌐 Open BK Pay',
+    open_btn: '🌐 Open Pay Match',
     mypage_btn: '📊 My Page',
   },
   zh: {
-    welcome: '🏦 <b>欢迎使用 BK Pay！</b>\n\n用日元轻松购买加密货币。\n自动从3个交易所搜索最优汇率。\n\n↓ 请从菜单中选择',
+    welcome: '🏦 <b>欢迎使用 Pay Match！</b>\n\n用日元轻松购买加密货币。\n自动从3个交易所搜索最优汇率。\n\n↓ 请从菜单中选择',
     buy_prompt: '💱 <b>购买加密货币</b>\n\n请输入您想购买的日元金额。\n\n例: <code>10000</code> 或 <code>5万</code>\n\n最低: ¥1,000 / 最高: ¥1,000,000',
     rates_title: '📊 <b>当前汇率（实时）</b>\n\n',
-    help_title: '📖 <b>BK Pay 使用方法</b>',
+    help_title: '📖 <b>Pay Match 使用方法</b>',
     lang_title: '🌐 <b>语言设置</b>\n\n当前语言: 中文\n\n选择语言:',
     lang_set: '✅ 语言已设置为中文。',
     buy_btn: '💰 购买USDT',
@@ -84,14 +84,14 @@ const botTranslations: Record<string, Record<string, string>> = {
     alert_btn: '⏰ 价格提醒',
     notify_btn: '🔔 通知设置',
     help_btn: '📖 使用指南',
-    open_btn: '🌐 打开BK Pay',
+    open_btn: '🌐 打开Pay Match',
     mypage_btn: '📊 我的页面',
   },
   vi: {
-    welcome: '🏦 <b>Chào mừng đến BK Pay!</b>\n\nMua tiền mã hóa dễ dàng bằng Yên Nhật.\nTự động tìm tỷ giá tốt nhất từ 3 sàn giao dịch.\n\n↓ Chọn từ menu bên dưới',
+    welcome: '🏦 <b>Chào mừng đến Pay Match!</b>\n\nMua tiền mã hóa dễ dàng bằng Yên Nhật.\nTự động tìm tỷ giá tốt nhất từ 3 sàn giao dịch.\n\n↓ Chọn từ menu bên dưới',
     buy_prompt: '💱 <b>Mua tiền mã hóa</b>\n\nNhập số tiền JPY bạn muốn chi.\n\nVí dụ: <code>10000</code> hoặc <code>5万</code>\n\nTối thiểu: ¥1,000 / Tối đa: ¥1,000,000',
     rates_title: '📊 <b>Tỷ giá hiện tại (Thời gian thực)</b>\n\n',
-    help_title: '📖 <b>Cách sử dụng BK Pay</b>',
+    help_title: '📖 <b>Cách sử dụng Pay Match</b>',
     lang_title: '🌐 <b>Cài đặt ngôn ngữ</b>\n\nHiện tại: Tiếng Việt\n\nChọn ngôn ngữ:',
     lang_set: '✅ Đã đặt ngôn ngữ thành Tiếng Việt.',
     buy_btn: '💰 Mua USDT',
@@ -103,7 +103,7 @@ const botTranslations: Record<string, Record<string, string>> = {
     alert_btn: '⏰ Cảnh báo giá',
     notify_btn: '🔔 Thông báo',
     help_btn: '📖 Hướng dẫn',
-    open_btn: '🌐 Mở BK Pay',
+    open_btn: '🌐 Mở Pay Match',
     mypage_btn: '📊 Trang cá nhân',
   },
 };
@@ -477,7 +477,7 @@ async function handleRates(chatId: number) {
 
 async function handleHelp(chatId: number) {
   await sendMessage(chatId,
-    `📖 <b>BK Pay の使い方</b>\n\n` +
+    `📖 <b>Pay Match の使い方</b>\n\n` +
     `1️⃣ /buy → 購入する通貨と金額を選択\n` +
     `2️⃣ 振込先が表示されます\n` +
     `3️⃣ 振込後「振込完了」ボタンをタップ\n` +
@@ -495,7 +495,7 @@ async function handleHelp(chatId: number) {
 /notify — 通知設定\n` +
     `/wallet — ウォレット確認\n` +
     `/help — この画面\n\n` +
-    `💡 下のメニューボタン「BK Pay」から\n` +
+    `💡 下のメニューボタン「Pay Match」から\n` +
     `   アプリ版もご利用いただけます`
   );
 }
@@ -886,7 +886,7 @@ async function handleReferral(chatId: number) {
         inline_keyboard: [
           [
             { text: 'コードをコピー', callback_data: 'cb_copy_referral' },
-            { text: '友達に送る', url: `https://t.me/share/url?url=${encodeURIComponent('BK Payで暗号通貨を購入！紹介コード: ' + customer.referral_code)}` },
+            { text: '友達に送る', url: `https://t.me/share/url?url=${encodeURIComponent('Pay Matchで暗号通貨を購入！紹介コード: ' + customer.referral_code)}` },
           ],
           [{ text: '← メニューに戻る', callback_data: 'cb_menu' }],
         ],
@@ -1280,7 +1280,7 @@ async function handleFaqCancelled(chatId: number) {
 async function handleFaqRateDiff(chatId: number) {
   await sendMessage(chatId,
     `レートが違う場合\n\n` +
-    `BK Payのレートはリアルタイムで変動します。\n\n` +
+    `Pay Matchのレートはリアルタイムで変動します。\n\n` +
     `・注文作成時のレートが適用されます\n` +
     `・レート表示と注文作成の間に変動する場合があります\n` +
     `・大幅な差異がある場合はスタッフにご連絡ください`,

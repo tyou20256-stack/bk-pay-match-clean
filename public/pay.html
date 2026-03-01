@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>BK Pay - 簡単入金</title>
+  <title>Pay Match - 簡単入金</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     [data-theme="dark"]{--bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;--border:#243049;--text:#edf0f7;--text2:#a0aec0;--dim:#5a6a85;--green:#34d399;--green2:#10b981;--green-soft:rgba(52,211,153,.1);--green-border:rgba(52,211,153,.25);--red:#f87171;--red-soft:rgba(248,113,113,.08);--blue:#60a5fa;--blue-soft:rgba(96,165,250,.08);--yellow:#fbbf24;--yellow-soft:rgba(251,191,36,.08);--purple:#a78bfa;--input-bg:#0f1520;--shadow:0 2px 12px rgba(0,0,0,.3)}
@@ -137,13 +137,13 @@
 <meta name="theme-color" content="#34d399">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="BK Pay">
+<meta name="apple-mobile-web-app-title" content="Pay Match">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 </head>
 <body>
   <div class="pay-header">
-    <div class="pay-logo">BK <span>Pay</span></div>
+    <div class="pay-logo">Pay <span>Match</span></div>
     <div class="pay-header-right"><div class="lang-selector" style="display:inline-flex;gap:2px"><button class="lang-btn active" data-lang="ja" onclick="setLanguage('ja')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">JP</button><button class="lang-btn" data-lang="en" onclick="setLanguage('en')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">EN</button><button class="lang-btn" data-lang="zh" onclick="setLanguage('zh')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">中</button><button class="lang-btn" data-lang="vi" onclick="setLanguage('vi')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">VI</button></div><button class="pay-icon-btn" onclick="toggleTheme()" id="themeBtn">D</button></div>
   </div>
 
@@ -360,7 +360,7 @@
 
   </div>
 
-  <div class="pay-footer">BK Pay v2.0 -- Powered by P2P Aggregation</div>
+  <div class="pay-footer">Pay Match v2.0 -- Powered by P2P Aggregation</div>
 
   <script>
     var amount=0,payMethod='bank',selectedCrypto='USDT',currentOrder=null,timerSec=900,timerInterval=null;
@@ -527,7 +527,7 @@
       document.getElementById('matchingScreen').style.display='none';
       document.getElementById('fallbackScreen').style.display='block';
     }
-    function useFallback(){currentOrder={id:'SELF',mode:'self',status:'pending_payment',amount:amount,crypto:'USDT',cryptoAmount:0,rate:0,payMethod:payMethod,exchange:'BK Pay（自社決済）',merchantName:'BK Stock',merchantCompletionRate:100,paymentInfo:null,createdAt:Date.now(),expiresAt:Date.now()+900000};fetchPreview().then(function(){showPaymentFromOrder();});}
+    function useFallback(){currentOrder={id:'SELF',mode:'self',status:'pending_payment',amount:amount,crypto:'USDT',cryptoAmount:0,rate:0,payMethod:payMethod,exchange:'Pay Match（自社決済）',merchantName:'BK Stock',merchantCompletionRate:100,paymentInfo:null,createdAt:Date.now(),expiresAt:Date.now()+900000};fetchPreview().then(function(){showPaymentFromOrder();});}
 
     // Step 3: Payment
     
@@ -704,7 +704,7 @@
 <!-- PWA Install Banner -->
 <div id="installBanner" style="display:none; position:fixed; bottom:0; left:0; right:0; padding:12px 16px; background:var(--card); border-top:1px solid var(--border); align-items:center; justify-content:space-between; z-index:1000">
   <div>
-    <div style="font-weight:700;font-size:13px">BK Payをインストール</div>
+    <div style="font-weight:700;font-size:13px">Pay Matchをインストール</div>
     <div style="font-size:11px;color:var(--dim)">ホーム画面に追加して素早くアクセス</div>
   </div>
   <button onclick="installPWA()" class="btn btn-green" style="padding:6px 16px;font-size:12px">追加</button>
