@@ -397,3 +397,42 @@ router.get('/export/fees', (req, res) => {
   const csv = exportFeeReport(from, to);
   sendCSV(res, csv, `fee_report_${from || 'all'}_${to || 'all'}.csv`);
 });
+
+// === Account Health / Freeze Detection API ===
+import { getHealthDashboard, autoRestUnhealthyAccounts, markTransferFailed } from '../services/freezeDetector.js';
+
+router.get('/accounts/health', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+  if (!token || !dbSvc.validateSession(token)) {
+    return res.status(401).json({ success: false, error: 'Authentication required' });
+  }
+  const dashboard = getHealthDashboard();
+  res.json({ success: true, data: dashboard });
+});
+
+router.post('/accounts/health/check-all', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+  if (!token || !dbSvc.validateSession(token)) {
+    return res.status(401).json({ success: false, error: 'Authentication required' });
+  }
+  const result = autoRestUnhealthyAccounts();
+  res.json({ success: true, ...result });
+});
+
+router.post('/orders/:id/transfer-failed', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+  if (!token || !dbSvc.validateSession(token)) {
+    return res.status(401).json({ success: false, error: 'Authentication required' });
+  }
+  const order = orderManager.getOrder(req.params.id);
+  if (!order) return res.json({ success: false, error: 'Order not found' });
+
+  // Find the account used for this order and mark transfer failed
+  const paymentInfo = order.paymentInfo;
+  if (paymentInfo?.accountId) {
+    markTransferFailed(paymentInfo.accountId);
+  }
+
+  orderManager.cancelOrder(req.params.id);
+  res.json({ success: true, message: 'Order marked as transfer failed' });
+});

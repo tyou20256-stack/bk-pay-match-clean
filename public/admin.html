@@ -105,6 +105,7 @@
         <button class="nav-btn" onclick="showTab('exchange')">取引所API</button>
         <button class="nav-btn" onclick="showTab('wallet')">ウォレット</button>
         <button class="nav-btn" onclick="showTab('settings')">設定</button>
+        <button class="nav-btn" onclick="showTab('spread')">スプレッド</button>
         <button class="nav-btn" onclick="showTab('reports')">レポート</button>
         <button class="nav-btn" onclick="showTab('customers')">顧客管理</button>
         <button class="nav-btn" onclick="showTab('fees')">手数料</button>
@@ -366,6 +367,37 @@
       </div>
     </div>
 
+
+    <!-- TAB: Spread Optimizer -->
+    <div class="tab-panel" id="tab-spread">
+      <div class="sec-header">
+        <div><div class="sec-title">スプレッド最適化</div><div class="sec-desc">AI自動スプレッド調整エンジン</div></div>
+        <button class="btn btn-outline" onclick="loadSpread()">更新</button>
+      </div>
+
+      <div class="stats-grid" id="spreadStats">
+        <div class="stat-card"><div class="stat-val green" id="spBuySpread">-</div><div class="stat-label">Buy Spread (USDT)</div></div>
+        <div class="stat-card"><div class="stat-val blue" id="spSellSpread">-</div><div class="stat-label">Sell Spread (USDT)</div></div>
+        <div class="stat-card"><div class="stat-val yellow" id="spDemand">-</div><div class="stat-label">Demand Factor</div></div>
+        <div class="stat-card"><div class="stat-val purple" id="sp24hOrders">0</div><div class="stat-label">24h Orders</div></div>
+      </div>
+
+      <!-- AI Recommendation -->
+      <div class="card" id="spreadRecommendation">
+        <div class="card-title">AI推奨スプレッド</div>
+        <div id="spreadRecContent" style="font-size:12px;color:var(--text2)">読み込み中...</div>
+      </div>
+
+      <!-- 24h Volume Chart -->
+      <div class="card">
+        <div class="card-title">24時間ボリューム</div>
+        <div id="volumeChart" style="display:flex;align-items:flex-end;gap:2px;height:120px;padding:8px 0"></div>
+      </div>
+
+      <!-- Config per crypto -->
+      <div id="spreadConfigCards"></div>
+    </div>
+
     <!-- TAB: Reports -->
     <div class="tab-panel" id="tab-reports">
       <div class="sec-header">
@@ -466,6 +498,7 @@
       if(t==='exchange')loadTraderStatus();
       if(t==='reports')loadReports();
       if(t==='customers')loadCustomers();
+      if(t==='spread')loadSpread();
       if(t==='fees')loadFeeReport();
     }
 
@@ -756,6 +789,86 @@
       }catch(e){console.error(e);}
     }
 
+
+    // Spread Optimizer
+    async function loadSpread(){
+      try{
+        // Load recommendation
+        var r=await fetch('/api/spread/recommendation');var d=await r.json();
+        if(d.success&&d.data){
+          var recs=d.data.recommendations||[];
+          var usdt=recs.find(function(x){return x.crypto==='USDT';});
+          if(usdt){
+            document.getElementById('spBuySpread').textContent=(usdt.buy.finalSpread*100).toFixed(2)+'%';
+            document.getElementById('spSellSpread').textContent=(usdt.sell.finalSpread*100).toFixed(2)+'%';
+            document.getElementById('spDemand').textContent=usdt.buy.demandAdjustment>0?'High':usdt.buy.demandAdjustment<0?'Low':'Normal';
+          }
+          // Render recommendations
+          var html='';
+          recs.forEach(function(rec){
+            html+='<div style="margin-bottom:12px"><strong>'+rec.crypto+'</strong><br>';
+            html+='<span style="color:var(--green)">Buy: '+(rec.buy.finalSpread*100).toFixed(2)+'%</span>';
+            html+=' | <span style="color:var(--blue)">Sell: '+(rec.sell.finalSpread*100).toFixed(2)+'%</span><br>';
+            html+='<span style="font-size:10px;color:var(--dim)">'+rec.buy.reason.join(' / ')+'</span>';
+            html+='</div>';
+          });
+          document.getElementById('spreadRecContent').innerHTML=html||'データなし';
+
+          // Render configs
+          var configs=d.data.configs||[];
+          var chtml='';
+          configs.forEach(function(c){
+            chtml+='<div class="card"><div class="card-title">'+c.crypto+' スプレッド設定</div>';
+            chtml+='<div class="form-grid">';
+            chtml+='<div class="form-group"><label class="form-label">Buy Markup (%)</label><input class="form-input" type="number" step="0.1" id="sp_buy_'+c.crypto+'" value="'+(c.buyMarkup*100).toFixed(1)+'"></div>';
+            chtml+='<div class="form-group"><label class="form-label">Sell Discount (%)</label><input class="form-input" type="number" step="0.1" id="sp_sell_'+c.crypto+'" value="'+(c.sellDiscount*100).toFixed(1)+'"></div>';
+            chtml+='<div class="form-group"><label class="form-label">Min Spread (%)</label><input class="form-input" type="number" step="0.1" id="sp_min_'+c.crypto+'" value="'+(c.minMarkup*100).toFixed(1)+'"></div>';
+            chtml+='<div class="form-group"><label class="form-label">Max Spread (%)</label><input class="form-input" type="number" step="0.1" id="sp_max_'+c.crypto+'" value="'+(c.maxMarkup*100).toFixed(1)+'"></div>';
+            chtml+='<div class="form-group"><label class="form-label">Auto Adjust</label><select class="form-select" id="sp_auto_'+c.crypto+'"><option value="1"'+(c.autoAdjust?' selected':'')+'>ON</option><option value="0"'+(!c.autoAdjust?' selected':'')+'>OFF</option></select></div>';
+            chtml+='</div>';
+            chtml+='<div class="btn-group"><button class="btn btn-green" onclick="saveSpreadConfig(''+c.crypto+'')">保存</button></div>';
+            chtml+='</div>';
+          });
+          document.getElementById('spreadConfigCards').innerHTML=chtml;
+        }
+
+        // Load 24h stats
+        var r2=await fetch('/api/spread/stats');var d2=await r2.json();
+        if(d2.success&&d2.data){
+          var stats=d2.data;
+          document.getElementById('sp24hOrders').textContent=stats.reduce(function(s,x){return s+x.orderCount;},0);
+          // Render volume chart (24 bars)
+          var hourData=new Array(24).fill(0);
+          stats.forEach(function(s){hourData[s.hour]=(hourData[s.hour]||0)+s.totalVolume;});
+          var maxVol=Math.max.apply(null,hourData)||1;
+          var chartHtml='';
+          for(var h=0;h<24;h++){
+            var pct=Math.max(2,hourData[h]/maxVol*100);
+            var jstH=h;
+            chartHtml+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">';
+            chartHtml+='<div style="width:100%;background:var(--green);border-radius:2px 2px 0 0;height:'+pct+'%;min-height:2px;opacity:'+(hourData[h]>0?'1':'0.2')+'" title="'+jstH+':00 - ¥'+Math.round(hourData[h]).toLocaleString()+'"></div>';
+            chartHtml+='<div style="font-size:8px;color:var(--dim)">'+(h%3===0?jstH:'')+'</div>';
+            chartHtml+='</div>';
+          }
+          document.getElementById('volumeChart').innerHTML=chartHtml;
+        }
+      }catch(e){console.error('loadSpread error:',e);}
+    }
+
+    async function saveSpreadConfig(crypto){
+      var data={
+        crypto:crypto,
+        buyMarkup:parseFloat(document.getElementById('sp_buy_'+crypto).value)/100,
+        sellDiscount:parseFloat(document.getElementById('sp_sell_'+crypto).value)/100,
+        minMarkup:parseFloat(document.getElementById('sp_min_'+crypto).value)/100,
+        maxMarkup:parseFloat(document.getElementById('sp_max_'+crypto).value)/100,
+        autoAdjust:document.getElementById('sp_auto_'+crypto).value==='1'
+      };
+      await fetch('/api/spread/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      alert(crypto+' スプレッド設定を保存しました');
+      loadSpread();
+    }
+
     // Init
     loadOrders();
     loadAccounts();
@@ -779,6 +892,18 @@
     }, 5000);
   };
 })();
+
+    function exportCSV(format) {
+      var from = document.getElementById("exportFrom")?.value || "";
+      var to = document.getElementById("exportTo")?.value || "";
+      var url = "/api/export/orders" + (format !== "standard" ? "/" + format : "") + "?from=" + from + "&to=" + to;
+      window.open(url, "_blank");
+    }
+
+    function exportAccounts() {
+      window.open("/api/export/accounts", "_blank");
+    }
+
 </script>
 </body>
 </html>
