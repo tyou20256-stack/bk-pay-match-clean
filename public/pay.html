@@ -115,6 +115,19 @@
     .trust-bar{display:flex;gap:16px;justify-content:center;padding:14px 0;margin-top:12px;border-top:1px solid var(--border)}
     .trust-item{text-align:center}.trust-icon{font-size:14px;margin-bottom:2px}.trust-text{font-size:9px;color:var(--dim)}
 
+
+    /* Buy/Sell tabs */
+    .direction-tabs{display:flex;gap:0;margin-bottom:16px;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+    .dir-tab{flex:1;padding:12px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;background:var(--card);color:var(--text2);transition:all .15s;border:none;font-family:inherit}
+    .dir-tab.active{background:var(--green);color:#fff}
+    .dir-tab:first-child{border-right:1px solid var(--border)}
+    .sell-panel{display:none}.sell-panel.active{display:block}
+    .bank-form{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+    .bank-form input{padding:10px 14px;font-size:13px;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit}
+    .bank-form input:focus{outline:none;border-color:var(--green)}
+    .bank-form label{font-size:11px;color:var(--dim);font-weight:600}
+    .deposit-addr{padding:12px;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;word-break:break-all;font-size:13px;font-weight:600;text-align:center;margin-bottom:8px}
+
     .pay-footer{text-align:center;padding:14px;font-size:9px;color:var(--dim);border-top:1px solid var(--border)}
 
     .embed .pay-header,.embed .pay-footer{display:none}.embed .pay-container{padding:12px}
@@ -128,7 +141,13 @@
   </div>
 
   <div class="pay-container">
-    <div class="steps">
+
+    <div class="direction-tabs" id="directionTabs">
+      <button class="dir-tab active" onclick="setDirection('buy',this)">購入（円→暗号通貨）</button>
+      <button class="dir-tab" onclick="setDirection('sell',this)">売却（暗号通貨→円）</button>
+    </div>
+
+    <div class="steps" id="buySteps">
       <div class="step-ind active" id="s1"><span class="step-num">1</span>金額・方法</div>
       <div class="step-ind" id="s2"><span class="step-num">2</span>マッチング</div>
       <div class="step-ind" id="s3"><span class="step-num">3</span>お支払い</div>
@@ -239,6 +258,97 @@
       <div class="summary" id="finalSummary"></div>
       <button class="btn-primary" onclick="go(1)">新しい入金をする</button>
     </div>
+  </div>
+
+
+    <!-- SELL FLOW -->
+    <div id="sellFlow" style="display:none">
+      <div class="steps" id="sellSteps">
+        <div class="step-ind active" id="ss1"><span class="step-num">1</span>通貨・金額</div>
+        <div class="step-ind" id="ss2"><span class="step-num">2</span>入金先</div>
+        <div class="step-ind" id="ss3"><span class="step-num">3</span>入金待ち</div>
+        <div class="step-ind" id="ss4"><span class="step-num">4</span>完了</div>
+      </div>
+
+      <!-- SELL STEP 1 -->
+      <div class="sell-panel active" id="sp1">
+        <div class="section-title">売却する暗号通貨</div>
+        <div class="section-desc">通貨と数量を入力し、振込先銀行情報を入力してください</div>
+        <div style="display:flex;gap:6px;margin-bottom:14px;justify-content:center" id="sellCryptoSelector">
+          <button class="quick-btn active" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selSellCrypto('USDT',this)">USDT</button>
+          <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selSellCrypto('BTC',this)">BTC</button>
+          <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selSellCrypto('ETH',this)">ETH</button>
+        </div>
+        <div class="amount-input-wrap">
+          <input type="text" class="amount-input" id="sellAmount" placeholder="100" inputmode="decimal" oninput="onSellAmountChange()" style="padding-left:14px">
+        </div>
+        <div class="convert-box" id="sellConvertBox" style="display:none;margin-bottom:14px">
+          <div class="convert-row"><span class="convert-label">現在の売却レート</span><span class="convert-val" id="sellCvRate">--</span></div>
+          <div class="convert-row"><span class="convert-label">受取予定額（JPY）</span><span class="convert-val hl" id="sellCvJpy">--</span></div>
+        </div>
+        <div class="section-desc" style="margin-top:8px">振込先銀行情報</div>
+        <div class="bank-form">
+          <label>銀行名</label>
+          <input type="text" id="sellBankName" placeholder="三菱UFJ銀行">
+          <label>支店名</label>
+          <input type="text" id="sellBranchName" placeholder="新宿支店">
+          <label>口座番号</label>
+          <input type="text" id="sellAccountNumber" placeholder="1234567" inputmode="numeric">
+          <label>口座名義（カタカナ）</label>
+          <input type="text" id="sellAccountHolder" placeholder="タナカ タロウ">
+        </div>
+        <button class="btn-primary" id="btnSellGo" onclick="startSellOrder()" disabled>売却注文を作成</button>
+      </div>
+
+      <!-- SELL STEP 2 -->
+      <div class="sell-panel" id="sp2">
+        <div class="section-title">暗号通貨を入金してください</div>
+        <div class="section-desc">以下のアドレスに送金してください</div>
+        <div class="pi-card">
+          <div class="pi-label">入金先アドレス (TRC-20)</div>
+          <div class="deposit-addr" id="sellDepositAddr">--</div>
+          <button class="copy-btn" onclick="copyText(document.getElementById('sellDepositAddr').textContent)">アドレスをコピー</button>
+        </div>
+        <div class="summary" style="margin-top:14px">
+          <div class="summary-row"><span class="summary-label">売却通貨</span><span class="summary-val" id="sellSumCrypto">--</span></div>
+          <div class="summary-row"><span class="summary-label">売却数量</span><span class="summary-val" id="sellSumAmount">--</span></div>
+          <div class="summary-row"><span class="summary-label">売却レート</span><span class="summary-val" id="sellSumRate">--</span></div>
+          <div class="summary-row"><span class="summary-label">受取予定額</span><span class="summary-val big" id="sellSumJpy">--</span></div>
+        </div>
+        <button class="btn-primary" onclick="goSell(3)">送金しました</button>
+        <button class="btn-secondary" onclick="goSell(1)">キャンセル</button>
+      </div>
+
+      <!-- SELL STEP 3 -->
+      <div class="sell-panel" id="sp3">
+        <div class="status-card">
+          <div class="status-icon">&#x23F3;</div>
+          <div class="status-title">入金待ち</div>
+          <div class="status-desc">ブロックチェーン上で入金を確認しています</div>
+        </div>
+        <div class="timer-bar" id="sellTimerBar">
+          <span class="timer-icon">&#x23F1;</span>
+          <span class="timer-text">入金確認後、指定口座へ日本円をお振込みします</span>
+          <span class="timer-count" id="sellTimerCount">30:00</span>
+        </div>
+        <div class="summary">
+          <div class="summary-row"><span class="summary-label">注文ID</span><span class="summary-val" id="sellOrderId">--</span></div>
+          <div class="summary-row"><span class="summary-label">ステータス</span><span class="summary-val" style="color:var(--yellow)" id="sellStatus">入金待ち</span></div>
+        </div>
+      </div>
+
+      <!-- SELL STEP 4 -->
+      <div class="sell-panel" id="sp4">
+        <div class="status-card success">
+          <div class="status-icon">&#x2705;</div>
+          <div class="status-title">売却完了</div>
+          <div class="status-desc">指定の銀行口座へ日本円をお振込みしました</div>
+        </div>
+        <div class="summary" id="sellFinalSummary"></div>
+        <button class="btn-primary" onclick="setDirection('sell');goSell(1)">新しい売却をする</button>
+      </div>
+    </div>
+
   </div>
 
   <div class="pay-footer">BK Pay v2.0 -- Powered by P2P Aggregation</div>
@@ -446,6 +556,139 @@
         +'<div class="summary-row"><span class="summary-label">ステータス</span><span class="summary-val" style="color:var(--green)">確認中</span></div>';
     }
     function cancelOrder(){clearInterval(timerInterval);if(currentOrder)fetch('/api/orders/'+currentOrder.id+'/cancel',{method:'POST'});go(1);}
+
+    // === SELL FLOW ===
+    var sellCrypto='USDT',sellOrder=null,sellTimerSec=1800,sellTimerInterval=null;
+    var buyFlow=true;
+
+    function setDirection(dir,el){
+      buyFlow=(dir==='buy');
+      document.querySelectorAll('.dir-tab').forEach(function(b){b.classList.remove('active');});
+      if(el)el.classList.add('active');
+      else document.querySelectorAll('.dir-tab')[dir==='buy'?0:1].classList.add('active');
+
+      // Show/hide flows
+      var buyPanels=['p1','p2','p3','p4'];
+      buyPanels.forEach(function(id){document.getElementById(id).style.display=buyFlow?'':'none';});
+      document.getElementById('buySteps').style.display=buyFlow?'':'none';
+      document.getElementById('sellFlow').style.display=buyFlow?'none':'block';
+      if(!buyFlow)goSell(1);
+      else go(1);
+    }
+
+    function selSellCrypto(c,el){
+      sellCrypto=c;
+      document.querySelectorAll('#sellCryptoSelector .quick-btn').forEach(function(b){b.classList.remove('active');});
+      el.classList.add('active');
+      onSellAmountChange();
+    }
+
+    async function onSellAmountChange(){
+      var val=parseFloat(document.getElementById('sellAmount').value)||0;
+      var box=document.getElementById('sellConvertBox');
+      var btn=document.getElementById('btnSellGo');
+      if(val>0){
+        box.style.display='block';
+        try{
+          var r=await fetch('/api/rates/'+sellCrypto);var j=await r.json();
+          if(j.success){
+            var allSell=[];
+            j.data.rates.forEach(function(ex){(ex.sellOrders||[]).forEach(function(o){allSell.push(o);});});
+            allSell.sort(function(a,b){return Number(b.price)-Number(a.price);});
+            if(allSell.length>0){
+              var price=Number(allSell[0].price);
+              document.getElementById('sellCvRate').textContent='¥'+fmt(price)+' / '+sellCrypto;
+              document.getElementById('sellCvJpy').textContent='¥'+Math.floor(val*price).toLocaleString();
+            }
+          }
+        }catch(e){}
+        // Check all bank fields
+        var b1=document.getElementById('sellBankName').value;
+        var b2=document.getElementById('sellAccountNumber').value;
+        var b3=document.getElementById('sellAccountHolder').value;
+        btn.disabled=!(val>0&&b1&&b2&&b3);
+      }else{
+        box.style.display='none';
+        btn.disabled=true;
+      }
+    }
+
+    // Add input listeners for bank fields
+    ['sellBankName','sellBranchName','sellAccountNumber','sellAccountHolder'].forEach(function(id){
+      document.getElementById(id).addEventListener('input',onSellAmountChange);
+    });
+
+    async function startSellOrder(){
+      var cryptoAmount=parseFloat(document.getElementById('sellAmount').value);
+      var bankInfo={
+        bankName:document.getElementById('sellBankName').value,
+        branchName:document.getElementById('sellBranchName').value,
+        accountNumber:document.getElementById('sellAccountNumber').value,
+        accountHolder:document.getElementById('sellAccountHolder').value
+      };
+      try{
+        var res=await fetch('/api/orders/sell',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cryptoAmount:cryptoAmount,crypto:sellCrypto,customerBankInfo:bankInfo})});
+        var data=await res.json();
+        if(!data.success){alert(data.error||'エラーが発生しました');return;}
+        sellOrder=data.order;
+        document.getElementById('sellDepositAddr').textContent=sellOrder.depositAddress||'--';
+        document.getElementById('sellSumCrypto').textContent=sellOrder.crypto;
+        document.getElementById('sellSumAmount').textContent=sellOrder.cryptoAmount+' '+sellOrder.crypto;
+        document.getElementById('sellSumRate').textContent='¥'+fmt(sellOrder.rate);
+        document.getElementById('sellSumJpy').textContent='¥'+(sellOrder.jpyAmount||0).toLocaleString();
+        document.getElementById('sellOrderId').textContent=sellOrder.id;
+        goSell(2);
+      }catch(e){alert('サーバーに接続できませんでした');}
+    }
+
+    function goSell(n){
+      for(var i=1;i<=4;i++){
+        var sp=document.getElementById('sp'+i);
+        if(sp)sp.classList.toggle('active',i===n);
+        var ss=document.getElementById('ss'+i);
+        if(ss){ss.classList.remove('active','done');if(i<n)ss.classList.add('done');if(i===n)ss.classList.add('active');}
+      }
+      if(n===3)startSellTimer();
+      window.scrollTo(0,0);
+    }
+
+    function startSellTimer(){
+      sellTimerSec=1800;
+      if(sellTimerInterval)clearInterval(sellTimerInterval);
+      sellTimerInterval=setInterval(function(){
+        sellTimerSec--;if(sellTimerSec<=0){clearInterval(sellTimerInterval);return;}
+        var m=Math.floor(sellTimerSec/60),s=sellTimerSec%60;
+        document.getElementById('sellTimerCount').textContent=m+':'+(s<10?'0':'')+s;
+      },1000);
+      // Poll order status
+      if(sellOrder)pollSellStatus();
+    }
+
+    async function pollSellStatus(){
+      if(!sellOrder)return;
+      try{
+        var res=await fetch('/api/orders/'+sellOrder.id);
+        var data=await res.json();
+        if(data.success&&data.order){
+          var st=data.order.status;
+          document.getElementById('sellStatus').textContent=
+            st==='awaiting_deposit'?'入金待ち':
+            st==='deposit_received'?'入金確認済み（出金処理中）':
+            st==='completed'?'完了':'処理中';
+          if(st==='completed'){
+            clearInterval(sellTimerInterval);
+            goSell(4);
+            document.getElementById('sellFinalSummary').innerHTML=
+              '<div class="summary-row"><span class="summary-label">注文ID</span><span class="summary-val">'+sellOrder.id+'</span></div>'
+              +'<div class="summary-row"><span class="summary-label">売却数量</span><span class="summary-val">'+sellOrder.cryptoAmount+' '+sellOrder.crypto+'</span></div>'
+              +'<div class="summary-row"><span class="summary-label">振込額</span><span class="summary-val big">¥'+(sellOrder.jpyAmount||0).toLocaleString()+'</span></div>';
+            return;
+          }
+        }
+      }catch(e){}
+      setTimeout(pollSellStatus,10000);
+    }
+
   </script>
 </body>
 </html>

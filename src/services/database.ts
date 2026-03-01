@@ -223,7 +223,8 @@ function rowToOrder(row: any): any {
     cryptoAmount: row.crypto_amount, rate: row.rate, payMethod: row.pay_method, exchange: row.exchange,
     merchantName: row.merchant_name, merchantCompletionRate: row.merchant_completion_rate,
     paymentInfo: JSON.parse(row.payment_info || 'null'), createdAt: row.created_at,
-    expiresAt: row.expires_at, paidAt: row.paid_at, completedAt: row.completed_at
+    expiresAt: row.expires_at, paidAt: row.paid_at, completedAt: row.completed_at,
+    direction: row.direction || 'buy', customerWallet: row.customer_wallet || '', customerBankInfo: row.customer_bank_info ? JSON.parse(row.customer_bank_info) : {}
   };
 }
 
@@ -316,6 +317,189 @@ export function setSetting(key: string, value: string): void {
 export function getSetting(key: string, defaultVal = ''): string {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as any;
   return row ? row.value : defaultVal;
+}
+
+
+// === Sell Order Support: Add columns ===
+try { db.exec(`ALTER TABLE orders ADD COLUMN direction TEXT DEFAULT 'buy'`); } catch {}
+try { db.exec(`ALTER TABLE orders ADD COLUMN customer_wallet TEXT DEFAULT ''`); } catch {}
+try { db.exec(`ALTER TABLE orders ADD COLUMN customer_bank_info TEXT DEFAULT ''`); } catch {}
+
+// === Sell Orders ===
+export function createSellOrder(data: {
+  id: string;
+  cryptoAmount: number;
+  crypto: string;
+  rate: number;
+  jpyAmount: number;
+  customerWallet?: string;
+  customerBankInfo: any;
+  expiresAt: number;
+}): void {
+  const now = Date.now();
+  db.prepare(`INSERT INTO orders (id, mode, status, amount, crypto, crypto_amount, rate, pay_method, exchange, merchant_name, merchant_completion_rate, payment_info, created_at, expires_at, direction, customer_wallet, customer_bank_info)
+    VALUES (?, 'self', 'awaiting_deposit', ?, ?, ?, ?, 'bank', 'BK Pay（自社決済）', 'BK Stock', 100, '{}', ?, ?, 'sell', ?, ?)`).run(
+    data.id, data.jpyAmount, data.crypto, data.cryptoAmount, data.rate,
+    now, data.expiresAt,
+    data.customerWallet || '',
+    JSON.stringify(data.customerBankInfo)
+  );
+}
+
+export function getSellOrdersAwaitingDeposit(): any[] {
+  const rows = db.prepare("SELECT * FROM orders WHERE direction = 'sell' AND status = 'awaiting_deposit' ORDER BY created_at DESC").all() as any[];
+  return rows.map(r => ({ ...rowToOrder(r), direction: r.direction, customerWallet: r.customer_wallet, customerBankInfo: JSON.parse(r.customer_bank_info || '{}') }));
+}
+
+// === Customers & Referral Tables ===
+db.exec(`
+  CREATE TABLE IF NOT EXISTS customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_id TEXT UNIQUE,
+    referral_code TEXT UNIQUE,
+    referred_by TEXT,
+    total_volume_jpy REAL DEFAULT 0,
+    total_orders INTEGER DEFAULT 0,
+    vip_rank TEXT DEFAULT 'bronze',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS referral_rewards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    referrer_telegram_id TEXT,
+    referred_telegram_id TEXT,
+    order_id TEXT,
+    reward_jpy REAL,
+    status TEXT DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
+function generateReferralCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return 'BK-' + code;
+}
+
+function calculateVipRank(totalVolume: number): string {
+  if (totalVolume >= 20_000_000) return 'platinum';
+  if (totalVolume >= 5_000_000) return 'gold';
+  if (totalVolume >= 1_000_000) return 'silver';
+  return 'bronze';
+}
+
+export function getVipDiscount(rank: string): number {
+  switch (rank) {
+    case 'platinum': return 1.0;
+    case 'gold': return 0.5;
+    case 'silver': return 0.3;
+    default: return 0;
+  }
+}
+
+export function getOrCreateCustomer(telegramId: string): any {
+  let customer = db.prepare('SELECT * FROM customers WHERE telegram_id = ?').get(telegramId) as any;
+  if (!customer) {
+    const code = generateReferralCode();
+    db.prepare('INSERT INTO customers (telegram_id, referral_code) VALUES (?, ?)').run(telegramId, code);
+    customer = db.prepare('SELECT * FROM customers WHERE telegram_id = ?').get(telegramId) as any;
+  }
+  return customer;
+}
+
+export function applyReferralCode(telegramId: string, code: string): { success: boolean; error?: string } {
+  const customer = getOrCreateCustomer(telegramId);
+  if (customer.referred_by) return { success: false, error: '既に紹介コードを登録済みです' };
+  const referrer = db.prepare('SELECT * FROM customers WHERE referral_code = ?').get(code) as any;
+  if (!referrer) return { success: false, error: '無効な紹介コードです' };
+  if (referrer.telegram_id === telegramId) return { success: false, error: '自分のコードは使用できません' };
+  db.prepare("UPDATE customers SET referred_by = ?, updated_at = datetime('now') WHERE telegram_id = ?").run(code, telegramId);
+  return { success: true };
+}
+
+export function addReferralReward(referrerId: string, referredId: string, orderId: string, rewardJpy: number): void {
+  db.prepare('INSERT INTO referral_rewards (referrer_telegram_id, referred_telegram_id, order_id, reward_jpy) VALUES (?, ?, ?, ?)').run(referrerId, referredId, orderId, rewardJpy);
+}
+
+export function updateCustomerVolume(telegramId: string, jpyAmount: number): void {
+  const customer = getOrCreateCustomer(telegramId);
+  const newVolume = (customer.total_volume_jpy || 0) + jpyAmount;
+  const newOrders = (customer.total_orders || 0) + 1;
+  const newRank = calculateVipRank(newVolume);
+  db.prepare("UPDATE customers SET total_volume_jpy = ?, total_orders = ?, vip_rank = ?, updated_at = datetime('now') WHERE telegram_id = ?").run(newVolume, newOrders, newRank, telegramId);
+}
+
+export function getCustomerStats(telegramId: string): any {
+  const customer = getOrCreateCustomer(telegramId);
+  const referralStats = getReferralStats(telegramId);
+  return { ...customer, ...referralStats };
+}
+
+export function getReferralStats(telegramId: string): { referral_count: number; total_rewards: number } {
+  const row = db.prepare('SELECT COUNT(*) as referral_count, COALESCE(SUM(reward_jpy), 0) as total_rewards FROM referral_rewards WHERE referrer_telegram_id = ?').get(telegramId) as any;
+  return { referral_count: row.referral_count, total_rewards: row.total_rewards };
+}
+
+export function getAllCustomers(): any[] {
+  return db.prepare('SELECT * FROM customers ORDER BY total_volume_jpy DESC').all() as any[];
+}
+
+export function getAllReferralRewards(): any[] {
+  return db.prepare('SELECT * FROM referral_rewards ORDER BY created_at DESC').all() as any[];
+}
+
+export function getCustomerByReferralCode(code: string): any {
+  return db.prepare('SELECT * FROM customers WHERE referral_code = ?').get(code) as any;
+}
+
+// === Notification Preferences ===
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notification_preferences (
+    telegram_id INTEGER PRIMARY KEY,
+    daily_summary INTEGER DEFAULT 1,
+    spike_alerts INTEGER DEFAULT 1,
+    weekly_summary INTEGER DEFAULT 1,
+    alert_crypto TEXT DEFAULT '',
+    alert_threshold REAL DEFAULT 0
+  );
+`);
+
+// === Notification Preferences ===
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notification_preferences (
+    telegram_id INTEGER PRIMARY KEY,
+    daily_summary INTEGER DEFAULT 1,
+    spike_alerts INTEGER DEFAULT 1,
+    weekly_summary INTEGER DEFAULT 1,
+    alert_crypto TEXT DEFAULT '',
+    alert_threshold REAL DEFAULT 0
+  );
+`);
+
+export function getNotificationSubscribers(type: string): number[] {
+  const col = type === 'daily_summary' ? 'daily_summary' : type === 'spike_alerts' ? 'spike_alerts' : 'weekly_summary';
+  const rows = db.prepare(`SELECT telegram_id FROM notification_preferences WHERE ${col} = 1`).all() as any[];
+  return rows.map(r => r.telegram_id);
+}
+
+export function setNotificationPreference(telegramId: number, type: string, enabled: boolean): void {
+  const col = type === 'daily_summary' ? 'daily_summary' : type === 'spike_alerts' ? 'spike_alerts' : 'weekly_summary';
+  db.prepare(`INSERT INTO notification_preferences (telegram_id, ${col}) VALUES (?, ?) ON CONFLICT(telegram_id) DO UPDATE SET ${col} = ?`).run(telegramId, enabled ? 1 : 0, enabled ? 1 : 0);
+}
+
+export function getNotificationPreferences(telegramId: number): { daily_summary: boolean; spike_alerts: boolean; weekly_summary: boolean } {
+  const row = db.prepare('SELECT * FROM notification_preferences WHERE telegram_id = ?').get(telegramId) as any;
+  if (!row) {
+    db.prepare('INSERT OR IGNORE INTO notification_preferences (telegram_id) VALUES (?)').run(telegramId);
+    return { daily_summary: true, spike_alerts: true, weekly_summary: true };
+  }
+  return { daily_summary: !!row.daily_summary, spike_alerts: !!row.spike_alerts, weekly_summary: !!row.weekly_summary };
+}
+
+export function setAlertThreshold(telegramId: number, crypto: string, threshold: number): void {
+  db.prepare(`INSERT INTO notification_preferences (telegram_id, alert_crypto, alert_threshold) VALUES (?, ?, ?) ON CONFLICT(telegram_id) DO UPDATE SET alert_crypto = ?, alert_threshold = ?`).run(telegramId, crypto, threshold, crypto, threshold);
 }
 
 // Cleanup expired sessions periodically

@@ -8,6 +8,7 @@ import { getNotificationPreferences, setNotificationPreference, setAlertThreshol
 
 const BOT_TOKEN = '8447506670:AAGY2bcpbZxTe9OL3Jzxpdo86CHkb47XIig';
 const API_BASE = 'http://localhost:3003';
+import * as dbSvc from './database.js';
 const MINIAPP_URL = process.env.MINIAPP_URL || 'https://debi-unominous-overcasually.ngrok-free.dev/miniapp.html';
 const MYPAGE_URL = MINIAPP_URL.replace('miniapp.html', 'mypage.html');
 
@@ -268,6 +269,9 @@ async function handleCreateOrder(chatId: number, crypto: string, amount: number)
     paymentInfo += `口座番号: <code>${account.accountNumber || '-'}</code>\n`;
     paymentInfo += `口座名義: ${account.accountHolder || '-'}\n\n`;
     paymentInfo += `⏰ 制限時間内にお振込みください。\n`;
+
+    // Track customer volume and referral rewards
+    processReferralReward(chatId, order.id, amount).catch(e => console.error('[TelegramBot] Referral tracking error:', e));
     paymentInfo += `振込完了後、下のボタンを押してください。`;
 
     await sendMessage(chatId, paymentInfo, {
@@ -737,6 +741,120 @@ async function handleNotify(chatId: number) {
   );
 }
 
+
+// Referral & VIP Handlers
+
+const VIP_LABELS: Record<string, string> = {
+  bronze: 'ブロンズ', silver: 'シルバー', gold: 'ゴールド', platinum: 'プラチナ',
+};
+const VIP_THRESHOLDS: Record<string, number> = {
+  bronze: 1_000_000, silver: 5_000_000, gold: 20_000_000, platinum: Infinity,
+};
+const VIP_DISCOUNTS: Record<string, string> = {
+  bronze: '標準', silver: '-0.3%', gold: '-0.5%', platinum: '-1.0%',
+};
+
+async function handleReferral(chatId: number) {
+  const telegramId = String(chatId);
+  const customer = dbSvc.getOrCreateCustomer(telegramId);
+  const stats = dbSvc.getReferralStats(telegramId);
+  await sendMessage(chatId,
+    `━━━━━━━━━━━━━━\n` +
+    `紹介プログラム\n\n` +
+    `あなたの紹介コード: <code>${customer.referral_code}</code>\n\n` +
+    `友達にこのコードを共有してください。\n` +
+    `友達が取引するたびに、取引額の0.5%が\n` +
+    `あなたにリワードとして付与されます。\n\n` +
+    `累計紹介: ${stats.referral_count}人\n` +
+    `累計リワード: ￥${Math.floor(stats.total_rewards).toLocaleString()}\n` +
+    `━━━━━━━━━━━━━━`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: 'コードをコピー', callback_data: 'cb_copy_referral' },
+            { text: '友達に送る', url: `https://t.me/share/url?url=${encodeURIComponent('BK Payで暗号通貨を購入！紹介コード: ' + customer.referral_code)}` },
+          ],
+          [{ text: '← メニューに戻る', callback_data: 'cb_menu' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handleMypage(chatId: number) {
+  const telegramId = String(chatId);
+  const stats = dbSvc.getCustomerStats(telegramId);
+  const rank = stats.vip_rank || 'bronze';
+  const rankLabel = VIP_LABELS[rank] || 'ブロンズ';
+  const nextThreshold = VIP_THRESHOLDS[rank];
+  const discount = VIP_DISCOUNTS[rank];
+  const volume = stats.total_volume_jpy || 0;
+  const orders = stats.total_orders || 0;
+  const nextRankName = rank === 'bronze' ? 'シルバー' : rank === 'silver' ? 'ゴールド' : rank === 'gold' ? 'プラチナ' : '';
+  let nextLine = '';
+  if (nextThreshold !== Infinity) {
+    nextLine = `次のランク(${nextRankName})まで: ￥${(nextThreshold - volume).toLocaleString()}`;
+  } else {
+    nextLine = '最高ランク達成！';
+  }
+  await sendMessage(chatId,
+    `━━━━━━━━━━━━━━\n` +
+    `マイページ\n\n` +
+    `━━ VIPランク ━━\n` +
+    `${rankLabel}会員\n` +
+    `累計取引額: ￥${Math.floor(volume).toLocaleString()}\n` +
+    `${nextLine}\n\n` +
+    `━━ 取引実績 ━━\n` +
+    `総取引回数: ${orders}回\n\n` +
+    `━━ 特典 ━━\n` +
+    `レート優遍: ${discount}\n\n` +
+    `━━ 紹介 ━━\n` +
+    `紹介コード: <code>${stats.referral_code}</code>\n` +
+    `紹介人数: ${stats.referral_count}人\n` +
+    `累計リワード: ￥${Math.floor(stats.total_rewards).toLocaleString()}\n` +
+    `━━━━━━━━━━━━━━`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '取引履歴', callback_data: 'cb_history' },
+            { text: '紹介する', callback_data: 'cb_referral' },
+          ],
+          [{ text: '← メニューに戻る', callback_data: 'cb_menu' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handleRegister(chatId: number, code: string) {
+  if (!code) {
+    await sendMessage(chatId, '使い方: /register 紹介コード\n例: <code>/register BK-ABC123</code>');
+    return;
+  }
+  const telegramId = String(chatId);
+  const result = dbSvc.applyReferralCode(telegramId, code.toUpperCase());
+  if (result.success) {
+    await sendMessage(chatId, '紹介コードを登録しました！取引するたびに紹介者にリワードが付与されます。');
+  } else {
+    await sendMessage(chatId, `紹介コード登録エラー: ${result.error}`);
+  }
+}
+
+async function processReferralReward(chatId: number, orderId: string, amount: number) {
+  const telegramId = String(chatId);
+  dbSvc.updateCustomerVolume(telegramId, amount);
+  const customer = dbSvc.getOrCreateCustomer(telegramId);
+  if (customer.referred_by) {
+    const referrer = dbSvc.getCustomerByReferralCode(customer.referred_by);
+    if (referrer) {
+      const reward = amount * 0.005;
+      dbSvc.addReferralReward(referrer.telegram_id, telegramId, orderId, reward);
+    }
+  }
+}
+
 // ━━━━━━━━━━━━━━━━━━ Update Processing ━━━━━━━━━━━━━━━━━━
 
 async function processUpdate(update: any) {
@@ -760,6 +878,14 @@ async function processUpdate(update: any) {
     if (data === 'cb_alert') return handleAlert(chatId);
     if (data === 'cb_notify') return handleNotify(chatId);
     if (data === 'cb_help') return handleHelp(chatId);
+    if (data === 'cb_referral') return handleReferral(chatId);
+    if (data === 'cb_mypage') return handleMypage(chatId);
+    if (data === 'cb_menu') return handleStart(chatId);
+    if (data === 'cb_copy_referral') {
+      const cust = dbSvc.getOrCreateCustomer(String(chatId));
+      await sendMessage(chatId, `<code>${cust.referral_code}</code>`);
+      return;
+    }
     if (data === 'cb_mypage') {
       await sendMessage(chatId, '📊 マイページを開く', { reply_markup: { inline_keyboard: [[{ text: '📊 マイページを開く', web_app: { url: MYPAGE_URL } }]] } });
       return;
@@ -871,6 +997,13 @@ async function processUpdate(update: any) {
   }
 
   if (text === '/notify') return handleNotify(chatId);
+
+  if (text === '/referral') return handleReferral(chatId);
+  if (text === '/mypage') return handleMypage(chatId);
+  if (text.startsWith('/register')) {
+    const code = text.split(/\s+/)[1] || '';
+    return handleRegister(chatId, code);
+  }
 
   if (text.startsWith('/status')) {
     const id = text.split(/\s+/)[1];

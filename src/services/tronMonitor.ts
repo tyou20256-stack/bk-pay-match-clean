@@ -45,14 +45,34 @@ async function checkDeposits(): Promise<void> {
       const usdtAmount = parseFloat(tx.value) / 1e6; // USDT has 6 decimals
       console.log(`[TronMonitor] Incoming USDT: ${usdtAmount} from ${tx.from} tx:${tx.transaction_id}`);
 
-      // Try to match with pending orders
+      // Try to match with pending buy orders
       const orders = dbSvc.getAllOrders() as any[];
       const pendingOrders = orders.filter((o: any) => 
         o.status === 'confirming' && 
         Math.abs(o.cryptoAmount - usdtAmount) < 0.01 // Allow tiny variance
       );
 
-      if (pendingOrders.length > 0) {
+      // Also check sell orders awaiting deposit
+      const sellOrders = dbSvc.getSellOrdersAwaitingDeposit();
+      const matchedSell = sellOrders.filter((o: any) =>
+        o.crypto === 'USDT' &&
+        Math.abs(o.cryptoAmount - usdtAmount) < 0.01
+      );
+
+      if (matchedSell.length > 0) {
+        const order = matchedSell[0];
+        dbSvc.updateOrderStatus(order.id, 'deposit_received');
+        console.log(`[TronMonitor] Sell order deposit received: ${order.id} (${usdtAmount} USDT)`);
+        notifier.notifyNewOrder({
+          id: order.id,
+          amount: order.amount,
+          cryptoAmount: usdtAmount,
+          rate: order.rate,
+          payMethod: 'USDT',
+          mode: 'sell-deposit',
+          exchange: `売却入金確認 TX: ${tx.transaction_id.slice(0, 16)}...`
+        });
+      } else if (pendingOrders.length > 0) {
         const order = pendingOrders[0];
         dbSvc.updateOrderStatus(order.id, 'completed', { completedAt: Date.now() });
         console.log(`[TronMonitor] Auto-completed order ${order.id} (${usdtAmount} USDT)`);

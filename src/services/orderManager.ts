@@ -305,4 +305,88 @@ setInterval(() => {
   });
 }, 10000);
 
-export default { createOrder, markPaid, cancelOrder, getOrder, getAllOrders };
+
+
+// === SELL Flow ===
+export async function createSellOrder(params: {
+  cryptoAmount: number;
+  crypto: string;
+  customerBankInfo: { bankName: string; branchName: string; accountNumber: string; accountHolder: string };
+}): Promise<any> {
+  const id = generateId().replace('ORD', 'SELL');
+  const now = Date.now();
+
+  // Fetch current sell rate from aggregator
+  let sellRate = 0;
+  try {
+    const res = await fetch(`http://localhost:3003/api/rates/${params.crypto}`);
+    const data = await res.json() as any;
+    if (data.success && data.data) {
+      const allSell: any[] = [];
+      for (const ex of data.data.rates) {
+        for (const o of (ex.sellOrders || [])) allSell.push(o);
+      }
+      allSell.sort((a: any, b: any) => Number(b.price) - Number(a.price));
+      if (allSell.length > 0) sellRate = Number(allSell[0].price);
+    }
+  } catch {}
+
+  if (sellRate === 0) throw new Error('売却レートを取得できませんでした');
+
+  const jpyAmount = Math.floor(params.cryptoAmount * sellRate);
+  const wallet = dbSvc.getWalletConfig() as any;
+
+  dbSvc.createSellOrder({
+    id,
+    cryptoAmount: params.cryptoAmount,
+    crypto: params.crypto,
+    rate: sellRate,
+    jpyAmount,
+    customerBankInfo: params.customerBankInfo,
+    expiresAt: now + 30 * 60 * 1000, // 30 minutes for sell
+  });
+
+  const order = {
+    id,
+    direction: 'sell',
+    status: 'awaiting_deposit',
+    cryptoAmount: params.cryptoAmount,
+    crypto: params.crypto,
+    rate: sellRate,
+    jpyAmount,
+    customerBankInfo: params.customerBankInfo,
+    depositAddress: wallet?.address || '（ウォレット未設定）',
+    depositNetwork: wallet?.network || 'TRC-20',
+    createdAt: now,
+    expiresAt: now + 30 * 60 * 1000,
+  };
+
+  orders.set(id, order as any);
+  notifier.notifyNewOrder({ ...order, amount: jpyAmount, payMethod: 'crypto', mode: 'sell', exchange: 'BK Pay（売却）' } as any);
+  broadcast('order', { id, status: 'awaiting_deposit', amount: jpyAmount, crypto: params.crypto, direction: 'sell' });
+
+  return order;
+}
+
+// Mark sell order deposit received
+export function markDepositReceived(orderId: string): any {
+  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
+  if (!order) return null;
+  dbSvc.updateOrderStatus(orderId, 'deposit_received');
+  if (order) order.status = 'deposit_received';
+  broadcast('order', { id: orderId, status: 'deposit_received' });
+  return order;
+}
+
+// Mark sell order withdrawal complete
+export function markWithdrawalComplete(orderId: string): any {
+  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
+  if (!order) return null;
+  dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: Date.now() });
+  if (order) { order.status = 'completed'; order.completedAt = Date.now(); }
+  notifier.notifyCompleted({ ...order, status: 'completed', completedAt: Date.now() });
+  broadcast('order', { id: orderId, status: 'completed' });
+  return order;
+}
+
+export default { createOrder, createSellOrder, markPaid, markDepositReceived, markWithdrawalComplete, cancelOrder, getOrder, getAllOrders };

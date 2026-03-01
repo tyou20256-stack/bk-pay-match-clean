@@ -115,6 +115,38 @@ router.get('/orders', (req, res) => {
   res.json({ success: true, orders: orderManager.getAllOrders() });
 });
 
+
+
+// === Sell Order API ===
+router.post('/orders/sell', async (req, res) => {
+  try {
+    const { cryptoAmount, crypto, customerBankInfo } = req.body;
+    if (!cryptoAmount || cryptoAmount <= 0) return res.json({ success: false, error: '暗号通貨の数量を指定してください' });
+    if (!customerBankInfo?.bankName || !customerBankInfo?.accountNumber || !customerBankInfo?.accountHolder) {
+      return res.json({ success: false, error: '銀行情報（銀行名、口座番号、名義）は必須です' });
+    }
+    const order = await orderManager.createSellOrder({
+      cryptoAmount: Number(cryptoAmount),
+      crypto: (crypto || 'USDT').toUpperCase(),
+      customerBankInfo,
+    });
+    res.json({ success: true, order });
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+router.post('/orders/:id/withdrawal-complete', (req, res) => {
+  // Auth check
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token;
+  if (!token || !dbSvc.validateSession(token)) {
+    return res.status(401).json({ success: false, error: '認証が必要です' });
+  }
+  const order = orderManager.markWithdrawalComplete(req.params.id);
+  if (!order) return res.json({ success: false, error: '注文が見つかりません' });
+  res.json({ success: true, order });
+});
+
 // === Puppeteer Trader Config ===
 import trader from '../services/puppeteerTrader.js';
 
@@ -228,4 +260,38 @@ router.get('/reports/monthly', (req, res) => {
 
 router.get('/reports/summary', (_req, res) => {
   res.json({ success: true, report: getSummaryReport() });
+});
+
+// === Customer & Referral API ===
+
+// Public: customer stats
+router.get('/customer/:telegramId/stats', (req, res) => {
+  try {
+    const stats = dbSvc.getCustomerStats(req.params.telegramId);
+    res.json({ success: true, data: stats });
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// Public: apply referral code
+router.post('/customer/referral', (req, res) => {
+  try {
+    const { telegramId, referralCode } = req.body;
+    if (!telegramId || !referralCode) return res.json({ success: false, error: 'telegramId and referralCode required' });
+    const result = dbSvc.applyReferralCode(telegramId, referralCode);
+    res.json(result);
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// Admin: all referral rewards
+router.get('/admin/referrals', (req, res) => {
+  res.json({ success: true, data: dbSvc.getAllReferralRewards() });
+});
+
+// Admin: all customers
+router.get('/admin/customers', (req, res) => {
+  res.json({ success: true, data: dbSvc.getAllCustomers() });
 });

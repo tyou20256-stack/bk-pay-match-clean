@@ -12,6 +12,7 @@ import rateLimit from 'express-rate-limit';
 import { startMonitor } from './services/tronMonitor.js';
 import { startTelegramBot } from './services/telegramBot.js';
 import { startAlerts } from './services/alertService.js';
+import { startPriceNotifier } from './services/priceNotifier.js';
 import apiRouter from './routes/api';
 import { updateAllCryptos } from './services/aggregator';
 import { CONFIG } from './config';
@@ -135,6 +136,14 @@ async function start() {
     try { startAlerts(); } catch (e) { console.error('[AlertService] Failed to start:', e); }
   } else {
     console.log('[AlertService] Disabled (set ENABLE_ALERTS=true to enable)');
+  }
+
+  // Price Notifications (Daily/Spike/Weekly)
+  const ENABLE_NOTIFICATIONS = process.env.ENABLE_NOTIFICATIONS === 'true';
+  if (ENABLE_NOTIFICATIONS) {
+    try { startPriceNotifier(); } catch (e) { console.error('[PriceNotifier] Failed to start:', e); }
+  } else {
+    console.log('[PriceNotifier] Disabled (set ENABLE_NOTIFICATIONS=true to enable)');
   }
 
   const server = http.createServer(app);
