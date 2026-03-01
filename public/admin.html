@@ -907,3 +907,88 @@
 </script>
 </body>
 </html>
+<script>
+// === Account Health ===
+async function loadAccountHealth(){
+  try{
+    var r=await fetch('/api/accounts/health');var d=await r.json();
+    if(!d.success||!d.data)return;
+    window._healthData=d.data;
+    // Update account table with health info
+    var rows=document.querySelectorAll('#accountTableBody tr');
+    d.data.forEach(function(h){
+      rows.forEach(function(row){
+        var cells=row.querySelectorAll('td');
+        if(!cells.length)return;
+        // Check if health column already exists
+        var lastCell=cells[cells.length-1];
+        var bankCell=cells[1];
+        if(bankCell&&bankCell.textContent===h.bankName){
+          // Add or update health badge
+          var existingBadge=row.querySelector('.health-badge');
+          if(existingBadge)existingBadge.remove();
+          var badge=document.createElement('span');
+          badge.className='health-badge';
+          var color=h.healthScore>=80?'#22c55e':h.healthScore>=50?'#eab308':'#ef4444';
+          badge.style.cssText='display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:600;color:#fff;background:'+color+';margin-left:4px';
+          badge.textContent=h.healthScore;
+          if(h.healthScore<50)badge.textContent+=' !';
+          cells[0].appendChild(badge);
+        }
+      });
+    });
+  }catch(e){console.error('Health load error:',e);}
+}
+
+async function checkAllAccountHealth(){
+  try{
+    var r=await fetch('/api/accounts/health/check-all',{method:'POST'});
+    var d=await r.json();
+    if(d.success){
+      alert('Check complete: '+d.rested+' rested, '+d.frozen+' frozen');
+      loadAccounts();
+      setTimeout(loadAccountHealth,500);
+    }
+  }catch(e){alert('Error: '+e.message);}
+}
+
+// Override showTab to also load health
+var _origShowTab=window.showTab;
+if(_origShowTab){
+  window.showTab=function(t){
+    _origShowTab(t);
+    if(t==='accounts')setTimeout(loadAccountHealth,300);
+  };
+}
+
+// Also load health on initial account load
+var _origLoadAccounts=window.loadAccounts;
+if(_origLoadAccounts){
+  var _newLoadAccounts=async function(){
+    await _origLoadAccounts();
+    setTimeout(loadAccountHealth,200);
+  };
+  window.loadAccounts=_newLoadAccounts;
+}
+
+// Add "全口座チェック" button
+document.addEventListener('DOMContentLoaded',function(){
+  var accountsSection=document.querySelector('[onclick="showTab(\'accounts\')"]');
+  if(accountsSection){
+    // Find the accounts section header and add button
+    setTimeout(function(){
+      var secTitles=document.querySelectorAll('.sec-title');
+      secTitles.forEach(function(t){
+        if(t.textContent.includes('銀行口座')){
+          var btn=document.createElement('button');
+          btn.className='btn btn-outline';
+          btn.style.cssText='margin-left:12px;padding:4px 12px;font-size:10px';
+          btn.textContent='全口座ヘルスチェック';
+          btn.onclick=checkAllAccountHealth;
+          t.parentElement.appendChild(btn);
+        }
+      });
+    },100);
+  }
+});
+</script>

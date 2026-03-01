@@ -429,8 +429,8 @@ router.post('/orders/:id/transfer-failed', (req, res) => {
 
   // Find the account used for this order and mark transfer failed
   const paymentInfo = order.paymentInfo;
-  if (paymentInfo?.accountId) {
-    markTransferFailed(paymentInfo.accountId);
+  if ((paymentInfo as any)?.accountId) {
+    markTransferFailed((paymentInfo as any).accountId);
   }
 
   orderManager.cancelOrder(req.params.id);
