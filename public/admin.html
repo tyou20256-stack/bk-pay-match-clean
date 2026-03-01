@@ -626,5 +626,24 @@
     loadAccounts();
     loadTraderStatus();
   </script>
+<script>
+// WebSocket for live order updates
+(function() {
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  var ws = new WebSocket(proto + '//' + location.host + '/ws');
+  ws.onmessage = function(e) {
+    var msg = JSON.parse(e.data);
+    if (msg.type === 'order') { loadOrders(); }
+  };
+  ws.onclose = function() {
+    setTimeout(function reconnect() {
+      var p = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      var w = new WebSocket(p + '//' + location.host + '/ws');
+      w.onmessage = ws.onmessage;
+      w.onclose = function() { setTimeout(reconnect, 5000); };
+    }, 5000);
+  };
+})();
+</script>
 </body>
 </html>

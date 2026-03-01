@@ -1,4 +1,5 @@
 import { recordSnapshot } from './priceHistory.js';
+import { broadcast } from './websocket.js';
 /**
  * @file aggregator.ts — レート集約エンジン
  * @description 全取引所のP2Pレートを30秒間隔で取得・集約する中核モジュール。
@@ -86,6 +87,9 @@ export async function fetchAllRates(crypto: string): Promise<AggregatedRates> {
   try { recordSnapshot(crypto, result); } catch(e) {}
 
   cachedRates.set(crypto, result);
+
+  // Broadcast rates via WebSocket
+  broadcast("rates", { crypto, ...result });
   return result;
 }
 

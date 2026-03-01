@@ -13,6 +13,7 @@
  */
 import notifier from './notifier.js';
 import * as dbSvc from './database.js';
+import { broadcast } from './websocket.js';
 
 // Order Manager - Handles both Auto-Match (Puppeteer) and Self-Merchant (Account Router) modes
 
@@ -241,6 +242,7 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
 
   dbSvc.saveOrder(order);
   notifier.notifyNewOrder(order);
+  broadcast('order', { id: order.id, status: order.status, amount: order.amount, crypto: order.crypto });
   return order;
 }
 
@@ -252,6 +254,7 @@ export function markPaid(orderId: string): Order | null {
   order.paidAt = Date.now();
   dbSvc.updateOrderStatus(orderId, 'confirming', { paidAt: order.paidAt });
   notifier.notifyPaid(order);
+  broadcast('order', { id: order.id, status: order.status, amount: order.amount });
   
   // Simulate confirmation (in prod: check bank API / TronGrid)
   setTimeout(() => {
@@ -261,6 +264,7 @@ export function markPaid(orderId: string): Order | null {
       o.completedAt = Date.now();
       dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: o.completedAt });
       notifier.notifyCompleted(o);
+      broadcast('order', { id: o.id, status: o.status, amount: o.amount });
     }
   }, 5000); // Auto-confirm after 5s for demo
 
@@ -274,6 +278,7 @@ export function cancelOrder(orderId: string): Order | null {
   order.status = 'cancelled';
   dbSvc.updateOrderStatus(orderId, 'cancelled');
   notifier.notifyCancelled(order);
+  broadcast('order', { id: order.id, status: order.status, amount: order.amount });
   return order;
 }
 
@@ -295,6 +300,7 @@ setInterval(() => {
       order.status = 'expired';
       dbSvc.updateOrderStatus(id, 'expired');
       notifier.notifyExpired(order);
+      broadcast('order', { id: order.id, status: order.status, amount: order.amount });
     }
   });
 }, 10000);

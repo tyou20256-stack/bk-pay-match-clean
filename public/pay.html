@@ -138,7 +138,12 @@
     <!-- STEP 1: Amount & Payment Method -->
     <div class="panel active" id="p1">
       <div class="section-title">入金額と支払方法</div>
-      <div class="section-desc">日本円で入金したい金額を入力してください</div>
+      <div class="section-desc">購入する暗号資産と日本円の金額を選択してください</div>
+      <div style="display:flex;gap:6px;margin-bottom:14px;justify-content:center" id="cryptoSelector">
+        <button class="quick-btn active" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selCrypto('USDT',this)">USDT</button>
+        <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selCrypto('BTC',this)">BTC</button>
+        <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selCrypto('ETH',this)">ETH</button>
+      </div>
       <div class="amount-input-wrap">
         <span class="amount-prefix">¥</span>
         <input type="tel" class="amount-input" id="inAmount" placeholder="10000" inputmode="numeric" pattern="[0-9]*" oninput="onAmountChange()">
@@ -239,7 +244,7 @@
   <div class="pay-footer">BK Pay v2.0 -- Powered by P2P Aggregation</div>
 
   <script>
-    var amount=0,payMethod='bank',currentOrder=null,timerSec=900,timerInterval=null;
+    var amount=0,payMethod='bank',selectedCrypto='USDT',currentOrder=null,timerSec=900,timerInterval=null;
 
     // Config
     var WALLET='TXxx...設定してください';
@@ -268,6 +273,7 @@
 
     // Step 1
     function setAmt(v,el){amount=v;document.getElementById('inAmount').value=v;document.querySelectorAll('.quick-btn').forEach(function(b){b.classList.remove('active');});el.classList.add('active');onAmountChange();}
+    function selCrypto(c,el){selectedCrypto=c;document.querySelectorAll('#cryptoSelector .quick-btn').forEach(function(b){b.classList.remove('active');});el.classList.add('active');onAmountChange();}
     function selPay(m,el){payMethod=m;document.querySelectorAll('.pay-method').forEach(function(b){b.classList.remove('selected');});el.classList.add('selected');}
     function onAmountChange(){
       amount=parseInt(document.getElementById('inAmount').value)||0;
@@ -277,7 +283,7 @@
     }
     async function fetchPreview(){
       try{
-        var r=await fetch('/api/rates/USDT');var j=await r.json();if(!j.success)return;
+        var r=await fetch('/api/rates/'+selectedCrypto);var j=await r.json();if(!j.success)return;
         var best=null;
         j.data.rates.forEach(function(ex){ex.buyOrders.forEach(function(o){
           if(o.minLimit<=amount&&(o.maxLimit===0||o.maxLimit>=amount)&&o.merchant.completionRate>=90){
@@ -286,8 +292,8 @@
         });});
         if(!best)j.data.rates.forEach(function(ex){ex.buyOrders.forEach(function(o){if(o.minLimit<=amount&&(o.maxLimit===0||o.maxLimit>=amount)){if(!best||o.price<best.price)best=o;}});});
         if(best){
-          document.getElementById('cvRate').textContent='¥'+fmt(best.price)+' / USDT';
-          document.getElementById('cvUsdt').textContent=(amount/best.price).toFixed(2)+' USDT';
+          document.getElementById('cvRate').textContent='¥'+fmt(best.price)+' / '+selectedCrypto;
+          document.getElementById('cvUsdt').textContent=(amount/best.price).toFixed(selectedCrypto==='USDT'?2:6)+' '+selectedCrypto;
         }
       }catch(e){}
     }
@@ -314,7 +320,7 @@
       await wait(200);
 
       try{
-        var res=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:amount,payMethod:payMethod,crypto:'USDT'})});
+        var res=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:amount,payMethod:payMethod,crypto:selectedCrypto})});
         var data=await res.json();
         
         if(!data.success){
@@ -331,7 +337,7 @@
           addLog(log,'OKX を検索...','ok');await wait(200);
           addLog(log,'HTX を検索...','ok');await wait(200);
           addLog(log,'最適マーチャント: '+currentOrder.exchange+' / '+currentOrder.merchantName,'ok');
-          addLog(log,'レート: ¥'+fmt(currentOrder.rate)+' / USDT','ok');
+          addLog(log,'レート: ¥'+fmt(currentOrder.rate)+' / '+currentOrder.crypto,'ok');
           addLog(log,'完了率: '+currentOrder.merchantCompletionRate+'%','ok');
           await wait(500);
           addLog(log,'注文作成完了','ok');

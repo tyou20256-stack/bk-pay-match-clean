@@ -140,5 +140,26 @@
   <footer><span>BK P2P Aggregator &mdash; Bybit / Binance / OKX / HTX</span></footer>
   <script src="i18n.js?v=1772345713"></script>
   <script src="app.js?v=1772345713"></script>
+<script>
+// WebSocket real-time updates
+(function() {
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  var ws = new WebSocket(proto + '//' + location.host + '/ws');
+  ws.onmessage = function(e) {
+    var msg = JSON.parse(e.data);
+    if (msg.type === 'rates') {
+      renderData(msg.data);
+    }
+  };
+  ws.onclose = function() {
+    setTimeout(function reconnect() {
+      var p = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      var w = new WebSocket(p + '//' + location.host + '/ws');
+      w.onmessage = ws.onmessage;
+      w.onclose = function() { setTimeout(reconnect, 5000); };
+    }, 5000);
+  };
+})();
+</script>
 </body>
 </html>

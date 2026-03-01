@@ -17,6 +17,7 @@ import { updateAllCryptos } from './services/aggregator';
 import { CONFIG } from './config';
 import { authRequired } from './middleware/auth';
 import { authenticateUser, deleteSession, validateSession, changePassword } from './services/database';
+import { initWebSocket } from './services/websocket';
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
@@ -136,7 +137,9 @@ async function start() {
     console.log('[AlertService] Disabled (set ENABLE_ALERTS=true to enable)');
   }
 
-  app.listen(CONFIG.port, '0.0.0.0', () => {
+  const server = http.createServer(app);
+  initWebSocket(server);
+  server.listen(CONFIG.port, '0.0.0.0', () => {
     console.log(`\n✅ Dashboard: http://localhost:${CONFIG.port}`);
     console.log(`📊 API: http://localhost:${CONFIG.port}/api/rates`);
   });
