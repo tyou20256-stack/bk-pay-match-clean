@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BK Pay - 損益ダッシュボード</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@0.321.0/font/lucide.min.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    [data-theme="dark"]{--bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;--border:#243049;--text:#edf0f7;--text2:#a0aec0;--dim:#5a6a85;--green:#34d399;--green-soft:rgba(52,211,153,.1);--green-border:rgba(52,211,153,.25);--red:#f87171;--red-soft:rgba(248,113,113,.08);--blue:#60a5fa;--blue-soft:rgba(96,165,250,.08);--yellow:#fbbf24;--yellow-soft:rgba(251,191,36,.08);--purple:#a78bfa;--input-bg:#0f1520;--shadow:0 2px 12px rgba(0,0,0,.3)}
+    [data-theme="light"]{--bg:#f5f7fa;--bg2:#fff;--card:#fff;--card2:#f8fafc;--border:#e2e8f0;--text:#1a202c;--text2:#4a5568;--dim:#a0aec0;--green:#059669;--green-soft:rgba(5,150,105,.08);--green-border:rgba(5,150,105,.2);--red:#dc2626;--red-soft:rgba(220,38,38,.06);--blue:#2563eb;--blue-soft:rgba(37,99,235,.06);--yellow:#d97706;--yellow-soft:rgba(217,119,6,.06);--purple:#7c3aed;--input-bg:#f1f5f9;--shadow:0 2px 12px rgba(0,0,0,.06)}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Segoe UI',sans-serif;font-size:13px;line-height:1.5}
+
+    .header{padding:12px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:100}
+    .logo{font-size:15px;font-weight:800}.logo span{color:var(--green)}
+    .header-right{display:flex;gap:6px;align-items:center}
+    .icon-btn{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;text-decoration:none}
+
+    .container{max-width:1100px;margin:0 auto;padding:20px}
+
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+    .stat-val{font-size:24px;font-weight:800;margin-bottom:2px}
+    .stat-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+    .stat-val.green{color:var(--green)}.stat-val.red{color:var(--red)}.stat-val.blue{color:var(--blue)}.stat-val.yellow{color:var(--yellow)}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+    .card-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+    /* Gauge */
+    .gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+    .gauge{position:relative;width:200px;height:200px}
+    .gauge svg{transform:rotate(-90deg)}
+    .gauge-bg{fill:none;stroke:var(--border);stroke-width:12}
+    .gauge-fill{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset .8s ease}
+    .gauge-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+    .gauge-pct{font-size:36px;font-weight:800}
+    .gauge-sub{font-size:11px;color:var(--dim)}
+    .goal-edit{display:flex;align-items:center;gap:8px}
+    .goal-input{width:120px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:12px;font-family:inherit;text-align:right}
+    .btn{padding:6px 14px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn-green{background:var(--green);color:#fff}.btn-green:hover{opacity:.9}
+    .btn-outline{background:none;border:1px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--text);color:var(--text)}
+
+    /* Heatmap */
+    .heatmap{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+    .heatmap-cell{aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid transparent}
+    .heatmap-cell:hover{border-color:var(--text2);transform:scale(1.1)}
+    .heatmap-cell.empty{background:transparent;cursor:default}
+    .heatmap-cell.empty:hover{border-color:transparent;transform:none}
+    .heatmap-header{font-size:9px;color:var(--dim);text-align:center;font-weight:700}
+
+    /* Summary table */
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{padding:8px 10px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);font-weight:700;border-bottom:1px solid var(--border);background:var(--bg2)}
+    td{padding:8px 10px;border-bottom:1px solid var(--border)}
+    tr:hover td{background:var(--card2)}
+
+    .trend-arrow{font-size:18px;font-weight:800;margin-left:8px}
+    .trend-up{color:var(--green)}.trend-down{color:var(--red)}
+
+    .period-tabs{display:flex;gap:4px;margin-bottom:16px}
+    .period-tab{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:11px;font-weight:600;font-family:inherit}
+    .period-tab.active{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+
+    .tooltip{position:fixed;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:11px;pointer-events:none;z-index:200;display:none;box-shadow:var(--shadow)}
+
+    @media(max-width:768px){
+      .stats-grid{grid-template-columns:repeat(2,1fr)}
+      .grid-2{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="logo">BK <span>Pay</span> 損益ダッシュボード</div>
+    </div>
+    <div class="header-right">
+      <a href="/admin.html" class="icon-btn" title="管理画面" style="font-size:10px">ADM</a>
+      <button class="icon-btn" onclick="toggleTheme()" id="themeBtn">D</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Section 1: Today's Summary -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-val green" id="todayProfit">--</div>
+        <div class="stat-label">本日の純利益</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val yellow" id="goalPct">--%</div>
+        <div class="stat-label">目標達成率</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val blue" id="todayOrders">--</div>
+        <div class="stat-label">注文数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="avgProfit">--</div>
+        <div class="stat-label">平均利益/件</div>
+      </div>
+    </div>
+
+    <!-- Section 2 & 3: Gauge + Hourly Chart -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">目標達成ゲージ</div>
+        <div class="gauge-wrap">
+          <div class="gauge">
+            <svg viewBox="0 0 200 200" width="200" height="200">
+              <circle class="gauge-bg" cx="100" cy="100" r="85"/>
+              <circle class="gauge-fill" id="gaugeFill" cx="100" cy="100" r="85"
+                stroke-dasharray="534" stroke-dashoffset="534"/>
+            </svg>
+            <div class="gauge-center">
+              <div class="gauge-pct" id="gaugePct">0%</div>
+              <div class="gauge-sub" id="gaugeSub">-- / --</div>
+            </div>
+          </div>
+          <div class="goal-edit">
+            <span style="font-size:11px;color:var(--dim)">日次目標:</span>
+            <input type="number" class="goal-input" id="goalInput" value="50000" step="1000">
+            <button class="btn btn-green" onclick="saveGoal()">設定</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">本日の時間別利益</div>
+        <canvas id="hourlyChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- Section 4: 7-day trend -->
+    <div class="card">
+      <div class="card-title">7日間トレンド <span class="trend-arrow" id="trendArrow"></span></div>
+      <canvas id="trendChart" height="100"></canvas>
+    </div>
+
+    <!-- Section 5: Breakdown -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">暗号通貨別利益</div>
+        <canvas id="cryptoPie" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">利益内訳</div>
+        <table>
+          <thead><tr><th>期間</th><th>スプレッド利益</th><th>手数料利益</th><th>合計</th></tr></thead>
+          <tbody id="breakdownBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 6: Monthly Heatmap -->
+    <div class="card">
+      <div class="card-title">
+        月間ヒートマップ
+        <div style="margin-left:auto;display:flex;gap:4px">
+          <button class="btn btn-outline" onclick="changeMonth(-1)" style="padding:4px 8px">&#9664;</button>
+          <span id="heatmapMonth" style="font-size:12px;min-width:80px;text-align:center;line-height:26px"></span>
+          <button class="btn btn-outline" onclick="changeMonth(1)" style="padding:4px 8px">&#9654;</button>
+        </div>
+      </div>
+      <div class="heatmap" id="heatmap"></div>
+    </div>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script>
+    const API = '/api';
+    let token = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('bkpay_token='))?.split('=')[1] || '';
+    if (!token) { token = localStorage.getItem('bkpay_token') || ''; }
+
+    const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token });
+
+    // Charts
+    let hourlyChart, trendChart, cryptoPieChart;
+    let heatmapYear, heatmapMonth;
+
+    async function apiFetch(path) {
+      const r = await fetch(API + path, { headers: headers(), credentials: 'include' });
+      if (r.status === 401) { window.location.href = '/admin.html'; return null; }
+      const j = await r.json();
+      return j.success ? j.data : null;
+    }
+
+    function fmt(n) { return '¥' + (n||0).toLocaleString(); }
+
+    async function loadAll() {
+      const [summary, daily, trend] = await Promise.all([
+        apiFetch('/profit/summary'),
+        apiFetch('/profit/daily'),
+        apiFetch('/profit/trend'),
+      ]);
+      if (!summary) return;
+
+      const goal = summary.goal || 50000;
+      const todayP = summary.today.totalProfit;
+      const pct = goal > 0 ? Math.round((todayP / goal) * 100) : 0;
+
+      document.getElementById('todayProfit').textContent = fmt(todayP);
+      document.getElementById('goalPct').textContent = pct + '%';
+      document.getElementById('todayOrders').textContent = summary.today.orderCount + '件';
+      document.getElementById('avgProfit').textContent = fmt(summary.today.avgProfitPerOrder);
+      document.getElementById('goalInput').value = goal;
+
+      // Gauge
+      const clampPct = Math.min(pct, 100);
+      const offset = 534 - (534 * clampPct / 100);
+      const gaugeFill = document.getElementById('gaugeFill');
+      gaugeFill.style.strokeDashoffset = offset;
+      gaugeFill.style.stroke = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--yellow)' : 'var(--red)';
+      document.getElementById('gaugePct').textContent = pct + '%';
+      document.getElementById('gaugeSub').textContent = fmt(todayP) + ' / ' + fmt(goal);
+
+      // Hourly chart
+      if (daily && daily.hourly) {
+        const labels = daily.hourly.map(h => h.hour + ':00');
+        const profits = daily.hourly.map(h => h.totalProfit);
+        let cum = 0;
+        const cumulative = daily.hourly.map(h => { cum += h.totalProfit; return cum; });
+
+        if (hourlyChart) hourlyChart.destroy();
+        hourlyChart = new Chart(document.getElementById('hourlyChart'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: '時間別利益', data: profits, backgroundColor: 'rgba(52,211,153,.5)', borderColor: 'var(--green)', borderWidth: 1, order: 2 },
+              { label: '累計利益', data: cumulative, type: 'line', borderColor: 'var(--blue)', borderWidth: 2, pointRadius: 0, fill: false, order: 1 },
+            ]
+          },
+          options: { responsive: true, plugins: { legend: { labels: { color: 'var(--text2)', font: { size: 10 } } } }, scales: { x: { ticks: { color: 'var(--dim)', font: { size: 9 } }, grid: { color: 'var(--border)' } }, y: { ticks: { color: 'var(--dim)', callback: v => '¥' + v.toLocaleString() }, grid: { color: 'var(--border)' } } } }
+        });
+      }
+
+      // 7-day trend
+      if (trend) {
+        const labels = trend.map(d => d.date.slice(5));
+        const profits = trend.map(d => d.totalProfit);
+        const up = profits.length >= 2 && profits[profits.length-1] >= profits[profits.length-2];
+        document.getElementById('trendArrow').innerHTML = up ? '&#9650;' : '&#9660;';
+        document.getElementById('trendArrow').className = 'trend-arrow ' + (up ? 'trend-up' : 'trend-down');
+
+        if (trendChart) trendChart.destroy();
+        trendChart = new Chart(document.getElementById('trendChart'), {
+          type: 'line',
+          data: { labels, datasets: [{ label: '日次利益', data: profits, borderColor: 'var(--green)', backgroundColor: 'rgba(52,211,153,.1)', fill: true, tension: .3, pointRadius: 4, pointBackgroundColor: 'var(--green)' }] },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: 'var(--dim)' }, grid: { color: 'var(--border)' } }, y: { ticks: { color: 'var(--dim)', callback: v => '¥' + v.toLocaleString() }, grid: { color: 'var(--border)' } } } }
+        });
+      }
+
+      // Crypto pie
+      const byCrypto = summary.byCrypto || [];
+      if (cryptoPieChart) cryptoPieChart.destroy();
+      const pieColors = ['var(--green)', 'var(--blue)', 'var(--purple)', 'var(--yellow)', 'var(--red)'];
+      cryptoPieChart = new Chart(document.getElementById('cryptoPie'), {
+        type: 'doughnut',
+        data: {
+          labels: byCrypto.length ? byCrypto.map(c => c.crypto) : ['データなし'],
+          datasets: [{ data: byCrypto.length ? byCrypto.map(c => c.totalProfit) : [1], backgroundColor: byCrypto.length ? pieColors.slice(0, byCrypto.length) : ['var(--border)'] }]
+        },
+        options: { responsive: true, plugins: { legend: { labels: { color: 'var(--text2)', font: { size: 11 } } } } }
+      });
+
+      // Breakdown table
+      const body = document.getElementById('breakdownBody');
+      body.innerHTML = [
+        { label: '本日', d: summary.today },
+        { label: '今週', d: summary.thisWeek },
+        { label: '今月', d: summary.thisMonth },
+        { label: '全期間', d: summary.allTime },
+      ].map(r => `<tr><td>${r.label}</td><td>${fmt(r.d.spreadProfit)}</td><td>${fmt(r.d.feeProfit)}</td><td style="font-weight:700">${fmt(r.d.totalProfit)}</td></tr>`).join('');
+    }
+
+    // Heatmap
+    async function loadHeatmap() {
+      const data = await apiFetch(`/profit/monthly?year=${heatmapYear}&month=${heatmapMonth}`);
+      document.getElementById('heatmapMonth').textContent = `${heatmapYear}/${String(heatmapMonth).padStart(2,'0')}`;
+      const el = document.getElementById('heatmap');
+      const daysInMonth = new Date(heatmapYear, heatmapMonth, 0).getDate();
+      const firstDow = new Date(heatmapYear, heatmapMonth - 1, 1).getDay();
+      const profitMap = {};
+      let maxP = 1;
+      (data || []).forEach(d => { profitMap[d.date] = d.totalProfit; if (d.totalProfit > maxP) maxP = d.totalProfit; });
+
+      const dayNames = ['日','月','火','水','木','金','土'];
+      let html = dayNames.map(d => `<div class="heatmap-header">${d}</div>`).join('');
+      for (let i = 0; i < firstDow; i++) html += '<div class="heatmap-cell empty"></div>';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${heatmapYear}-${String(heatmapMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const p = profitMap[dateStr] || 0;
+        const intensity = p > 0 ? Math.max(0.15, Math.min(1, p / maxP)) : 0;
+        const bg = p > 0 ? `rgba(52,211,153,${intensity})` : (p < 0 ? `rgba(248,113,113,${Math.max(0.15, Math.min(1, Math.abs(p)/maxP))})` : 'var(--bg2)');
+        html += `<div class="heatmap-cell" style="background:${bg}" data-date="${dateStr}" data-profit="${p}" onmouseenter="showTip(event,this)" onmouseleave="hideTip()">${d}</div>`;
+      }
+      el.innerHTML = html;
+    }
+
+    function changeMonth(delta) {
+      heatmapMonth += delta;
+      if (heatmapMonth > 12) { heatmapMonth = 1; heatmapYear++; }
+      if (heatmapMonth < 1) { heatmapMonth = 12; heatmapYear--; }
+      loadHeatmap();
+    }
+
+    function showTip(e, el) {
+      const tip = document.getElementById('tooltip');
+      tip.textContent = el.dataset.date + ': ' + fmt(parseInt(el.dataset.profit));
+      tip.style.display = 'block';
+      tip.style.left = e.clientX + 12 + 'px';
+      tip.style.top = e.clientY - 30 + 'px';
+    }
+    function hideTip() { document.getElementById('tooltip').style.display = 'none'; }
+
+    async function saveGoal() {
+      const amount = parseInt(document.getElementById('goalInput').value);
+      if (!amount || amount <= 0) return;
+      await fetch(API + '/profit/goal', { method: 'POST', headers: headers(), credentials: 'include', body: JSON.stringify({ amount }) });
+      loadAll();
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const next = html.dataset.theme === 'dark' ? 'light' : 'dark';
+      html.dataset.theme = next;
+      document.getElementById('themeBtn').textContent = next === 'dark' ? 'D' : 'L';
+      localStorage.setItem('theme', next);
+    }
+
+    // Init
+    const now = new Date();
+    heatmapYear = now.getFullYear();
+    heatmapMonth = now.getMonth() + 1;
+
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) { document.documentElement.dataset.theme = savedTheme; document.getElementById('themeBtn').textContent = savedTheme === 'dark' ? 'D' : 'L'; }
+
+    loadAll();
+    loadHeatmap();
+    setInterval(() => { loadAll(); loadHeatmap(); }, 60000);
+  </script>
+</body>
+</html>

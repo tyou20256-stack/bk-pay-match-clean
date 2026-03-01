@@ -486,3 +486,48 @@ router.post('/orders/:id/transfer-failed', (req, res) => {
   orderManager.cancelOrder(req.params.id);
   res.json({ success: true, message: 'Order marked as transfer failed' });
 });
+
+// === Puppeteer Trader Login/Screenshot/Test API ===
+import fs from 'fs';
+
+router.post('/trader/login/:exchange', async (req, res) => {
+  const exchange = req.params.exchange as 'Bybit' | 'Binance';
+  if (!['Bybit', 'Binance'].includes(exchange)) return res.json({ success: false, error: 'Unsupported exchange' });
+  try {
+    const { email, password, totpSecret } = req.body || {};
+    const result = await trader.login(exchange, email, password, totpSecret);
+    res.json({ success: result, message: result ? `${exchange} login successful` : `${exchange} login failed` });
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+router.get('/trader/screenshot', (req, res) => {
+  const screenshotPath = trader.getScreenshotPath();
+  if (!screenshotPath) return res.json({ success: false, error: 'No screenshot available' });
+  try {
+    res.setHeader('Content-Type', 'image/png');
+    res.send(fs.readFileSync(screenshotPath));
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+router.post('/trader/test-order', async (req, res) => {
+  const { exchange, crypto, amount, payMethod } = req.body;
+  if (!exchange || !amount) return res.json({ success: false, error: 'exchange and amount required' });
+  console.log(`[API] Test order: ${exchange} ${crypto || 'USDT'} ${amount} JPY via ${payMethod || 'bank'} (dry-run)`);
+  // Dry run - just check login status and return
+  const status = trader.getStatus();
+  const loginInfo = (status as any).loginStatus?.[exchange];
+  res.json({
+    success: true,
+    dryRun: true,
+    exchange,
+    crypto: crypto || 'USDT',
+    amount,
+    payMethod: payMethod || 'bank',
+    loginStatus: loginInfo || { loggedIn: false },
+    message: loginInfo?.loggedIn ? 'Ready to trade (dry-run, no order placed)' : `Not logged in to ${exchange}. Login first.`,
+  });
+});
