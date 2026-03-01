@@ -187,13 +187,13 @@
       <div class="convert-box" id="convertBox" style="display:none">
         <div class="convert-row"><span class="convert-label">現在の最安レート</span><span class="convert-val" id="cvRate">--</span></div>
         <div class="convert-row"><span class="convert-label">受取り予定額</span><span class="convert-val hl" id="cvUsdt">--</span></div>
-        <div class="convert-row"><span class="convert-label">取引手数料</span><span class="convert-val">無料</span></div>
+        <div class="convert-row"><span class="convert-label">手数料 (2.0%)</span><span class="convert-val" id="cvFee">--</span></div>
       </div>
       <button class="btn-primary" id="btnGo" onclick="startMatching()" disabled>マッチング開始</button>
       <div class="trust-bar">
         <div class="trust-item"><div class="trust-icon">&#x1F512;</div><div class="trust-text">エスクロー保護</div></div>
         <div class="trust-item"><div class="trust-icon">&#x26A1;</div><div class="trust-text">5-15分で完了</div></div>
-        <div class="trust-item"><div class="trust-icon">&#x1F4B0;</div><div class="trust-text">手数料 0円</div></div>
+        <div class="trust-item"><div class="trust-icon">&#x1F4B0;</div><div class="trust-text">手数料 2.0%</div></div>
       </div>
     </div>
 
@@ -239,9 +239,11 @@
       <!-- Order summary -->
       <div class="summary">
         <div class="summary-row"><span class="summary-label">入金額</span><span class="summary-val" id="sumAmt">--</span></div>
+        <div class="summary-row"><span class="summary-label">手数料</span><span class="summary-val" id="sumFee" style="color:var(--yellow)">--</span></div>
+        <div class="summary-row"><span class="summary-label">実質入金額</span><span class="summary-val" id="sumNet">--</span></div>
         <div class="summary-row"><span class="summary-label">レート</span><span class="summary-val" id="sumRate">--</span></div>
         <div class="summary-row"><span class="summary-label">取引所</span><span class="summary-val" id="sumExch">--</span></div>
-        <div class="summary-row"><span class="summary-label">受取り額</span><span class="summary-val big" id="sumUsdt">--</span></div>
+        <div class="summary-row"><span class="summary-label">受取予定</span><span class="summary-val big" id="sumUsdt">--</span></div>
       </div>
 
       <button class="btn-primary" onclick="confirmPaid()">振込完了 -- 確認を待つ</button>

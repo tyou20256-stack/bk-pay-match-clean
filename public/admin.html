@@ -107,6 +107,7 @@
         <button class="nav-btn" onclick="showTab('settings')">設定</button>
         <button class="nav-btn" onclick="showTab('reports')">レポート</button>
         <button class="nav-btn" onclick="showTab('customers')">顧客管理</button>
+        <button class="nav-btn" onclick="showTab('fees')">手数料</button>
       </div>
     </div>
     <div class="admin-right">
@@ -138,6 +139,16 @@
           <button class="btn btn-outline" onclick="clearFilters()" style="height:33px">クリア</button>
         </div>
       </div>
+      <!-- CSV Export -->
+      <div class="card" style="padding:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="gap:2px"><label class="form-label">エクスポート開始日</label><input class="form-input" type="date" id="exportFrom" style="width:140px"></div>
+          <div class="form-group" style="gap:2px"><label class="form-label">エクスポート終了日</label><input class="form-input" type="date" id="exportTo" style="width:140px"></div>
+          <button class="btn btn-outline" onclick="exportCSV('standard')">CSV出力</button>
+          <button class="btn btn-outline" onclick="exportCSV('freee')">freee形式</button>
+          <button class="btn btn-outline" onclick="exportCSV('yayoi')">弥生形式</button>
+        </div>
+      </div>
       <div class="stats-grid" id="orderStats">
         <div class="stat-card"><div class="stat-val blue" id="statTotal">0</div><div class="stat-label">全注文</div></div>
         <div class="stat-card"><div class="stat-val yellow" id="statPending">0</div><div class="stat-label">支払待ち</div></div>
@@ -156,7 +167,7 @@
     <div class="tab-panel" id="tab-accounts">
       <div class="sec-header">
         <div><div class="sec-title">銀行口座管理</div><div class="sec-desc">自社決済フォールバック用の口座</div></div>
-        <div style="display:flex;gap:6px"><button class="btn btn-green" onclick="showAddAccount()">+ 口座を追加</button><button class="btn btn-outline" onclick="showBulkImport()">CSV一括登録</button></div>
+        <div style="display:flex;gap:6px"><button class="btn btn-green" onclick="showAddAccount()">+ 口座を追加</button><button class="btn btn-outline" onclick="showBulkImport()">CSV一括登録</button><button class="btn btn-outline" onclick="exportAccounts()">口座一覧CSV</button></div>
       </div>
       <!-- Add form -->
       <div class="card" id="addAccountForm" style="display:none">
@@ -397,6 +408,36 @@
 
 
 
+    <!-- TAB: Fees -->
+    <div class="tab-panel" id="tab-fees">
+      <div class="sec-header">
+        <div><div class="sec-title">手数料設定</div><div class="sec-desc">VIPランク別手数料率と収益レポート</div></div>
+        <button class="btn btn-outline" onclick="loadFeeReport()">更新</button>
+      </div>
+      <div class="stats-grid" id="feeStats">
+        <div class="stat-card"><div class="stat-val green" id="feesToday">¥0</div><div class="stat-label">今日の手数料</div></div>
+        <div class="stat-card"><div class="stat-val blue" id="feesMonth">¥0</div><div class="stat-label">今月の手数料</div></div>
+        <div class="stat-card"><div class="stat-val purple" id="feesTotal">¥0</div><div class="stat-label">累計手数料</div></div>
+        <div class="stat-card"><div class="stat-val yellow" id="feesOrders">0</div><div class="stat-label">対象注文数</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">手数料率設定</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Bronze（基本）</label><input class="form-input" type="number" step="0.001" id="feeBronze" value="0.02"></div>
+          <div class="form-group"><label class="form-label">Silver</label><input class="form-input" type="number" step="0.001" id="feeSilver" value="0.017"></div>
+          <div class="form-group"><label class="form-label">Gold</label><input class="form-input" type="number" step="0.001" id="feeGold" value="0.015"></div>
+          <div class="form-group"><label class="form-label">Platinum</label><input class="form-input" type="number" step="0.001" id="feePlatinum" value="0.01"></div>
+        </div>
+        <div class="btn-group"><button class="btn btn-green" onclick="saveFeeSettings()">保存</button></div>
+      </div>
+      <div class="card" style="padding:0;overflow-x:auto">
+        <table>
+          <thead><tr><th>日付</th><th>手数料(JPY)</th><th>手数料(Crypto)</th><th>注文数</th></tr></thead>
+          <tbody id="feeTableBody"><tr><td colspan="4" class="empty-state">読み込み中...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
       <div class="card">
         <div class="card-title">パスワード変更</div>
         <div class="form-grid">
@@ -425,6 +466,7 @@
       if(t==='exchange')loadTraderStatus();
       if(t==='reports')loadReports();
       if(t==='customers')loadCustomers();
+      if(t==='fees')loadFeeReport();
     }
 
     // Orders
@@ -671,6 +713,47 @@
             +"<td>"+dt+"</td></tr>";
         }).join("");
       }catch(e){console.error("loadCustomers error:",e);}
+    }
+
+    // Fee Settings
+    async function loadFeeSettings(){
+      try{
+        var r=await fetch('/api/fees/settings');var d=await r.json();
+        if(!d.success||!d.data)return;
+        document.getElementById('feeBronze').value=d.data.vip_bronze_rate;
+        document.getElementById('feeSilver').value=d.data.vip_silver_rate;
+        document.getElementById('feeGold').value=d.data.vip_gold_rate;
+        document.getElementById('feePlatinum').value=d.data.vip_platinum_rate;
+      }catch(e){}
+    }
+    async function saveFeeSettings(){
+      var body={vip_bronze_rate:parseFloat(document.getElementById('feeBronze').value),vip_silver_rate:parseFloat(document.getElementById('feeSilver').value),vip_gold_rate:parseFloat(document.getElementById('feeGold').value),vip_platinum_rate:parseFloat(document.getElementById('feePlatinum').value)};
+      body.base_fee_rate=body.vip_bronze_rate;
+      await fetch('/api/fees/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      alert('手数料設定を保存しました');
+    }
+    async function loadFeeReport(){
+      try{
+        var today=new Date().toISOString().slice(0,10);
+        var monthStart=today.slice(0,8)+'01';
+        // Today
+        var r1=await fetch('/api/fees/report?from='+today+'&to='+today);var d1=await r1.json();
+        if(d1.success)document.getElementById('feesToday').textContent='\u00a5'+(d1.data.total.total_fee_jpy||0).toLocaleString();
+        // Month
+        var r2=await fetch('/api/fees/report?from='+monthStart+'&to='+today);var d2=await r2.json();
+        if(d2.success){
+          document.getElementById('feesMonth').textContent='\u00a5'+(d2.data.total.total_fee_jpy||0).toLocaleString();
+          document.getElementById('feesOrders').textContent=d2.data.total.order_count||0;
+          var tbody=document.getElementById('feeTableBody');
+          var days=d2.data.byDay||[];
+          if(!days.length){tbody.innerHTML='<tr><td colspan="4" class="empty-state">データなし</td></tr>';return;}
+          tbody.innerHTML=days.map(function(d){return'<tr><td>'+d.day+'</td><td>\u00a5'+(d.fee_jpy||0).toLocaleString()+'</td><td>'+(d.fee_crypto||0).toFixed(4)+'</td><td>'+d.order_count+'</td></tr>';}).join('');
+        }
+        // Total (all time)
+        var r3=await fetch('/api/fees/report?from=2020-01-01&to='+today);var d3=await r3.json();
+        if(d3.success)document.getElementById('feesTotal').textContent='\u00a5'+(d3.data.total.total_fee_jpy||0).toLocaleString();
+        loadFeeSettings();
+      }catch(e){console.error(e);}
     }
 
     // Init

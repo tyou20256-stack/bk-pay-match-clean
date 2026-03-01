@@ -262,6 +262,35 @@ router.get('/reports/summary', (_req, res) => {
   res.json({ success: true, report: getSummaryReport() });
 });
 
+// === Fee Settings API ===
+router.get('/fees/settings', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token;
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: '認証が必要です' });
+  res.json({ success: true, data: dbSvc.getFeeSettings() });
+});
+
+router.post('/fees/settings', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token;
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: '認証が必要です' });
+  dbSvc.updateFeeSettings(req.body);
+  res.json({ success: true });
+});
+
+router.get('/fees/report', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token;
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: '認証が必要です' });
+  const from = (req.query.from as string) || new Date().toISOString().slice(0, 10);
+  const to = (req.query.to as string) || new Date().toISOString().slice(0, 10);
+  res.json({ success: true, data: dbSvc.getFeeReport(from, to) });
+});
+
+// Public: get fee rate for preview (no auth)
+router.get('/fees/rate', (req, res) => {
+  const rank = (req.query.rank as string) || 'bronze';
+  const rate = dbSvc.getFeeRateForRank(rank);
+  res.json({ success: true, rate });
+});
+
 // === Customer & Referral API ===
 
 // Public: customer stats
@@ -294,4 +323,77 @@ router.get('/admin/referrals', (req, res) => {
 // Admin: all customers
 router.get('/admin/customers', (req, res) => {
   res.json({ success: true, data: dbSvc.getAllCustomers() });
+});
+
+// === Spread Optimizer API ===
+import spreadOptimizer, { getSpreadConfig, updateSpreadConfig, get24hStats, getOptimalSpread } from '../services/spreadOptimizer.js';
+
+router.get('/spread/config', (req, res) => {
+  const token = req.cookies?.bkpay_token || req.headers.authorization?.replace('Bearer ', '');
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  res.json({ success: true, data: getSpreadConfig() });
+});
+
+router.post('/spread/config', (req, res) => {
+  const token = req.cookies?.bkpay_token || req.headers.authorization?.replace('Bearer ', '');
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  const { crypto, ...data } = req.body;
+  if (!crypto) return res.json({ success: false, error: 'crypto required' });
+  updateSpreadConfig(crypto, data);
+  res.json({ success: true });
+});
+
+router.get('/spread/stats', (req, res) => {
+  const token = req.cookies?.bkpay_token || req.headers.authorization?.replace('Bearer ', '');
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  res.json({ success: true, data: get24hStats() });
+});
+
+router.get('/spread/recommendation', async (req, res) => {
+  const token = req.cookies?.bkpay_token || req.headers.authorization?.replace('Bearer ', '');
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  try {
+    const report = await spreadOptimizer.getSpreadReport();
+    res.json({ success: true, data: report });
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// === CSV Export API ===
+import { exportOrders, exportFreee, exportYayoi, exportAccounts, exportFeeReport } from '../services/csvExporter.js';
+
+function sendCSV(res: Response, csv: string, filename: string) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send('\uFEFF' + csv);
+}
+
+router.get('/export/orders', (req, res) => {
+  const { from, to, format } = req.query as any;
+  const csv = exportOrders(from, to, format || 'standard');
+  sendCSV(res, csv, `orders_${from || 'all'}_${to || 'all'}.csv`);
+});
+
+router.get('/export/orders/freee', (req, res) => {
+  const { from, to } = req.query as any;
+  const csv = exportFreee(from, to);
+  sendCSV(res, csv, `orders_freee_${from || 'all'}_${to || 'all'}.csv`);
+});
+
+router.get('/export/orders/yayoi', (req, res) => {
+  const { from, to } = req.query as any;
+  const csv = exportYayoi(from, to);
+  sendCSV(res, csv, `orders_yayoi_${from || 'all'}_${to || 'all'}.csv`);
+});
+
+router.get('/export/accounts', (_req, res) => {
+  const csv = exportAccounts();
+  sendCSV(res, csv, 'bank_accounts.csv');
+});
+
+router.get('/export/fees', (req, res) => {
+  const { from, to } = req.query as any;
+  const csv = exportFeeReport(from, to);
+  sendCSV(res, csv, `fee_report_${from || 'all'}_${to || 'all'}.csv`);
 });

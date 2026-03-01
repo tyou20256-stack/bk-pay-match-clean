@@ -962,6 +962,16 @@ async function processUpdate(update: any) {
       }
     }
 
+
+    // Support FAQ callbacks
+    if (data === 'faq_not_reflected') return handleFaqNotReflected(chatId);
+    if (data === 'faq_cancelled') return handleFaqCancelled(chatId);
+    if (data === 'faq_rate_diff') return handleFaqRateDiff(chatId);
+    if (data === 'faq_no_account') return handleFaqNoAccount(chatId);
+    if (data === 'faq_no_usdt') return handleFaqNoUsdt(chatId);
+    if (data === 'faq_other') return handleContactStaff(chatId);
+    if (data === 'support_contact_staff') return handleContactStaff(chatId);
+    if (data === 'support_input_order_id') return handleSupportInputOrderId(chatId);
     if (data.startsWith('paid_')) return handlePaid(chatId, data.slice(5));
     if (data.startsWith('status_')) return handleStatus(chatId, data.slice(7));
     return;
@@ -997,6 +1007,7 @@ async function processUpdate(update: any) {
   }
 
   if (text === '/notify') return handleNotify(chatId);
+  if (text === '/support') return handleSupport(chatId);
 
   if (text === '/referral') return handleReferral(chatId);
   if (text === '/mypage') return handleMypage(chatId);
@@ -1013,6 +1024,15 @@ async function processUpdate(update: any) {
     return;
   }
 
+
+  // Support waiting states
+  const supportState = supportWaiting.get(chatId);
+  if (supportState === 'staff_message') {
+    return handleStaffMessage(chatId, text, msg.from);
+  }
+  if (supportState === 'order_id_input') {
+    return handleSupportOrderId(chatId, text);
+  }
   // Conversation states
   if (chat.state === 'awaiting_amount') {
     return handleAmount(chatId, text);
@@ -1071,4 +1091,180 @@ export function stopTelegramBot() {
     clearInterval(alertCheckInterval);
     alertCheckInterval = null;
   }
+}
+
+
+// ━━━━━━━━━━━━━━━━━━ Customer Support Bot ━━━━━━━━━━━━━━━━━━
+
+const STAFF_CHAT_ID = 5791086501;
+const supportWaiting = new Map<number, string>(); // chatId -> context (e.g. 'staff_message', 'order_id_input')
+
+async function handleSupport(chatId: number) {
+  await sendMessage(chatId,
+    `━━━━━━━━━━━━━━\n` +
+    `カスタマーサポート\n\n` +
+    `お困りの内容を選択してください:\n` +
+    `━━━━━━━━━━━━━━`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '振込したのに反映されない', callback_data: 'faq_not_reflected' }],
+          [{ text: '注文がキャンセルされた', callback_data: 'faq_cancelled' }],
+          [{ text: 'レートが違う', callback_data: 'faq_rate_diff' }],
+          [{ text: '銀行口座が表示されない', callback_data: 'faq_no_account' }],
+          [{ text: 'USDTが届かない', callback_data: 'faq_no_usdt' }],
+          [{ text: 'その他（スタッフに相談）', callback_data: 'faq_other' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handleFaqNotReflected(chatId: number) {
+  await sendMessage(chatId,
+    `振込が反映されない場合\n\n` +
+    `考えられる原因:\n` +
+    `・振込後「振込完了」ボタンを押していない\n` +
+    `・銀行の処理に時間がかかっている（通常5-10分）\n` +
+    `・振込先の口座番号が間違っている\n\n` +
+    `対処法:\n` +
+    `1. 注文画面で「振込完了」ボタンを押してください\n` +
+    `2. 15分以上経っても反映されない場合は\n` +
+    `   注文IDをお知らせください`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '注文IDを入力する', callback_data: 'support_input_order_id' }],
+          [{ text: 'スタッフに相談', callback_data: 'support_contact_staff' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handleFaqCancelled(chatId: number) {
+  await sendMessage(chatId,
+    `注文がキャンセルされた場合\n\n` +
+    `考えられる原因:\n` +
+    `・15分以内に振込が完了しなかった\n` +
+    `・システムの自動キャンセル\n\n` +
+    `対処法:\n` +
+    `・もう一度注文を作成してください\n` +
+    `・既に振込済みの場合はスタッフにご連絡ください`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'もう一度注文する', callback_data: 'cb_buy' }],
+          [{ text: 'スタッフに相談', callback_data: 'support_contact_staff' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handleFaqRateDiff(chatId: number) {
+  await sendMessage(chatId,
+    `レートが違う場合\n\n` +
+    `BK Payのレートはリアルタイムで変動します。\n\n` +
+    `・注文作成時のレートが適用されます\n` +
+    `・レート表示と注文作成の間に変動する場合があります\n` +
+    `・大幅な差異がある場合はスタッフにご連絡ください`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '現在のレートを確認', callback_data: 'cb_rates' }],
+          [{ text: 'スタッフに相談', callback_data: 'support_contact_staff' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handleFaqNoAccount(chatId: number) {
+  await sendMessage(chatId,
+    `銀行口座が表示されない場合\n\n` +
+    `考えられる原因:\n` +
+    `・全ての口座が1日の限度額に達している\n` +
+    `・システムメンテナンス中\n` +
+    `・口座が一時休止中\n\n` +
+    `対処法:\n` +
+    `・しばらく時間をおいてから再度お試しください\n` +
+    `・改善しない場合はスタッフにご連絡ください`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'スタッフに相談', callback_data: 'support_contact_staff' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handleFaqNoUsdt(chatId: number) {
+  await sendMessage(chatId,
+    `USDTが届かない場合\n\n` +
+    `考えられる原因:\n` +
+    `・振込確認がまだ完了していない\n` +
+    `・ブロックチェーンの処理に時間がかかっている\n` +
+    `・ウォレットアドレスの確認が必要\n\n` +
+    `対処法:\n` +
+    `1. 注文ステータスを確認してください\n` +
+    `2. 「完了」表示なのに届かない場合は\n` +
+    `   TXIDと共にスタッフにご連絡ください`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '注文状況を確認', callback_data: 'cb_status' }],
+          [{ text: 'スタッフに相談', callback_data: 'support_contact_staff' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handleContactStaff(chatId: number) {
+  supportWaiting.set(chatId, 'staff_message');
+  await sendMessage(chatId,
+    `スタッフに転送します。\n\nお困りの内容をメッセージで入力してください。`
+  );
+}
+
+async function handleSupportInputOrderId(chatId: number) {
+  supportWaiting.set(chatId, 'order_id_input');
+  await sendMessage(chatId, '注文IDを入力してください:\n\n例: <code>ORD-xxxxx</code>');
+}
+
+async function handleStaffMessage(chatId: number, text: string, from: any) {
+  supportWaiting.delete(chatId);
+  const userName = from?.first_name || from?.username || 'Unknown';
+  const userId = from?.id || chatId;
+
+  // Forward to staff
+  await sendMessage(STAFF_CHAT_ID,
+    `━━ サポート問い合わせ ━━\n\n` +
+    `From: ${userName} (ID: ${userId})\n` +
+    `Chat: ${chatId}\n\n` +
+    `${text}\n\n` +
+    `━━━━━━━━━━━━━━`,
+  );
+
+  await sendMessage(chatId,
+    `スタッフに転送しました。しばらくお待ちください。`
+  );
+}
+
+async function handleSupportOrderId(chatId: number, text: string) {
+  supportWaiting.delete(chatId);
+  // Forward order ID concern to staff
+  const userName = String(chatId);
+  await sendMessage(STAFF_CHAT_ID,
+    `━━ 振込反映の問い合わせ ━━\n\n` +
+    `From: Chat ${chatId}\n` +
+    `注文ID: ${text}\n\n` +
+    `振込したが反映されないとのこと。確認をお願いします。\n` +
+    `━━━━━━━━━━━━━━`,
+  );
+  await sendMessage(chatId,
+    `注文ID <code>${text}</code> についてスタッフに連絡しました。\nしばらくお待ちください。`
+  );
 }

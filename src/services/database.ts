@@ -189,11 +189,12 @@ if (adminCount === 0) {
 
 // === Orders ===
 export function saveOrder(order: any): void {
-  db.prepare(`INSERT OR REPLACE INTO orders (id, mode, status, amount, crypto, crypto_amount, rate, pay_method, exchange, merchant_name, merchant_completion_rate, payment_info, created_at, expires_at, paid_at, completed_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+  db.prepare(`INSERT OR REPLACE INTO orders (id, mode, status, amount, crypto, crypto_amount, rate, pay_method, exchange, merchant_name, merchant_completion_rate, payment_info, created_at, expires_at, paid_at, completed_at, fee_rate, fee_jpy, fee_crypto)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
     order.id, order.mode, order.status, order.amount, order.crypto, order.cryptoAmount, order.rate,
     order.payMethod, order.exchange, order.merchantName, order.merchantCompletionRate,
-    JSON.stringify(order.paymentInfo), order.createdAt, order.expiresAt, order.paidAt || null, order.completedAt || null
+    JSON.stringify(order.paymentInfo), order.createdAt, order.expiresAt, order.paidAt || null, order.completedAt || null,
+    order.feeRate || 0, order.feeJpy || 0, order.feeCrypto || 0
   );
 }
 
@@ -224,7 +225,8 @@ function rowToOrder(row: any): any {
     merchantName: row.merchant_name, merchantCompletionRate: row.merchant_completion_rate,
     paymentInfo: JSON.parse(row.payment_info || 'null'), createdAt: row.created_at,
     expiresAt: row.expires_at, paidAt: row.paid_at, completedAt: row.completed_at,
-    direction: row.direction || 'buy', customerWallet: row.customer_wallet || '', customerBankInfo: row.customer_bank_info ? JSON.parse(row.customer_bank_info) : {}
+    direction: row.direction || 'buy', customerWallet: row.customer_wallet || '', customerBankInfo: row.customer_bank_info ? JSON.parse(row.customer_bank_info) : {},
+    feeRate: row.fee_rate || 0, feeJpy: row.fee_jpy || 0, feeCrypto: row.fee_crypto || 0
   };
 }
 
@@ -500,6 +502,72 @@ export function getNotificationPreferences(telegramId: number): { daily_summary:
 
 export function setAlertThreshold(telegramId: number, crypto: string, threshold: number): void {
   db.prepare(`INSERT INTO notification_preferences (telegram_id, alert_crypto, alert_threshold) VALUES (?, ?, ?) ON CONFLICT(telegram_id) DO UPDATE SET alert_crypto = ?, alert_threshold = ?`).run(telegramId, crypto, threshold, crypto, threshold);
+}
+
+
+// === Fee Settings ===
+db.exec(`
+  CREATE TABLE IF NOT EXISTS fee_settings (
+    id INTEGER PRIMARY KEY,
+    base_fee_rate REAL DEFAULT 0.02,
+    vip_bronze_rate REAL DEFAULT 0.02,
+    vip_silver_rate REAL DEFAULT 0.017,
+    vip_gold_rate REAL DEFAULT 0.015,
+    vip_platinum_rate REAL DEFAULT 0.01,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+try {
+  const feeCount = (db.prepare('SELECT COUNT(*) as c FROM fee_settings').get() as any).c;
+  if (feeCount === 0) db.prepare('INSERT INTO fee_settings (id) VALUES (1)').run();
+} catch {}
+
+try { db.exec(`ALTER TABLE orders ADD COLUMN fee_rate REAL DEFAULT 0.02`); } catch {}
+try { db.exec(`ALTER TABLE orders ADD COLUMN fee_jpy REAL DEFAULT 0`); } catch {}
+try { db.exec(`ALTER TABLE orders ADD COLUMN fee_crypto REAL DEFAULT 0`); } catch {}
+
+export function getFeeSettings(): any {
+  return db.prepare('SELECT * FROM fee_settings WHERE id = 1').get();
+}
+
+export function updateFeeSettings(settings: any): void {
+  const allowed = ['base_fee_rate','vip_bronze_rate','vip_silver_rate','vip_gold_rate','vip_platinum_rate'];
+  const fields: string[] = [];
+  const vals: any[] = [];
+  for (const [k, v] of Object.entries(settings)) {
+    if (allowed.includes(k)) { fields.push(`${k} = ?`); vals.push(v); }
+  }
+  fields.push("updated_at = datetime('now')");
+  if (vals.length > 0) db.prepare(`UPDATE fee_settings SET ${fields.join(', ')} WHERE id = 1`).run(...vals);
+}
+
+export function getFeeRateForRank(rank: string): number {
+  const s = getFeeSettings() as any;
+  if (!s) return 0.02;
+  switch (rank) {
+    case 'platinum': return s.vip_platinum_rate;
+    case 'gold': return s.vip_gold_rate;
+    case 'silver': return s.vip_silver_rate;
+    default: return s.vip_bronze_rate;
+  }
+}
+
+export function getFeeReport(from: string, to: string): any {
+  const total = db.prepare(`
+    SELECT COALESCE(SUM(fee_jpy),0) as total_fee_jpy, COALESCE(SUM(fee_crypto),0) as total_fee_crypto, COUNT(*) as order_count
+    FROM orders WHERE status='completed' AND datetime(created_at/1000,'unixepoch') BETWEEN ? AND ?
+  `).get(from, to + ' 23:59:59') as any;
+  const byDay = db.prepare(`
+    SELECT date(created_at/1000,'unixepoch') as day, COALESCE(SUM(fee_jpy),0) as fee_jpy, COALESCE(SUM(fee_crypto),0) as fee_crypto, COUNT(*) as order_count
+    FROM orders WHERE status='completed' AND datetime(created_at/1000,'unixepoch') BETWEEN ? AND ?
+    GROUP BY day ORDER BY day DESC
+  `).all(from, to + ' 23:59:59') as any[];
+  const byCrypto = db.prepare(`
+    SELECT crypto, COALESCE(SUM(fee_jpy),0) as fee_jpy, COALESCE(SUM(fee_crypto),0) as fee_crypto, COUNT(*) as order_count
+    FROM orders WHERE status='completed' AND datetime(created_at/1000,'unixepoch') BETWEEN ? AND ?
+    GROUP BY crypto
+  `).all(from, to + ' 23:59:59') as any[];
+  return { total, byDay, byCrypto };
 }
 
 // Cleanup expired sessions periodically

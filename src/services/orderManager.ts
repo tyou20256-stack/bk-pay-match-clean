@@ -13,7 +13,9 @@
  */
 import notifier from './notifier.js';
 import * as dbSvc from './database.js';
+import { getFeeRateForRank } from './database.js';
 import { broadcast } from './websocket.js';
+import { getOptimalSpread, recordOrder as recordSpreadOrder } from './spreadOptimizer.js';
 
 // Order Manager - Handles both Auto-Match (Puppeteer) and Self-Merchant (Account Router) modes
 
@@ -240,6 +242,26 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
     order.merchantCompletionRate = 100;
   }
 
+  // Fee calculation
+  const feeRate = getFeeRateForRank('bronze'); // default rank; no telegram context here
+  (order as any).feeRate = feeRate;
+  (order as any).feeJpy = Math.round(order.amount * feeRate);
+  (order as any).feeCrypto = 0;
+  // Adjust crypto amount: customer pays full amount but receives crypto for (amount - fee)
+  if (order.rate > 0) {
+    order.cryptoAmount = parseFloat(((order.amount - (order as any).feeJpy) / order.rate).toFixed(4));
+  }
+
+  // Apply spread optimization
+  try {
+    const spread = await getOptimalSpread(crypto, 'buy');
+    if (order.rate > 0 && spread.finalSpread > 0) {
+      order.rate = Math.round(order.rate * (1 + spread.finalSpread) * 10) / 10;
+      order.cryptoAmount = parseFloat((amount / order.rate).toFixed(4));
+    }
+    recordSpreadOrder(crypto, amount);
+  } catch (e) { /* spread optimizer not critical */ }
+
   dbSvc.saveOrder(order);
   notifier.notifyNewOrder(order);
   broadcast('order', { id: order.id, status: order.status, amount: order.amount, crypto: order.crypto });
@@ -333,8 +355,22 @@ export async function createSellOrder(params: {
 
   if (sellRate === 0) throw new Error('売却レートを取得できませんでした');
 
-  const jpyAmount = Math.floor(params.cryptoAmount * sellRate);
+  // Apply sell spread
+  try {
+    const sellSpread = await getOptimalSpread(params.crypto, 'sell');
+    if (sellSpread.finalSpread > 0) {
+      sellRate = Math.round(sellRate * (1 - sellSpread.finalSpread) * 10) / 10;
+    }
+  } catch (e) { /* spread optimizer not critical */ }
+
+  const jpyAmount = Math.floor(params.cryptoAmount * sellRate); // gross before fee
   const wallet = dbSvc.getWalletConfig() as any;
+
+  // Fee calculation for sell
+  const sellFeeRate = getFeeRateForRank('bronze');
+  const feeCrypto = parseFloat((params.cryptoAmount * sellFeeRate).toFixed(6));
+  const effectiveCrypto = params.cryptoAmount - feeCrypto;
+  const jpyAmountAfterFee = Math.floor(effectiveCrypto * sellRate);
 
   dbSvc.createSellOrder({
     id,
@@ -353,7 +389,11 @@ export async function createSellOrder(params: {
     cryptoAmount: params.cryptoAmount,
     crypto: params.crypto,
     rate: sellRate,
-    jpyAmount,
+    jpyAmount: jpyAmountAfterFee,
+    jpyGross: jpyAmount,
+    feeRate: sellFeeRate,
+    feeCrypto,
+    feeJpy: Math.round(jpyAmount - jpyAmountAfterFee),
     customerBankInfo: params.customerBankInfo,
     depositAddress: wallet?.address || '（ウォレット未設定）',
     depositNetwork: wallet?.network || 'TRC-20',

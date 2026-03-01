@@ -90,6 +90,7 @@ app.use('/api/trader', authRequired);
 app.use('/api/wallet', authRequired);
 app.use('/api/settings', authRequired);
 app.use('/api/reports', authRequired);
+app.use('/api/export', authRequired);
 
 // Public API routes (rates, pay orders)
 app.use('/api/orders', orderLimiter);
