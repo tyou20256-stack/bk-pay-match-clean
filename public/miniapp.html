@@ -3,188 +3,330 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>BK Pay — USDT購入</title>
+<title>BK Pay — 暗号通貨購入</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root {
   --bg: #ffffff;
-  --text: #000000;
-  --hint: #999999;
+  --text: #1a1a2e;
+  --hint: #8e8e93;
   --btn: #3390ec;
   --btn-text: #ffffff;
-  --secondary-bg: #f0f0f0;
+  --secondary-bg: #f2f2f7;
+  --green: #34c759;
+  --red: #ff3b30;
+  --orange: #ff9500;
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+  background: linear-gradient(180deg, var(--secondary-bg) 0%, var(--bg) 40%);
   color: var(--text);
   min-height: 100vh;
-  padding: 16px;
+  padding: 0 16px 100px;
   line-height: 1.5;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
 }
-.step { display: none; animation: fadeIn 0.2s ease; }
-.step.active { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
-.subtitle { color: var(--hint); font-size: 14px; margin-bottom: 20px; }
+.progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: linear-gradient(180deg, var(--secondary-bg) 60%, transparent);
+}
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--hint);
+  opacity: 0.3;
+  transition: all var(--transition);
+}
+.dot.active { opacity: 1; background: var(--btn); width: 24px; border-radius: 4px; }
+.dot.done { opacity: 0.6; background: var(--green); }
 
-.amount-grid {
+.step {
+  display: none;
+  opacity: 0;
+  transform: translateX(30px);
+}
+.step.active {
+  display: block;
+  animation: slideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+
+h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.subtitle { color: var(--hint); font-size: 14px; margin-bottom: 16px; }
+
+.crypto-selector {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-bottom: 16px;
 }
+.crypto-card {
+  background: var(--bg);
+  border: 2px solid var(--secondary-bg);
+  border-radius: 14px;
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: var(--card-shadow);
+}
+.crypto-card.selected { border-color: var(--green); background: color-mix(in srgb, var(--green) 5%, var(--bg)); }
+.crypto-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+.crypto-rate { font-size: 11px; color: var(--hint); }
+.crypto-rate.loading { background: var(--secondary-bg); border-radius: 4px; color: transparent; animation: shimmer 1.5s infinite; }
+@keyframes shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+.amount-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
 .amount-btn {
   padding: 14px 8px;
   border: 2px solid var(--secondary-bg);
-  border-radius: 12px;
-  background: var(--secondary-bg);
+  border-radius: 14px;
+  background: var(--bg);
   color: var(--text);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition);
   text-align: center;
+  box-shadow: var(--card-shadow);
+  line-height: 1.3;
 }
+.amount-btn .est { font-size: 11px; color: var(--hint); font-weight: 400; display: block; margin-top: 2px; }
+.amount-btn.popular { border-color: color-mix(in srgb, var(--btn) 40%, transparent); }
 .amount-btn.selected {
   border-color: var(--btn);
-  background: color-mix(in srgb, var(--btn) 12%, transparent);
+  background: color-mix(in srgb, var(--btn) 8%, var(--bg));
   color: var(--btn);
 }
+.amount-btn.selected .est { color: var(--btn); }
 
-.input-group { margin-bottom: 20px; }
-.input-group label {
-  display: block;
-  font-size: 13px;
-  color: var(--hint);
-  margin-bottom: 6px;
-  font-weight: 500;
-}
-.input-group input, .input-group select {
+.input-group { margin-bottom: 16px; }
+.input-group label { display: block; font-size: 13px; color: var(--hint); margin-bottom: 6px; font-weight: 500; }
+.input-group input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 14px 16px;
   border: 1.5px solid var(--secondary-bg);
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 16px;
-  background: var(--secondary-bg);
+  background: var(--bg);
   color: var(--text);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--transition);
+  box-shadow: var(--card-shadow);
 }
-.input-group input:focus, .input-group select:focus {
-  border-color: var(--btn);
-}
+.input-group input:focus { border-color: var(--btn); }
 
-.method-row {
+.method-scroll {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  margin-bottom: 16px;
+  scrollbar-width: none;
 }
-.method-btn {
-  flex: 1;
-  padding: 12px;
+.method-scroll::-webkit-scrollbar { display: none; }
+.method-pill {
+  flex-shrink: 0;
+  padding: 10px 16px;
   border: 2px solid var(--secondary-bg);
-  border-radius: 12px;
-  background: var(--secondary-bg);
+  border-radius: 50px;
+  background: var(--bg);
   color: var(--text);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  text-align: center;
-  transition: all 0.15s;
+  transition: all var(--transition);
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.method-btn.selected {
+.method-pill .pill-icon { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
+.method-pill .pill-icon svg { width: 18px; height: 18px; }
+.method-pill.selected {
   border-color: var(--btn);
-  background: color-mix(in srgb, var(--btn) 12%, transparent);
+  background: color-mix(in srgb, var(--btn) 8%, var(--bg));
   color: var(--btn);
 }
 
 .confirm-card {
-  background: var(--secondary-bg);
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 16px;
+  background: var(--bg);
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--card-shadow);
 }
 .confirm-row {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: 10px 0;
   font-size: 14px;
 }
-.confirm-row:not(:last-child) { border-bottom: 1px solid color-mix(in srgb, var(--hint) 15%, transparent); }
+.confirm-row:not(:last-child) { border-bottom: 1px solid var(--secondary-bg); }
 .confirm-row .label { color: var(--hint); }
 .confirm-row .value { font-weight: 600; }
-.confirm-row.total .value { font-size: 18px; color: var(--btn); }
+.confirm-row.total .value { font-size: 18px; color: var(--green); }
 
-.bank-info {
-  background: var(--secondary-bg);
-  border-radius: 14px;
-  padding: 20px;
-  margin-bottom: 16px;
+.bank-card {
+  background: var(--bg);
+  border-radius: 16px;
+  padding: 4px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--card-shadow);
 }
 .bank-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
+  padding: 12px 0;
   font-size: 14px;
 }
-.bank-row:not(:last-child) { border-bottom: 1px solid color-mix(in srgb, var(--hint) 15%, transparent); }
-.bank-row .label { color: var(--hint); font-size: 13px; }
-.bank-row .value { font-weight: 600; text-align: right; }
+.bank-row:not(:last-child) { border-bottom: 1px solid var(--secondary-bg); }
+.bank-row .label { color: var(--hint); font-size: 13px; flex-shrink: 0; }
+.bank-row .value-wrap { display: flex; align-items: center; gap: 6px; }
+.bank-row .value { font-weight: 600; }
 .copy-btn {
-  background: none;
+  background: color-mix(in srgb, var(--btn) 12%, transparent);
   border: none;
   color: var(--btn);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: 6px;
-  margin-left: 8px;
+  transition: all 0.15s;
+  white-space: nowrap;
 }
-.copy-btn:active { opacity: 0.6; }
+.copy-btn:active { transform: scale(0.92); }
 
-.timer-bar {
-  text-align: center;
-  margin-bottom: 20px;
+.timer-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 8px 0 20px;
 }
-.timer-circle {
+.timer-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+.timer-ring svg { width: 120px; height: 120px; transform: rotate(-90deg); }
+.timer-ring .bg-ring { stroke: var(--secondary-bg); }
+.timer-ring .fg-ring {
+  stroke: var(--btn);
+  transition: stroke-dashoffset 1s linear, stroke 0.3s;
+  stroke-linecap: round;
+}
+.timer-ring.warning .fg-ring { stroke: var(--red); }
+.timer-ring.pulse { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+.timer-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--btn);
+  transition: color 0.3s;
+}
+.timer-ring.warning .timer-text { color: var(--red); }
+.timer-label { font-size: 13px; color: var(--hint); margin-top: 8px; }
+
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 100;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.completion { text-align: center; padding-top: 20px; }
+.checkmark-circle {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: var(--green);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  border: 3px solid var(--btn);
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--btn);
-  margin-bottom: 8px;
+  margin-bottom: 16px;
+  animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-.timer-circle.warning { border-color: #e8590c; color: #e8590c; }
-.timer-label { font-size: 13px; color: var(--hint); }
+@keyframes scaleIn { from { transform: scale(0); } to { transform: scale(1); } }
+.checkmark-circle svg {
+  width: 40px; height: 40px;
+  stroke: white;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+.checkmark-circle svg path {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: drawCheck 0.5s 0.3s forwards;
+}
+@keyframes drawCheck { to { stroke-dashoffset: 0; } }
+.completion-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.completion-sub { color: var(--hint); font-size: 14px; margin-bottom: 20px; }
 
-.result-icon {
-  text-align: center;
-  margin: 30px 0 16px;
+.confetti-piece {
+  position: fixed;
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  top: -10px;
+  z-index: 99;
+  animation: confettiFall 3s linear forwards;
 }
-.result-icon svg { width: 64px; height: 64px; }
-.result-title {
-  text-align: center;
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-.result-sub {
-  text-align: center;
-  color: var(--hint);
-  font-size: 14px;
-  margin-bottom: 24px;
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
 
-.loading {
+.close-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: var(--secondary-bg);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.15s;
+}
+.close-btn:active { transform: scale(0.97); }
+
+.loading-center {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -192,7 +334,7 @@ h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
   padding: 40px;
 }
 .spinner {
-  width: 32px; height: 32px;
+  width: 36px; height: 36px;
   border: 3px solid var(--secondary-bg);
   border-top-color: var(--btn);
   border-radius: 50%;
@@ -201,57 +343,147 @@ h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { margin-top: 12px; color: var(--hint); font-size: 14px; }
 
+.matching-progress {
+  width: 100%;
+  height: 4px;
+  background: var(--secondary-bg);
+  border-radius: 2px;
+  margin-top: 16px;
+  overflow: hidden;
+}
+.matching-progress .bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--btn), var(--green));
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
 .notice {
-  background: color-mix(in srgb, var(--btn) 8%, transparent);
-  border-radius: 10px;
+  background: color-mix(in srgb, var(--btn) 6%, var(--bg));
+  border-radius: 12px;
   padding: 12px 14px;
   font-size: 13px;
   color: var(--hint);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   line-height: 1.6;
+  border-left: 3px solid var(--btn);
+}
+
+.error-state { text-align: center; padding: 40px 20px; }
+.error-state svg { width: 48px; height: 48px; color: var(--hint); margin-bottom: 12px; }
+.error-state p { color: var(--hint); font-size: 14px; margin-bottom: 16px; }
+.retry-btn {
+  padding: 12px 32px;
+  border: none;
+  border-radius: 12px;
+  background: var(--btn);
+  color: var(--btn-text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.retry-btn:active { transform: scale(0.96); }
+
+.pull-indicator {
+  text-align: center;
+  height: 0;
+  overflow: hidden;
+  transition: height 0.2s;
+  color: var(--hint);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pull-indicator .pull-spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--secondary-bg);
+  border-top-color: var(--btn);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
 }
 </style>
 </head>
 <body>
 
-<!-- Step 1: Amount & Method -->
-<div id="step1" class="step active">
-  <h2>USDT購入</h2>
-  <p class="subtitle">購入金額を選択してください</p>
+<div class="toast" id="toast"></div>
+<div class="pull-indicator" id="pullIndicator"><div class="pull-spinner"></div>レート更新中...</div>
 
-  <div class="amount-grid">
-    <button class="amount-btn" data-amount="5000">¥5,000</button>
-    <button class="amount-btn" data-amount="10000">¥10,000</button>
-    <button class="amount-btn" data-amount="30000">¥30,000</button>
-    <button class="amount-btn" data-amount="50000">¥50,000</button>
-    <button class="amount-btn" data-amount="100000">¥100,000</button>
-    <button class="amount-btn" id="customAmountBtn">カスタム</button>
+<div class="progress-dots">
+  <div class="dot active" id="dot1"></div>
+  <div class="dot" id="dot2"></div>
+  <div class="dot" id="dot3"></div>
+  <div class="dot" id="dot4"></div>
+</div>
+
+<!-- Step 1 -->
+<div id="step1" class="step active">
+  <h2>暗号通貨を購入</h2>
+  <p class="subtitle">通貨と金額を選択してください</p>
+
+  <div class="crypto-selector">
+    <div class="crypto-card selected" data-crypto="USDT">
+      <div class="crypto-name">USDT</div>
+      <div class="crypto-rate loading" id="rateUSDT">---</div>
+    </div>
+    <div class="crypto-card" data-crypto="BTC">
+      <div class="crypto-name">BTC</div>
+      <div class="crypto-rate loading" id="rateBTC">---</div>
+    </div>
+    <div class="crypto-card" data-crypto="ETH">
+      <div class="crypto-name">ETH</div>
+      <div class="crypto-rate loading" id="rateETH">---</div>
+    </div>
   </div>
+
+  <div class="amount-grid" id="amountGrid"></div>
 
   <div class="input-group" id="customInputGroup" style="display:none">
     <label>金額（円）</label>
     <input type="number" id="customAmount" placeholder="10000" min="1000" max="1000000" inputmode="numeric">
   </div>
 
-  <p class="subtitle" style="margin-top:8px">支払い方法</p>
-  <div class="method-row">
-    <button class="method-btn selected" data-method="bank">銀行振込</button>
-    <button class="method-btn" data-method="paypay">PayPay</button>
+  <p class="subtitle" style="margin-top:4px">支払い方法</p>
+  <div class="method-scroll">
+    <button class="method-pill selected" data-method="bank">
+      <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg></span>
+      銀行振込
+    </button>
+    <button class="method-pill" data-method="paypay">
+      <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg></span>
+      PayPay
+    </button>
+    <button class="method-pill" data-method="linepay">
+      <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></span>
+      LINE Pay
+    </button>
+    <button class="method-pill" data-method="aupay">
+      <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="18" r="1"/></svg></span>
+      au PAY
+    </button>
   </div>
 </div>
 
-<!-- Step 2: Rate Confirm -->
+<!-- Step 2 -->
 <div id="step2" class="step">
   <h2>注文内容の確認</h2>
-  <div id="rateLoading" class="loading">
+  <p class="subtitle">内容をご確認ください</p>
+  <div id="rateLoading" class="loading-center">
     <div class="spinner"></div>
-    <p class="loading-text">レートを取得中...</p>
+    <p class="loading-text">最適なレートを取得中...</p>
+    <div class="matching-progress"><div class="bar" id="matchBar"></div></div>
   </div>
   <div id="rateContent" style="display:none">
     <div class="confirm-card">
       <div class="confirm-row">
         <span class="label">支払い金額</span>
         <span class="value" id="confirmAmount"></span>
+      </div>
+      <div class="confirm-row">
+        <span class="label">通貨</span>
+        <span class="value" id="confirmCrypto"></span>
       </div>
       <div class="confirm-row">
         <span class="label">レート</span>
@@ -262,48 +494,49 @@ h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
         <span class="value" id="confirmMethod"></span>
       </div>
       <div class="confirm-row total">
-        <span class="label">受取USDT</span>
-        <span class="value" id="confirmUsdt"></span>
+        <span class="label">受取額</span>
+        <span class="value" id="confirmCryptoAmount"></span>
       </div>
     </div>
-    <div class="notice">
-      注文確定後、15分以内にお振込みください。期限を過ぎると自動キャンセルされます。
-    </div>
+    <div class="notice">注文確定後、15分以内にお支払いください。期限を過ぎると自動キャンセルされます。</div>
+  </div>
+  <div id="rateError" class="error-state" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+    <p>通信エラーが発生しました。<br>再試行してください。</p>
+    <button class="retry-btn" onclick="goToStep2()">再試行</button>
   </div>
 </div>
 
-<!-- Step 3: Payment Info -->
+<!-- Step 3 -->
 <div id="step3" class="step">
-  <h2>お振込み情報</h2>
-
-  <div class="timer-bar">
-    <div class="timer-circle" id="timerDisplay">15:00</div>
+  <h2>お支払い情報</h2>
+  <div class="timer-container">
+    <div class="timer-ring" id="timerRing">
+      <svg viewBox="0 0 120 120">
+        <circle class="bg-ring" cx="60" cy="60" r="52" fill="none" stroke-width="6"/>
+        <circle class="fg-ring" id="timerArc" cx="60" cy="60" r="52" fill="none" stroke-width="6" stroke-dasharray="326.73" stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-text" id="timerDisplay">15:00</div>
+    </div>
     <div class="timer-label">残り時間</div>
   </div>
-
-  <div class="bank-info" id="bankDetails"></div>
-
-  <div class="notice">
-    振込名義が異なる場合、確認に時間がかかることがあります。
-  </div>
+  <div class="bank-card" id="bankDetails"></div>
+  <div class="notice">振込名義が異なる場合、確認に時間がかかることがあります。</div>
 </div>
 
-<!-- Step 4: Result -->
+<!-- Step 4 -->
 <div id="step4" class="step">
-  <div id="resultLoading" class="loading">
+  <div id="resultLoading" class="loading-center">
     <div class="spinner"></div>
     <p class="loading-text">処理中...</p>
   </div>
-  <div id="resultContent" style="display:none">
-    <div class="result-icon">
-      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color:var(--btn)">
-        <circle cx="32" cy="32" r="28"/>
-        <path d="M20 33l8 8 16-16"/>
-      </svg>
+  <div id="resultContent" class="completion" style="display:none">
+    <div class="checkmark-circle">
+      <svg viewBox="0 0 40 40"><path d="M10 20l8 8 12-14"/></svg>
     </div>
-    <p class="result-title">振込完了を受け付けました</p>
-    <p class="result-sub">スタッフが確認次第、USDTを送付いたします。<br>しばらくお待ちください。</p>
-    <div class="confirm-card">
+    <p class="completion-title">完了しました！</p>
+    <p class="completion-sub">スタッフが確認次第、送付いたします。<br>しばらくお待ちください。</p>
+    <div class="confirm-card" style="text-align:left">
       <div class="confirm-row">
         <span class="label">注文ID</span>
         <span class="value" id="resultOrderId"></span>
@@ -312,60 +545,77 @@ h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
         <span class="label">金額</span>
         <span class="value" id="resultAmount"></span>
       </div>
-      <div class="confirm-row">
-        <span class="label">USDT</span>
-        <span class="value" id="resultUsdt"></span>
+      <div class="confirm-row total">
+        <span class="label">受取額</span>
+        <span class="value" id="resultCrypto"></span>
       </div>
     </div>
+    <button class="close-btn" onclick="if(tg)tg.close()">閉じる</button>
   </div>
 </div>
 
 <script>
-const tg = window.Telegram && window.Telegram.WebApp;
+var tg = window.Telegram && window.Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
+function haptic(type, val) {
+  try { if (tg && tg.HapticFeedback) tg.HapticFeedback[type](val); } catch(e) {}
+}
+
 function applyTheme() {
-  const tp = tg ? tg.themeParams : {};
-  const s = document.documentElement.style;
+  var tp = tg ? tg.themeParams : {};
+  var s = document.documentElement.style;
   if (tp.bg_color) s.setProperty('--bg', tp.bg_color);
   if (tp.text_color) s.setProperty('--text', tp.text_color);
   if (tp.hint_color) s.setProperty('--hint', tp.hint_color);
   if (tp.button_color) s.setProperty('--btn', tp.button_color);
   if (tp.button_text_color) s.setProperty('--btn-text', tp.button_text_color);
   if (tp.secondary_bg_color) s.setProperty('--secondary-bg', tp.secondary_bg_color);
-  document.body.style.background = tp.bg_color || '#ffffff';
+  document.body.style.background = 'linear-gradient(180deg, ' + (tp.secondary_bg_color || '#f2f2f7') + ' 0%, ' + (tp.bg_color || '#ffffff') + ' 40%)';
 }
 applyTheme();
 if (tg) tg.onEvent('themeChanged', applyTheme);
 
-var currentStep = 1;
-var selectedAmount = 0;
-var selectedMethod = 'bank';
-var rateData = null;
-var orderId = null;
-var orderData = null;
-var timerInterval = null;
+var currentStep = 1, selectedAmount = 0, selectedCrypto = 'USDT', selectedMethod = 'bank';
+var rates = { USDT: null, BTC: null, ETH: null };
+var rateData = null, orderId = null, orderData = null, timerInterval = null, timerTotal = 15 * 60;
 
 function $(id) { return document.getElementById(id); }
+
+function showToast(msg) {
+  var t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 1800);
+}
+
+function updateDots() {
+  for (var i = 1; i <= 4; i++) {
+    var d = $('dot' + i);
+    d.className = 'dot';
+    if (i < currentStep) d.classList.add('done');
+    if (i === currentStep) d.classList.add('active');
+  }
+}
+
 function showStep(n) {
   var steps = document.querySelectorAll('.step');
   for (var i = 0; i < steps.length; i++) steps[i].classList.remove('active');
   $('step' + n).classList.add('active');
   currentStep = n;
+  updateDots();
   updateButtons();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function updateButtons() {
   if (!tg) return;
-  var mb = tg.MainButton;
-  var bb = tg.BackButton;
-
+  var mb = tg.MainButton, bb = tg.BackButton;
   mb.offClick(onMainButton);
   if (bb) bb.offClick(onBackButton);
 
   if (currentStep === 1) {
-    mb.setText('レート確認');
-    mb.show();
+    mb.setText('レート確認'); mb.show();
     if (selectedAmount > 0) mb.enable(); else mb.disable();
     if (bb) bb.hide();
   } else if (currentStep === 2) {
@@ -373,14 +623,12 @@ function updateButtons() {
     if (rateData) { mb.show(); mb.enable(); } else mb.hide();
     if (bb) bb.show();
   } else if (currentStep === 3) {
-    mb.setText('振込完了を報告');
-    mb.show(); mb.enable();
+    mb.setText('支払い完了を報告'); mb.show(); mb.enable();
     if (bb) bb.show();
   } else {
     mb.hide();
     if (bb) bb.hide();
   }
-
   mb.onClick(onMainButton);
   if (bb) bb.onClick(onBackButton);
 }
@@ -398,95 +646,163 @@ function onMainButton() {
   else if (currentStep === 3) goToStep4();
 }
 
-// Step 1 handlers
-var amountBtns = document.querySelectorAll('.amount-btn[data-amount]');
-for (var i = 0; i < amountBtns.length; i++) {
-  (function(btn) {
-    btn.addEventListener('click', function() {
-      var all = document.querySelectorAll('.amount-btn');
-      for (var j = 0; j < all.length; j++) all[j].classList.remove('selected');
-      btn.classList.add('selected');
-      selectedAmount = parseInt(btn.dataset.amount);
-      $('customInputGroup').style.display = 'none';
-      $('customAmount').value = '';
-      updateButtons();
-    });
-  })(amountBtns[i]);
+function fetchRates(callback) {
+  var cryptos = ['USDT', 'BTC', 'ETH'], done = 0;
+  cryptos.forEach(function(c) {
+    fetch('/api/rates/' + c)
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) {
+          var r = d.bestRate || (d.rates && d.rates.length > 0 ? d.rates[0].price : null);
+          if (r) rates[c] = parseFloat(r);
+        }
+      })
+      .catch(function() {})
+      .finally(function() {
+        done++;
+        updateRateDisplay(c);
+        if (done === cryptos.length) { updateAmountEstimates(); if (callback) callback(); }
+      });
+  });
 }
 
-$('customAmountBtn').addEventListener('click', function() {
-  var all = document.querySelectorAll('.amount-btn');
-  for (var j = 0; j < all.length; j++) all[j].classList.remove('selected');
-  $('customAmountBtn').classList.add('selected');
-  $('customInputGroup').style.display = 'block';
-  $('customAmount').focus();
-  selectedAmount = 0;
-  updateButtons();
-});
+function updateRateDisplay(c) {
+  var el = $('rate' + c);
+  if (rates[c]) {
+    el.classList.remove('loading');
+    el.textContent = '¥' + Math.round(rates[c]).toLocaleString();
+  }
+}
+
+var amounts = [5000, 10000, 30000, 50000, 100000, 200000, 500000];
+var popularAmounts = [30000, 50000];
+
+function buildAmountGrid() {
+  var grid = $('amountGrid'), html = '';
+  for (var i = 0; i < amounts.length; i++) {
+    var a = amounts[i], pop = popularAmounts.indexOf(a) >= 0 ? ' popular' : '';
+    html += '<button class="amount-btn' + pop + '" data-amount="' + a + '">¥' + a.toLocaleString() + '<span class="est" id="est' + a + '">---</span></button>';
+  }
+  html += '<button class="amount-btn" id="customAmountBtn">カスタム<span class="est">自由入力</span></button>';
+  grid.innerHTML = html;
+  bindAmountButtons();
+}
+
+function updateAmountEstimates() {
+  var r = rates[selectedCrypto];
+  if (!r) return;
+  for (var i = 0; i < amounts.length; i++) {
+    var el = $('est' + amounts[i]);
+    if (el) {
+      var est = amounts[i] / r;
+      if (selectedCrypto === 'USDT') el.textContent = '≈ ' + est.toFixed(2) + ' USDT';
+      else if (selectedCrypto === 'BTC') el.textContent = '≈ ' + est.toFixed(6) + ' BTC';
+      else el.textContent = '≈ ' + est.toFixed(4) + ' ETH';
+    }
+  }
+}
+
+function bindAmountButtons() {
+  var btns = document.querySelectorAll('.amount-btn[data-amount]');
+  for (var i = 0; i < btns.length; i++) {
+    (function(btn) {
+      btn.addEventListener('click', function() {
+        var all = document.querySelectorAll('.amount-btn');
+        for (var j = 0; j < all.length; j++) all[j].classList.remove('selected');
+        btn.classList.add('selected');
+        selectedAmount = parseInt(btn.dataset.amount);
+        $('customInputGroup').style.display = 'none';
+        $('customAmount').value = '';
+        haptic('impactOccurred', 'medium');
+        updateButtons();
+      });
+    })(btns[i]);
+  }
+  var cb = $('customAmountBtn');
+  if (cb) cb.addEventListener('click', function() {
+    var all = document.querySelectorAll('.amount-btn');
+    for (var j = 0; j < all.length; j++) all[j].classList.remove('selected');
+    cb.classList.add('selected');
+    $('customInputGroup').style.display = 'block';
+    $('customAmount').focus();
+    selectedAmount = 0;
+    haptic('impactOccurred', 'light');
+    updateButtons();
+  });
+}
 
 $('customAmount').addEventListener('input', function(e) {
   selectedAmount = parseInt(e.target.value) || 0;
   updateButtons();
 });
 
-var methodBtns = document.querySelectorAll('.method-btn');
-for (var i = 0; i < methodBtns.length; i++) {
-  (function(btn) {
-    btn.addEventListener('click', function() {
-      for (var j = 0; j < methodBtns.length; j++) methodBtns[j].classList.remove('selected');
-      btn.classList.add('selected');
-      selectedMethod = btn.dataset.method;
+var cryptoCards = document.querySelectorAll('.crypto-card');
+for (var i = 0; i < cryptoCards.length; i++) {
+  (function(card) {
+    card.addEventListener('click', function() {
+      for (var j = 0; j < cryptoCards.length; j++) cryptoCards[j].classList.remove('selected');
+      card.classList.add('selected');
+      selectedCrypto = card.dataset.crypto;
+      haptic('impactOccurred', 'light');
+      updateAmountEstimates();
     });
-  })(methodBtns[i]);
+  })(cryptoCards[i]);
+}
+
+var methodPills = document.querySelectorAll('.method-pill');
+for (var i = 0; i < methodPills.length; i++) {
+  (function(pill) {
+    pill.addEventListener('click', function() {
+      for (var j = 0; j < methodPills.length; j++) methodPills[j].classList.remove('selected');
+      pill.classList.add('selected');
+      selectedMethod = pill.dataset.method;
+      haptic('impactOccurred', 'light');
+    });
+  })(methodPills[i]);
 }
 
 function goToStep2() {
   if (selectedAmount < 1000) { if (tg) tg.showAlert('最小金額は¥1,000です'); return; }
   if (selectedAmount > 1000000) { if (tg) tg.showAlert('最大金額は¥1,000,000です'); return; }
-
   showStep(2);
   $('rateLoading').style.display = 'flex';
   $('rateContent').style.display = 'none';
+  $('rateError').style.display = 'none';
   if (tg) tg.MainButton.hide();
+  var bar = $('matchBar'); bar.style.width = '0%';
+  var prog = 0;
+  var progInterval = setInterval(function() { prog += Math.random() * 15; if (prog > 85) prog = 85; bar.style.width = prog + '%'; }, 300);
 
-  fetch('/api/rates/USDT')
+  fetch('/api/rates/' + selectedCrypto)
     .then(function(res) { return res.json(); })
     .then(function(data) {
+      clearInterval(progInterval); bar.style.width = '100%';
       if (!data.success) throw new Error(data.error || 'レート取得失敗');
-      var rates = data.rates || data.data || [];
-      var rate = data.bestRate || (rates.length > 0 ? rates[0].price : null);
-      if (!rate) throw new Error('レートが取得できません');
-      rate = parseFloat(rate);
-      rateData = rate;
-
-      var usdt = (selectedAmount / rate).toFixed(2);
-      var methodLabels = { bank: '銀行振込', paypay: 'PayPay' };
-
+      var r = data.bestRate || (data.rates && data.rates.length > 0 ? data.rates[0].price : null);
+      if (!r) throw new Error('レートが取得できません');
+      rateData = parseFloat(r);
+      var cryptoAmt;
+      if (selectedCrypto === 'USDT') cryptoAmt = (selectedAmount / rateData).toFixed(2);
+      else if (selectedCrypto === 'BTC') cryptoAmt = (selectedAmount / rateData).toFixed(6);
+      else cryptoAmt = (selectedAmount / rateData).toFixed(4);
+      var methodLabels = { bank: '銀行振込', paypay: 'PayPay', linepay: 'LINE Pay', aupay: 'au PAY' };
       $('confirmAmount').textContent = '¥' + selectedAmount.toLocaleString();
-      $('confirmRate').textContent = '¥' + rate.toLocaleString();
+      $('confirmCrypto').textContent = selectedCrypto;
+      $('confirmRate').textContent = '¥' + rateData.toLocaleString();
       $('confirmMethod').textContent = methodLabels[selectedMethod] || selectedMethod;
-      $('confirmUsdt').textContent = usdt + ' USDT';
-
-      $('rateLoading').style.display = 'none';
-      $('rateContent').style.display = 'block';
-      updateButtons();
+      $('confirmCryptoAmount').textContent = cryptoAmt + ' ' + selectedCrypto;
+      setTimeout(function() { $('rateLoading').style.display = 'none'; $('rateContent').style.display = 'block'; updateButtons(); }, 400);
     })
-    .catch(function(e) {
-      if (tg) tg.showAlert(e.message || 'レート取得に失敗しました');
-      showStep(1);
-    });
+    .catch(function(e) { clearInterval(progInterval); $('rateLoading').style.display = 'none'; $('rateError').style.display = 'block'; });
 }
 
 function goToStep3() {
   if (tg) { tg.MainButton.showProgress(); tg.MainButton.disable(); }
-
   fetch('/api/orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      amount: selectedAmount,
-      crypto: 'USDT',
-      payMethod: selectedMethod,
+      amount: selectedAmount, crypto: selectedCrypto, payMethod: selectedMethod,
       walletAddress: tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? 'tg_' + tg.initDataUnsafe.user.id : 'tg_unknown',
       source: 'miniapp',
     }),
@@ -494,13 +810,10 @@ function goToStep3() {
     .then(function(res) { return res.json(); })
     .then(function(data) {
       if (!data.success || !data.order) throw new Error(data.error || '注文作成に失敗しました');
-
-      orderData = data.order;
-      orderId = data.order.id;
+      orderData = data.order; orderId = data.order.id;
       var account = data.account || data.order.bankAccount || {};
-
       var fields = [
-        { label: '注文ID', value: orderId, copy: false },
+        { label: '注文ID', value: orderId, copy: true },
         { label: '銀行名', value: account.bankName || '-', copy: false },
         { label: '支店名', value: account.branchName || '-', copy: false },
         { label: '口座種別', value: account.accountType || '普通', copy: false },
@@ -508,19 +821,16 @@ function goToStep3() {
         { label: '口座名義', value: account.accountHolder || '-', copy: true },
         { label: '振込金額', value: '¥' + selectedAmount.toLocaleString(), copy: true },
       ];
-
       var html = '';
       for (var i = 0; i < fields.length; i++) {
-        var f = fields[i];
-        html += '<div class="bank-row"><span class="label">' + f.label + '</span><span class="value">' + f.value;
-        if (f.copy) html += '<button class="copy-btn" onclick="copyText(\'' + f.value.replace(/'/g, "\\'") + '\')">コピー</button>';
+        var f = fields[i], cleanVal = f.value.replace(/[¥,]/g, '');
+        html += '<div class="bank-row"><span class="label">' + f.label + '</span><span class="value-wrap"><span class="value">' + f.value + '</span>';
+        if (f.copy) html += '<button class="copy-btn" onclick="copyField(\'' + cleanVal.replace(/'/g, "\\'") + '\')">コピー</button>';
         html += '</span></div>';
       }
       $('bankDetails').innerHTML = html;
-
       if (tg) tg.MainButton.hideProgress();
-      showStep(3);
-      startTimer(15 * 60);
+      showStep(3); startTimer(timerTotal);
     })
     .catch(function(e) {
       if (tg) { tg.MainButton.hideProgress(); tg.MainButton.enable(); }
@@ -530,46 +840,37 @@ function goToStep3() {
 
 function goToStep4() {
   showStep(4);
-  $('resultLoading').style.display = 'flex';
-  $('resultContent').style.display = 'none';
+  $('resultLoading').style.display = 'flex'; $('resultContent').style.display = 'none';
   if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
   if (tg) tg.MainButton.hide();
-
   fetch('/api/orders/' + orderId + '/paid', { method: 'POST' })
     .then(function(res) { return res.json(); })
     .then(function(data) {
       if (!data.success) throw new Error(data.error || '処理に失敗しました');
-
-      var usdt = orderData && orderData.cryptoAmount ? orderData.cryptoAmount : (selectedAmount / rateData).toFixed(2);
+      var cryptoAmt = orderData && orderData.cryptoAmount ? orderData.cryptoAmount : (selectedAmount / rateData).toFixed(selectedCrypto === 'BTC' ? 6 : selectedCrypto === 'ETH' ? 4 : 2);
       $('resultOrderId').textContent = orderId;
       $('resultAmount').textContent = '¥' + selectedAmount.toLocaleString();
-      $('resultUsdt').textContent = usdt + ' USDT';
-
-      $('resultLoading').style.display = 'none';
-      $('resultContent').style.display = 'block';
-
-      setTimeout(function() { if (tg) tg.close(); }, 5000);
+      $('resultCrypto').textContent = cryptoAmt + ' ' + selectedCrypto;
+      $('resultLoading').style.display = 'none'; $('resultContent').style.display = 'block';
+      haptic('notificationOccurred', 'success');
+      launchConfetti();
     })
-    .catch(function(e) {
-      if (tg) tg.showAlert(e.message || '処理に失敗しました');
-      showStep(3);
-    });
+    .catch(function(e) { if (tg) tg.showAlert(e.message || '処理に失敗しました'); showStep(3); });
 }
 
 function startTimer(seconds) {
   if (timerInterval) clearInterval(timerInterval);
-  var remaining = seconds;
-  var display = $('timerDisplay');
-
+  var remaining = seconds, total = seconds, circumference = 2 * Math.PI * 52;
+  var display = $('timerDisplay'), arc = $('timerArc'), ring = $('timerRing'), warningFired = false;
   function update() {
-    var m = Math.floor(remaining / 60);
-    var s = remaining % 60;
+    var m = Math.floor(remaining / 60), s = remaining % 60;
     display.textContent = m + ':' + (s < 10 ? '0' : '') + s;
-    if (remaining < 180) display.classList.add('warning');
-    else display.classList.remove('warning');
+    arc.style.strokeDashoffset = circumference * (1 - remaining / total);
+    if (remaining < 180) { ring.classList.add('warning'); if (!warningFired) { haptic('notificationOccurred', 'warning'); warningFired = true; } }
+    else ring.classList.remove('warning');
+    if (remaining < 60) ring.classList.add('pulse'); else ring.classList.remove('pulse');
     if (remaining <= 0) {
-      clearInterval(timerInterval);
-      timerInterval = null;
+      clearInterval(timerInterval); timerInterval = null;
       if (tg) tg.showAlert('制限時間が過ぎました。注文は自動キャンセルされます。');
       setTimeout(function() { if (tg) tg.close(); }, 2000);
     }
@@ -579,16 +880,47 @@ function startTimer(seconds) {
   timerInterval = setInterval(update, 1000);
 }
 
-function copyText(text) {
-  var clean = text.replace(/[¥,]/g, '');
+function copyField(text) {
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(clean).then(function() {
-      if (tg) tg.showAlert('コピーしました');
-    });
+    navigator.clipboard.writeText(text).then(function() { showToast('コピー済み'); haptic('impactOccurred', 'light'); });
+  } else {
+    var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('コピー済み');
   }
 }
 
-updateButtons();
+function launchConfetti() {
+  var colors = ['#ff3b30', '#ff9500', '#ffcc00', '#34c759', '#007aff', '#af52de'];
+  for (var i = 0; i < 40; i++) {
+    (function(i) {
+      setTimeout(function() {
+        var el = document.createElement('div');
+        el.className = 'confetti-piece';
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.background = colors[Math.floor(Math.random() * colors.length)];
+        el.style.animationDuration = (2 + Math.random() * 2) + 's';
+        el.style.width = (4 + Math.random() * 6) + 'px';
+        el.style.height = (4 + Math.random() * 6) + 'px';
+        document.body.appendChild(el);
+        setTimeout(function() { el.remove(); }, 4000);
+      }, i * 50);
+    })(i);
+  }
+}
+
+var touchStartY = 0, pulling = false;
+document.addEventListener('touchstart', function(e) { if (currentStep === 1 && window.scrollY === 0) touchStartY = e.touches[0].clientY; }, { passive: true });
+document.addEventListener('touchmove', function(e) {
+  if (currentStep !== 1 || touchStartY === 0) return;
+  var diff = e.touches[0].clientY - touchStartY;
+  if (diff > 60 && !pulling) {
+    pulling = true; $('pullIndicator').style.height = '40px';
+    fetchRates(function() { $('pullIndicator').style.height = '0'; pulling = false; showToast('レート更新完了'); });
+  }
+}, { passive: true });
+document.addEventListener('touchend', function() { touchStartY = 0; if (!pulling) $('pullIndicator').style.height = '0'; }, { passive: true });
+
+buildAmountGrid(); fetchRates(); updateButtons(); updateDots();
 </script>
 </body>
 </html>
