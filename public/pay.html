@@ -395,9 +395,9 @@
 
       // Summary
       document.getElementById('sumAmt').textContent='¥'+o.amount.toLocaleString();
-      document.getElementById('sumRate').textContent='¥'+fmt(o.rate)+' / USDT';
+      document.getElementById('sumRate').textContent='¥'+fmt(o.rate)+' / '+(o.crypto||'USDT');
       document.getElementById('sumExch').textContent=o.exchange||'--';
-      document.getElementById('sumUsdt').textContent=o.cryptoAmount+' USDT';
+      document.getElementById('sumUsdt').textContent=o.cryptoAmount+' '+(o.crypto||'USDT');
 
       startTimer();
     }
@@ -416,9 +416,9 @@
     
     function fillSummary(){
       document.getElementById('sumAmt').textContent='¥'+amount.toLocaleString();
-      document.getElementById('sumRate').textContent=currentOrder.price?'¥'+fmt(currentOrder.price)+' / USDT':'計算中...';
+      document.getElementById('sumRate').textContent=currentOrder.price?'¥'+fmt(currentOrder.price)+' / '+(currentOrder.crypto||'USDT'):'計算中...';
       document.getElementById('sumExch').textContent=currentOrder.exchange;
-      document.getElementById('sumUsdt').textContent=currentOrder.price?(amount/currentOrder.price).toFixed(2)+' USDT':'--';
+      document.getElementById('sumUsdt').textContent=currentOrder.price?(amount/currentOrder.price).toFixed(2)+' '+(currentOrder.crypto||'USDT'):'--';
     }
     function startTimer(){
       timerSec=900;clearInterval(timerInterval);
@@ -440,8 +440,8 @@
       document.getElementById('finalSummary').innerHTML=
         '<div class="summary-row"><span class="summary-label">注文ID</span><span class="summary-val">'+(o.id||'--')+'</span></div>'
         +'<div class="summary-row"><span class="summary-label">入金額</span><span class="summary-val">¥'+amount.toLocaleString()+'</span></div>'
-        +'<div class="summary-row"><span class="summary-label">レート</span><span class="summary-val">¥'+fmt(o.rate||0)+' / USDT</span></div>'
-        +'<div class="summary-row"><span class="summary-label">受取り額</span><span class="summary-val big">'+(o.cryptoAmount||'--')+' USDT</span></div>'
+        +'<div class="summary-row"><span class="summary-label">レート</span><span class="summary-val">¥'+fmt(o.rate||0)+' / '+(o.crypto||'USDT')+'</span></div>'
+        +'<div class="summary-row"><span class="summary-label">受取り額</span><span class="summary-val big">'+(o.cryptoAmount||'--')+' '+(o.crypto||'USDT')+'</span></div>'
         +'<div class="summary-row"><span class="summary-label">モード</span><span class="summary-val">'+(o.mode==='self'?'自社決済':'自動マッチング')+'</span></div>'
         +'<div class="summary-row"><span class="summary-label">ステータス</span><span class="summary-val" style="color:var(--green)">確認中</span></div>';
     }

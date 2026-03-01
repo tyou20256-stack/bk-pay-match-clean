@@ -145,8 +145,8 @@
       </div>
       <div class="card" style="padding:0;overflow-x:auto">
         <table>
-          <thead><tr><th>注文ID</th><th>モード</th><th>金額</th><th>USDT</th><th>レート</th><th>取引所</th><th>支払方法</th><th>ステータス</th><th>作成日時</th><th>操作</th></tr></thead>
-          <tbody id="orderTableBody"><tr><td colspan="10" class="empty-state">読み込み中...</td></tr></tbody>
+          <thead><tr><th>注文ID</th><th>モード</th><th>金額</th><th>暗号資産</th><th>数量</th><th>レート</th><th>取引所</th><th>支払方法</th><th>ステータス</th><th>作成日時</th><th>操作</th></tr></thead>
+          <tbody id="orderTableBody"><tr><td colspan="11" class="empty-state">読み込み中...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -545,7 +545,7 @@
       document.getElementById('statCompleted').textContent=orders.filter(function(o){return o.status==='completed';}).length;
       document.getElementById('statCancelled').textContent=orders.filter(function(o){return o.status==='cancelled'||o.status==='expired';}).length;
       var tbody=document.getElementById('orderTableBody');
-      if(!orders.length){tbody.innerHTML='<tr><td colspan="10" class="empty-state">該当する注文がありません</td></tr>';return;}
+      if(!orders.length){tbody.innerHTML='<tr><td colspan="11" class="empty-state">該当する注文がありません</td></tr>';return;}
       var sc={'matching':'os-matching','pending_payment':'os-pending','confirming':'os-confirming','completed':'os-completed','cancelled':'os-cancelled','expired':'os-expired'};
       var sl={'matching':'検索中','pending_payment':'支払待ち','confirming':'確認中','completed':'完了','cancelled':'キャンセル','expired':'期限切れ','paid':'支払済'};
       tbody.innerHTML=orders.map(function(o){
@@ -553,6 +553,7 @@
         return'<tr><td style="font-family:monospace;font-size:10px">'+o.id+'</td>'
           +'<td><span class="badge '+(o.mode==='auto'?'badge-green':'badge-yellow')+'">'+o.mode.toUpperCase()+'</span></td>'
           +'<td>¥'+o.amount.toLocaleString()+'</td>'
+          +'<td>'+(o.crypto||'USDT')+'</td>'
           +'<td>'+o.cryptoAmount+'</td>'
           +'<td>¥'+(o.rate||0).toFixed(1)+'</td>'
           +'<td>'+(o.exchange||'--')+'</td>'
