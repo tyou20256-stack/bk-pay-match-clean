@@ -6,6 +6,7 @@
 
 const BOT_TOKEN = '8447506670:AAGY2bcpbZxTe9OL3Jzxpdo86CHkb47XIig';
 const API_BASE = 'http://localhost:3003';
+const MINIAPP_URL = process.env.MINIAPP_URL || 'https://YOUR_DOMAIN/miniapp.html';
 
 type ConversationState = 'idle' | 'awaiting_amount';
 
@@ -54,7 +55,8 @@ async function handleStart(chatId: number) {
     {
       reply_markup: {
         inline_keyboard: [
-          [{ text: 'USDT購入', callback_data: 'buy' }],
+          [{ text: 'BK Payを開く', web_app: { url: MINIAPP_URL } }],
+          [{ text: 'USDT購入（チャット）', callback_data: 'buy' }],
           [{ text: 'レート確認', callback_data: 'rates' }, { text: 'ヘルプ', callback_data: 'help' }],
         ],
       },
@@ -246,7 +248,17 @@ async function processUpdate(update: any) {
   const chat = getState(chatId);
 
   if (text === '/start') return handleStart(chatId);
-  if (text === '/buy' || text === 'USDT購入') return handleBuy(chatId);
+  if (text === '/buy' || text === 'USDT購入') {
+    await sendMessage(chatId, '💱 <b>USDT購入</b>\n\nMini Appで簡単に購入できます。', {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'BK Payを開く', web_app: { url: MINIAPP_URL } }],
+          [{ text: 'チャットで購入', callback_data: 'buy' }],
+        ],
+      },
+    });
+    return;
+  }
   if (text === '/rates') return handleRates(chatId);
   if (text === '/help') return handleHelp(chatId);
   if (text.startsWith('/status')) {

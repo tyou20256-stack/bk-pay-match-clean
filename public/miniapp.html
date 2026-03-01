@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BK Pay — USDT購入</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root {
+  --bg: #ffffff;
+  --text: #000000;
+  --hint: #999999;
+  --btn: #3390ec;
+  --btn-text: #ffffff;
+  --secondary-bg: #f0f0f0;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 16px;
+  line-height: 1.5;
+}
+.step { display: none; animation: fadeIn 0.2s ease; }
+.step.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+h2 { font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+.subtitle { color: var(--hint); font-size: 14px; margin-bottom: 20px; }
+
+.amount-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.amount-btn {
+  padding: 14px 8px;
+  border: 2px solid var(--secondary-bg);
+  border-radius: 12px;
+  background: var(--secondary-bg);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.amount-btn.selected {
+  border-color: var(--btn);
+  background: color-mix(in srgb, var(--btn) 12%, transparent);
+  color: var(--btn);
+}
+
+.input-group { margin-bottom: 20px; }
+.input-group label {
+  display: block;
+  font-size: 13px;
+  color: var(--hint);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.input-group input, .input-group select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--secondary-bg);
+  border-radius: 10px;
+  font-size: 16px;
+  background: var(--secondary-bg);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input-group input:focus, .input-group select:focus {
+  border-color: var(--btn);
+}
+
+.method-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.method-btn {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid var(--secondary-bg);
+  border-radius: 12px;
+  background: var(--secondary-bg);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.method-btn.selected {
+  border-color: var(--btn);
+  background: color-mix(in srgb, var(--btn) 12%, transparent);
+  color: var(--btn);
+}
+
+.confirm-card {
+  background: var(--secondary-bg);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.confirm-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+}
+.confirm-row:not(:last-child) { border-bottom: 1px solid color-mix(in srgb, var(--hint) 15%, transparent); }
+.confirm-row .label { color: var(--hint); }
+.confirm-row .value { font-weight: 600; }
+.confirm-row.total .value { font-size: 18px; color: var(--btn); }
+
+.bank-info {
+  background: var(--secondary-bg);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.bank-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  font-size: 14px;
+}
+.bank-row:not(:last-child) { border-bottom: 1px solid color-mix(in srgb, var(--hint) 15%, transparent); }
+.bank-row .label { color: var(--hint); font-size: 13px; }
+.bank-row .value { font-weight: 600; text-align: right; }
+.copy-btn {
+  background: none;
+  border: none;
+  color: var(--btn);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-left: 8px;
+}
+.copy-btn:active { opacity: 0.6; }
+
+.timer-bar {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.timer-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid var(--btn);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--btn);
+  margin-bottom: 8px;
+}
+.timer-circle.warning { border-color: #e8590c; color: #e8590c; }
+.timer-label { font-size: 13px; color: var(--hint); }
+
+.result-icon {
+  text-align: center;
+  margin: 30px 0 16px;
+}
+.result-icon svg { width: 64px; height: 64px; }
+.result-title {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.result-sub {
+  text-align: center;
+  color: var(--hint);
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--secondary-bg);
+  border-top-color: var(--btn);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { margin-top: 12px; color: var(--hint); font-size: 14px; }
+
+.notice {
+  background: color-mix(in srgb, var(--btn) 8%, transparent);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--hint);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<!-- Step 1: Amount & Method -->
+<div id="step1" class="step active">
+  <h2>USDT購入</h2>
+  <p class="subtitle">購入金額を選択してください</p>
+
+  <div class="amount-grid">
+    <button class="amount-btn" data-amount="5000">¥5,000</button>
+    <button class="amount-btn" data-amount="10000">¥10,000</button>
+    <button class="amount-btn" data-amount="30000">¥30,000</button>
+    <button class="amount-btn" data-amount="50000">¥50,000</button>
+    <button class="amount-btn" data-amount="100000">¥100,000</button>
+    <button class="amount-btn" id="customAmountBtn">カスタム</button>
+  </div>
+
+  <div class="input-group" id="customInputGroup" style="display:none">
+    <label>金額（円）</label>
+    <input type="number" id="customAmount" placeholder="10000" min="1000" max="1000000" inputmode="numeric">
+  </div>
+
+  <p class="subtitle" style="margin-top:8px">支払い方法</p>
+  <div class="method-row">
+    <button class="method-btn selected" data-method="bank">銀行振込</button>
+    <button class="method-btn" data-method="paypay">PayPay</button>
+  </div>
+</div>
+
+<!-- Step 2: Rate Confirm -->
+<div id="step2" class="step">
+  <h2>注文内容の確認</h2>
+  <div id="rateLoading" class="loading">
+    <div class="spinner"></div>
+    <p class="loading-text">レートを取得中...</p>
+  </div>
+  <div id="rateContent" style="display:none">
+    <div class="confirm-card">
+      <div class="confirm-row">
+        <span class="label">支払い金額</span>
+        <span class="value" id="confirmAmount"></span>
+      </div>
+      <div class="confirm-row">
+        <span class="label">レート</span>
+        <span class="value" id="confirmRate"></span>
+      </div>
+      <div class="confirm-row">
+        <span class="label">支払い方法</span>
+        <span class="value" id="confirmMethod"></span>
+      </div>
+      <div class="confirm-row total">
+        <span class="label">受取USDT</span>
+        <span class="value" id="confirmUsdt"></span>
+      </div>
+    </div>
+    <div class="notice">
+      注文確定後、15分以内にお振込みください。期限を過ぎると自動キャンセルされます。
+    </div>
+  </div>
+</div>
+
+<!-- Step 3: Payment Info -->
+<div id="step3" class="step">
+  <h2>お振込み情報</h2>
+
+  <div class="timer-bar">
+    <div class="timer-circle" id="timerDisplay">15:00</div>
+    <div class="timer-label">残り時間</div>
+  </div>
+
+  <div class="bank-info" id="bankDetails"></div>
+
+  <div class="notice">
+    振込名義が異なる場合、確認に時間がかかることがあります。
+  </div>
+</div>
+
+<!-- Step 4: Result -->
+<div id="step4" class="step">
+  <div id="resultLoading" class="loading">
+    <div class="spinner"></div>
+    <p class="loading-text">処理中...</p>
+  </div>
+  <div id="resultContent" style="display:none">
+    <div class="result-icon">
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color:var(--btn)">
+        <circle cx="32" cy="32" r="28"/>
+        <path d="M20 33l8 8 16-16"/>
+      </svg>
+    </div>
+    <p class="result-title">振込完了を受け付けました</p>
+    <p class="result-sub">スタッフが確認次第、USDTを送付いたします。<br>しばらくお待ちください。</p>
+    <div class="confirm-card">
+      <div class="confirm-row">
+        <span class="label">注文ID</span>
+        <span class="value" id="resultOrderId"></span>
+      </div>
+      <div class="confirm-row">
+        <span class="label">金額</span>
+        <span class="value" id="resultAmount"></span>
+      </div>
+      <div class="confirm-row">
+        <span class="label">USDT</span>
+        <span class="value" id="resultUsdt"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+function applyTheme() {
+  const tp = tg ? tg.themeParams : {};
+  const s = document.documentElement.style;
+  if (tp.bg_color) s.setProperty('--bg', tp.bg_color);
+  if (tp.text_color) s.setProperty('--text', tp.text_color);
+  if (tp.hint_color) s.setProperty('--hint', tp.hint_color);
+  if (tp.button_color) s.setProperty('--btn', tp.button_color);
+  if (tp.button_text_color) s.setProperty('--btn-text', tp.button_text_color);
+  if (tp.secondary_bg_color) s.setProperty('--secondary-bg', tp.secondary_bg_color);
+  document.body.style.background = tp.bg_color || '#ffffff';
+}
+applyTheme();
+if (tg) tg.onEvent('themeChanged', applyTheme);
+
+var currentStep = 1;
+var selectedAmount = 0;
+var selectedMethod = 'bank';
+var rateData = null;
+var orderId = null;
+var orderData = null;
+var timerInterval = null;
+
+function $(id) { return document.getElementById(id); }
+function showStep(n) {
+  var steps = document.querySelectorAll('.step');
+  for (var i = 0; i < steps.length; i++) steps[i].classList.remove('active');
+  $('step' + n).classList.add('active');
+  currentStep = n;
+  updateButtons();
+}
+
+function updateButtons() {
+  if (!tg) return;
+  var mb = tg.MainButton;
+  var bb = tg.BackButton;
+
+  mb.offClick(onMainButton);
+  if (bb) bb.offClick(onBackButton);
+
+  if (currentStep === 1) {
+    mb.setText('レート確認');
+    mb.show();
+    if (selectedAmount > 0) mb.enable(); else mb.disable();
+    if (bb) bb.hide();
+  } else if (currentStep === 2) {
+    mb.setText('注文を確定');
+    if (rateData) { mb.show(); mb.enable(); } else mb.hide();
+    if (bb) bb.show();
+  } else if (currentStep === 3) {
+    mb.setText('振込完了を報告');
+    mb.show(); mb.enable();
+    if (bb) bb.show();
+  } else {
+    mb.hide();
+    if (bb) bb.hide();
+  }
+
+  mb.onClick(onMainButton);
+  if (bb) bb.onClick(onBackButton);
+}
+
+function onBackButton() {
+  if (currentStep > 1 && currentStep < 4) {
+    if (currentStep === 3 && timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    showStep(currentStep - 1);
+  }
+}
+
+function onMainButton() {
+  if (currentStep === 1) goToStep2();
+  else if (currentStep === 2) goToStep3();
+  else if (currentStep === 3) goToStep4();
+}
+
+// Step 1 handlers
+var amountBtns = document.querySelectorAll('.amount-btn[data-amount]');
+for (var i = 0; i < amountBtns.length; i++) {
+  (function(btn) {
+    btn.addEventListener('click', function() {
+      var all = document.querySelectorAll('.amount-btn');
+      for (var j = 0; j < all.length; j++) all[j].classList.remove('selected');
+      btn.classList.add('selected');
+      selectedAmount = parseInt(btn.dataset.amount);
+      $('customInputGroup').style.display = 'none';
+      $('customAmount').value = '';
+      updateButtons();
+    });
+  })(amountBtns[i]);
+}
+
+$('customAmountBtn').addEventListener('click', function() {
+  var all = document.querySelectorAll('.amount-btn');
+  for (var j = 0; j < all.length; j++) all[j].classList.remove('selected');
+  $('customAmountBtn').classList.add('selected');
+  $('customInputGroup').style.display = 'block';
+  $('customAmount').focus();
+  selectedAmount = 0;
+  updateButtons();
+});
+
+$('customAmount').addEventListener('input', function(e) {
+  selectedAmount = parseInt(e.target.value) || 0;
+  updateButtons();
+});
+
+var methodBtns = document.querySelectorAll('.method-btn');
+for (var i = 0; i < methodBtns.length; i++) {
+  (function(btn) {
+    btn.addEventListener('click', function() {
+      for (var j = 0; j < methodBtns.length; j++) methodBtns[j].classList.remove('selected');
+      btn.classList.add('selected');
+      selectedMethod = btn.dataset.method;
+    });
+  })(methodBtns[i]);
+}
+
+function goToStep2() {
+  if (selectedAmount < 1000) { if (tg) tg.showAlert('最小金額は¥1,000です'); return; }
+  if (selectedAmount > 1000000) { if (tg) tg.showAlert('最大金額は¥1,000,000です'); return; }
+
+  showStep(2);
+  $('rateLoading').style.display = 'flex';
+  $('rateContent').style.display = 'none';
+  if (tg) tg.MainButton.hide();
+
+  fetch('/api/rates/USDT')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data.success) throw new Error(data.error || 'レート取得失敗');
+      var rates = data.rates || data.data || [];
+      var rate = data.bestRate || (rates.length > 0 ? rates[0].price : null);
+      if (!rate) throw new Error('レートが取得できません');
+      rate = parseFloat(rate);
+      rateData = rate;
+
+      var usdt = (selectedAmount / rate).toFixed(2);
+      var methodLabels = { bank: '銀行振込', paypay: 'PayPay' };
+
+      $('confirmAmount').textContent = '¥' + selectedAmount.toLocaleString();
+      $('confirmRate').textContent = '¥' + rate.toLocaleString();
+      $('confirmMethod').textContent = methodLabels[selectedMethod] || selectedMethod;
+      $('confirmUsdt').textContent = usdt + ' USDT';
+
+      $('rateLoading').style.display = 'none';
+      $('rateContent').style.display = 'block';
+      updateButtons();
+    })
+    .catch(function(e) {
+      if (tg) tg.showAlert(e.message || 'レート取得に失敗しました');
+      showStep(1);
+    });
+}
+
+function goToStep3() {
+  if (tg) { tg.MainButton.showProgress(); tg.MainButton.disable(); }
+
+  fetch('/api/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      amount: selectedAmount,
+      crypto: 'USDT',
+      payMethod: selectedMethod,
+      walletAddress: tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? 'tg_' + tg.initDataUnsafe.user.id : 'tg_unknown',
+      source: 'miniapp',
+    }),
+  })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data.success || !data.order) throw new Error(data.error || '注文作成に失敗しました');
+
+      orderData = data.order;
+      orderId = data.order.id;
+      var account = data.account || data.order.bankAccount || {};
+
+      var fields = [
+        { label: '注文ID', value: orderId, copy: false },
+        { label: '銀行名', value: account.bankName || '-', copy: false },
+        { label: '支店名', value: account.branchName || '-', copy: false },
+        { label: '口座種別', value: account.accountType || '普通', copy: false },
+        { label: '口座番号', value: account.accountNumber || '-', copy: true },
+        { label: '口座名義', value: account.accountHolder || '-', copy: true },
+        { label: '振込金額', value: '¥' + selectedAmount.toLocaleString(), copy: true },
+      ];
+
+      var html = '';
+      for (var i = 0; i < fields.length; i++) {
+        var f = fields[i];
+        html += '<div class="bank-row"><span class="label">' + f.label + '</span><span class="value">' + f.value;
+        if (f.copy) html += '<button class="copy-btn" onclick="copyText(\'' + f.value.replace(/'/g, "\\'") + '\')">コピー</button>';
+        html += '</span></div>';
+      }
+      $('bankDetails').innerHTML = html;
+
+      if (tg) tg.MainButton.hideProgress();
+      showStep(3);
+      startTimer(15 * 60);
+    })
+    .catch(function(e) {
+      if (tg) { tg.MainButton.hideProgress(); tg.MainButton.enable(); }
+      if (tg) tg.showAlert(e.message || '注文作成に失敗しました');
+    });
+}
+
+function goToStep4() {
+  showStep(4);
+  $('resultLoading').style.display = 'flex';
+  $('resultContent').style.display = 'none';
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (tg) tg.MainButton.hide();
+
+  fetch('/api/orders/' + orderId + '/paid', { method: 'POST' })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data.success) throw new Error(data.error || '処理に失敗しました');
+
+      var usdt = orderData && orderData.cryptoAmount ? orderData.cryptoAmount : (selectedAmount / rateData).toFixed(2);
+      $('resultOrderId').textContent = orderId;
+      $('resultAmount').textContent = '¥' + selectedAmount.toLocaleString();
+      $('resultUsdt').textContent = usdt + ' USDT';
+
+      $('resultLoading').style.display = 'none';
+      $('resultContent').style.display = 'block';
+
+      setTimeout(function() { if (tg) tg.close(); }, 5000);
+    })
+    .catch(function(e) {
+      if (tg) tg.showAlert(e.message || '処理に失敗しました');
+      showStep(3);
+    });
+}
+
+function startTimer(seconds) {
+  if (timerInterval) clearInterval(timerInterval);
+  var remaining = seconds;
+  var display = $('timerDisplay');
+
+  function update() {
+    var m = Math.floor(remaining / 60);
+    var s = remaining % 60;
+    display.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    if (remaining < 180) display.classList.add('warning');
+    else display.classList.remove('warning');
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      if (tg) tg.showAlert('制限時間が過ぎました。注文は自動キャンセルされます。');
+      setTimeout(function() { if (tg) tg.close(); }, 2000);
+    }
+    remaining--;
+  }
+  update();
+  timerInterval = setInterval(update, 1000);
+}
+
+function copyText(text) {
+  var clean = text.replace(/[¥,]/g, '');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(clean).then(function() {
+      if (tg) tg.showAlert('コピーしました');
+    });
+  }
+}
+
+updateButtons();
+</script>
+</body>
+</html>
