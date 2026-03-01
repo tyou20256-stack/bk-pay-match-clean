@@ -82,6 +82,9 @@ export async function fetchAllRates(crypto: string): Promise<AggregatedRates> {
   // Track arbitrage windows
   processArbitrage(result, crypto);
 
+  // Record price history
+  try { recordSnapshot(crypto, result); } catch(e) {}
+
   cachedRates.set(crypto, result);
   return result;
 }

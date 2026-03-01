@@ -62,6 +62,21 @@ router.get('/status', (_req: Request, res: Response) => {
 
 function fetchers() { return ['Bybit', 'Binance', 'OKX', 'HTX']; }
 
+
+// === Price History API ===
+import { getHistory, getHistoryByRange } from "../services/priceHistory.js";
+
+router.get("/history/:crypto", (req: Request, res: Response) => {
+  const crypto = req.params.crypto.toUpperCase();
+  const { hours, from, to } = req.query as any;
+  let data;
+  if (from && to) {
+    data = getHistoryByRange(crypto, Number(from), Number(to));
+  } else {
+    data = getHistory(crypto, Number(hours) || 24);
+  }
+  res.json({ success: true, data });
+});
 export default router;
 
 // === Order Management API ===
