@@ -375,12 +375,12 @@
           +'<div class="pi-row"><span class="pi-row-label">振込金額</span><span class="pi-row-val" style="color:var(--green);font-size:18px;font-weight:800">¥'+o.amount.toLocaleString()+'</span></div>'
           +(o.mode==='auto'?'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+o.merchantName+' (完了率'+o.merchantCompletionRate+'%)</span></div>':'')
           +'</div>'
-          +'<button class="copy-btn" onclick="copyText(''+pi.accountNumber+'')">口座番号をコピー</button>';
+          +'<button class="copy-btn" onclick="copyText(\x27'+pi.accountNumber+'\x27)">口座番号をコピー</button>';
       }else{
         var payNames={paypay:'PayPay',linepay:'LINE Pay',aupay:'au PAY'};
         var pName=payNames[pi.type]||pi.type;
         info.innerHTML='<div class="pi-card"><div class="pi-label">'+pName+' で支払い</div>'
-          +(pi.qrUrl?'<div class="pi-qr"><img src="'+pi.qrUrl+'" style="max-width:160px;max-height:160px" onerror="this.parentNode.innerHTML=''+pName+' QRコード'"></div>':'<div class="pi-qr">'+pName+' QRコード</div>')
+          +(pi.qrUrl?'<div class="pi-qr"><img src="'+pi.qrUrl+'" style="max-width:160px;max-height:160px" onerror="this.parentNode.textContent=\x27QR\x27"></div>':'<div class="pi-qr">'+pName+' QRコード</div>')
           +'<div class="pi-row"><span class="pi-row-label">'+pName+' ID</span><span class="pi-row-val" style="font-weight:800">'+(pi.payId||'--')+'</span></div>'
           +'<div class="pi-row"><span class="pi-row-label">支払金額</span><span class="pi-row-val" style="color:var(--green);font-size:18px;font-weight:800">¥'+o.amount.toLocaleString()+'</span></div>'
           +(o.merchantName?'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+o.merchantName+'</span></div>':'')
