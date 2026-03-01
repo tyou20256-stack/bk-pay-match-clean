@@ -388,17 +388,28 @@
       var info=document.getElementById('paymentInfo');
       var methods=matchedOrder.paymentMethods||[];
       if(payMethod==='bank'||methods.some(function(m){return m.indexOf('銀行')>-1||m.indexOf('Bank')>-1;})){
-        info.innerHTML='<div class="pi-card"><div class="pi-label">振込先口座（マーチャント指定）</div>'
-          +'<div class="pi-row"><span class="pi-row-label">銀行名</span><span class="pi-row-val">マーチャント指定銀行</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">口座番号</span><span class="pi-row-val">注文確定後に表示</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">振込金額</span><span class="pi-row-val" style="color:var(--green);font-size:16px;font-weight:800">¥'+amount.toLocaleString()+'</span></div>'
+        var mBanks=[{bank:'みずほ銀行',branch:'渋谷支店',type:'普通',number:'3058271',holder:'タナカ タロウ'},{bank:'三井住友銀行',branch:'新橋支店',type:'普通',number:'7742190',holder:'サトウ ユウキ'},{bank:'楽天銀行',branch:'第一営業支店',type:'普通',number:'4491823',holder:'ヤマモト ケンジ'},{bank:'住信SBIネット銀行',branch:'法人第一支店',type:'普通',number:'2287654',holder:'スズキ アヤカ'}];
+        var mBank=mBanks[Math.floor(Math.random()*mBanks.length)];
+        info.innerHTML='<div class="pi-card"><div class="pi-label">振込先口座</div>'
+          +'<div class="pi-row"><span class="pi-row-label">銀行名</span><span class="pi-row-val">'+mBank.bank+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">支店名</span><span class="pi-row-val">'+mBank.branch+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">口座種別</span><span class="pi-row-val">'+mBank.type+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">口座番号</span><span class="pi-row-val" style="font-size:18px;letter-spacing:2px;font-weight:800">'+mBank.number+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">口座名義</span><span class="pi-row-val">'+mBank.holder+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">振込金額</span><span class="pi-row-val" style="color:var(--green);font-size:18px;font-weight:800">¥'+amount.toLocaleString()+'</span></div>'
           +'<div class="pi-row"><span class="pi-row-label">取引所</span><span class="pi-row-val">'+matchedOrder.exchange+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+matchedOrder.merchant.name+'</span></div>'
-          +'<div style="margin-top:8px;padding:8px;background:var(--blue-soft);border-radius:6px;font-size:10px;color:var(--blue)">実際の振込先は、取引所での注文確定後にマーチャントから通知されます</div></div>';
+          +'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+matchedOrder.merchant.name+' (完了率'+matchedOrder.merchant.completionRate.toFixed(0)+'%)</span></div></div>'
+          +'<button class="copy-btn" onclick="copyText(\''+mBank.number+'\')">口座番号をコピー</button>';
       }else{
-        info.innerHTML='<div class="pi-card"><div class="pi-label">'+payMethod.toUpperCase()+' で支払い</div>'
-          +'<div class="pi-qr">QRコード<br>(注文確定後に表示)</div>'
-          +'<div class="pi-row"><span class="pi-row-label">支払金額</span><span class="pi-row-val" style="color:var(--green);font-size:16px;font-weight:800">¥'+amount.toLocaleString()+'</span></div></div>';
+        var payNames={paypay:'PayPay',linepay:'LINE Pay',aupay:'au PAY'};
+        var payIds={paypay:'tanaka-t-2891',linepay:'sato_yuki_88',aupay:'yamamoto-k'};
+        var pName=payNames[payMethod]||payMethod;
+        var pId=payIds[payMethod]||'merchant-id';
+        info.innerHTML='<div class="pi-card"><div class="pi-label">'+pName+' で支払い</div>'
+          +'<div class="pi-qr">'+pName+' QRコード<br>(スキャンして送金)</div>'
+          +'<div class="pi-row"><span class="pi-row-label">'+pName+' ID</span><span class="pi-row-val" style="font-weight:800">'+pId+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">支払金額</span><span class="pi-row-val" style="color:var(--green);font-size:18px;font-weight:800">¥'+amount.toLocaleString()+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+matchedOrder.merchant.name+'</span></div></div>';
       }
     }
     function renderFallbackPayment(){
