@@ -106,6 +106,7 @@
         <button class="nav-btn" onclick="showTab('wallet')">ウォレット</button>
         <button class="nav-btn" onclick="showTab('settings')">設定</button>
         <button class="nav-btn" onclick="showTab('reports')">レポート</button>
+        <button class="nav-btn" onclick="showTab('customers')">顧客管理</button>
       </div>
     </div>
     <div class="admin-right">
@@ -374,6 +375,27 @@
       </div>
     </div>
 
+    <!-- TAB: Customers -->
+    <div class="tab-panel" id="tab-customers">
+      <div class="sec-header">
+        <div><div class="sec-title">顧客管理</div><div class="sec-desc">登録済み顧客の一覧と統計</div></div>
+        <button class="btn btn-outline" onclick="loadCustomers()">更新</button>
+      </div>
+      <div class="stats-grid" id="customerStats">
+        <div class="stat-card"><div class="stat-val blue" id="custTotal">0</div><div class="stat-label">総顧客数</div></div>
+        <div class="stat-card"><div class="stat-val green" id="custActive">0</div><div class="stat-label">アクティブ(今月)</div></div>
+        <div class="stat-card"><div class="stat-val yellow" id="custVip">0</div><div class="stat-label">VIP会員(Silver+)</div></div>
+        <div class="stat-card"><div class="stat-val purple" id="custRewards">¥0</div><div class="stat-label">紹介リワード合計</div></div>
+      </div>
+      <div class="card" style="padding:0;overflow-x:auto">
+        <table>
+          <thead><tr><th>Telegram ID</th><th>VIPランク</th><th>累計取引額</th><th>取引回数</th><th>紹介コード</th><th>紹介人数</th><th>登録日</th></tr></thead>
+          <tbody id="customerTableBody"><tr><td colspan="7" class="empty-state">読み込み中...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+
 
       <div class="card">
         <div class="card-title">パスワード変更</div>
@@ -402,6 +424,7 @@
       if(t==='accounts')loadAccounts();
       if(t==='exchange')loadTraderStatus();
       if(t==='reports')loadReports();
+      if(t==='customers')loadCustomers();
     }
 
     // Orders
@@ -620,6 +643,34 @@
         if(d.success){alert('パスワードを変更しました');['pwCurrent','pwNew','pwConfirm'].forEach(function(id){document.getElementById(id).value='';});}
         else{alert('エラー: '+(d.error||'変更できませんでした'));}
       }catch(e){alert('通信エラー');}
+    }
+
+
+    // Customers
+    async function loadCustomers(){
+      try{
+        var r=await fetch("/api/admin/customers");var d=await r.json();
+        if(!d.success)return;
+        var customers=d.customers||[];
+        document.getElementById("custTotal").textContent=customers.length;
+        document.getElementById("custActive").textContent=customers.filter(function(c){return c.isActive;}).length;
+        document.getElementById("custVip").textContent=customers.filter(function(c){return c.vipRank&&c.vipRank!=="Bronze";}).length;
+        var totalRewards=customers.reduce(function(s,c){return s+(c.referralReward||0);},0);
+        document.getElementById("custRewards").textContent="¥"+totalRewards.toLocaleString();
+        var tbody=document.getElementById("customerTableBody");
+        if(!customers.length){tbody.innerHTML="<tr><td colspan=\"7\" class=\"empty-state\">顧客がいません</td></tr>";return;}
+        tbody.innerHTML=customers.map(function(c){
+          var dt=c.createdAt?new Date(c.createdAt).toLocaleDateString("ja-JP"):"--";
+          var rankCls={"Bronze":"badge-yellow","Silver":"badge-yellow","Gold":"badge-green","Platinum":"badge-green"};
+          return "<tr><td style=\"font-family:monospace\">"+(c.telegramId||"--")+"</td>"
+            +"<td><span class=\"badge "+(rankCls[c.vipRank]||"badge-yellow")+"\">"+(c.vipRank||"Bronze")+"</span></td>"
+            +"<td>¥"+((c.totalVolume||0)).toLocaleString()+"</td>"
+            +"<td>"+(c.totalTrades||0)+"</td>"
+            +"<td style=\"font-family:monospace\">"+(c.referralCode||"--")+"</td>"
+            +"<td>"+(c.referralCount||0)+"</td>"
+            +"<td>"+dt+"</td></tr>";
+        }).join("");
+      }catch(e){console.error("loadCustomers error:",e);}
     }
 
     // Init

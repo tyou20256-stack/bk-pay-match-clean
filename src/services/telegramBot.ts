@@ -4,11 +4,14 @@
  *   Long polling (getUpdates) を使用。ライブラリ不要。
  */
 
+import { getNotificationPreferences, setNotificationPreference, setAlertThreshold } from './database.js';
+
 const BOT_TOKEN = '8447506670:AAGY2bcpbZxTe9OL3Jzxpdo86CHkb47XIig';
 const API_BASE = 'http://localhost:3003';
 const MINIAPP_URL = process.env.MINIAPP_URL || 'https://debi-unominous-overcasually.ngrok-free.dev/miniapp.html';
+const MYPAGE_URL = MINIAPP_URL.replace('miniapp.html', 'mypage.html');
 
-type ConversationState = 'idle' | 'awaiting_amount' | 'awaiting_crypto_selection' | 'awaiting_order_id';
+type ConversationState = 'idle' | 'awaiting_amount' | 'awaiting_crypto_selection' | 'awaiting_order_id' | 'sell_awaiting_crypto' | 'sell_awaiting_amount' | 'sell_awaiting_bank' | 'sell_confirm';
 
 interface ChatState {
   state: ConversationState;
@@ -81,6 +84,8 @@ async function answerCallback(callbackId: string, text?: string) {
 
 async function handleStart(chatId: number) {
   conversations.set(chatId, { state: 'idle' });
+  // 通知設定を自動登録（デフォルトON）
+  getNotificationPreferences(chatId);
   await sendMessage(chatId,
     `━━━━━━━━━━━━━━\n` +
     `🏦 <b>BK Pay へようこそ！</b>\n\n` +
@@ -93,6 +98,9 @@ async function handleStart(chatId: number) {
         inline_keyboard: [
           [
             { text: '💰 USDT購入', callback_data: 'cb_buy' },
+            { text: '💱 暗号通貨売却', callback_data: 'cb_sell' },
+          ],
+          [
             { text: '📊 レート確認', callback_data: 'cb_rates' },
           ],
           [
@@ -103,8 +111,12 @@ async function handleStart(chatId: number) {
             { text: '🧮 金額計算', callback_data: 'cb_calc' },
             { text: '⏰ アラート設定', callback_data: 'cb_alert' },
           ],
-          [{ text: '📖 使い方ガイド', callback_data: 'cb_help' }],
+          [
+            { text: '🔔 通知設定', callback_data: 'cb_notify' },
+            { text: '📖 使い方ガイド', callback_data: 'cb_help' },
+          ],
           [{ text: '🌐 BK Payを開く', web_app: { url: MINIAPP_URL } }],
+          [{ text: '📊 マイページ', web_app: { url: MYPAGE_URL } }],
         ],
       },
     }
@@ -362,7 +374,8 @@ async function handleHelp(chatId: number) {
     `/calc — 金額シミュレーション\n` +
     `/status — 注文確認\n` +
     `/history — 注文履歴\n` +
-    `/alert — アラート設定\n` +
+    `/alert — アラート設定
+/notify — 通知設定\n` +
     `/wallet — ウォレット確認\n` +
     `/help — この画面\n\n` +
     `💡 下のメニューボタン「BK Pay」から\n` +
@@ -553,6 +566,177 @@ async function checkAlerts() {
   }
 }
 
+
+// ━━━━━━━━━━━━━━━━━━ Sell Handlers ━━━━━━━━━━━━━━━━━━
+
+async function handleSell(chatId: number) {
+  conversations.set(chatId, { state: 'sell_awaiting_crypto' });
+  await sendMessage(chatId,
+    '💱 <b>暗号通貨売却（暗号通貨→日本円）</b>\n\n' +
+    '売却する通貨を選択してください:',
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: 'USDT', callback_data: 'sell_crypto_USDT' },
+            { text: 'BTC', callback_data: 'sell_crypto_BTC' },
+            { text: 'ETH', callback_data: 'sell_crypto_ETH' },
+          ],
+        ],
+      },
+    }
+  );
+}
+
+async function handleSellAmount(chatId: number, text: string) {
+  const chat = getState(chatId);
+  const amount = parseFloat(text);
+  if (!amount || amount <= 0) {
+    await sendMessage(chatId, '⚠️ 有効な数量を入力してください（例: 100, 0.5）');
+    return;
+  }
+  chat.data = { ...chat.data, cryptoAmount: amount };
+  chat.state = 'sell_awaiting_bank';
+  conversations.set(chatId, chat);
+  await sendMessage(chatId,
+    '🏦 <b>振込先銀行情報を入力してください</b>\n\n' +
+    '以下の形式でカンマ区切りで入力:\n' +
+    '<code>銀行名, 口座番号, 名義</code>\n\n' +
+    '例: <code>三菱UFJ銀行, 1234567, タナカ タロウ</code>'
+  );
+}
+
+async function handleSellBank(chatId: number, text: string) {
+  const chat = getState(chatId);
+  const parts = text.split(/[,，]/).map(s => s.trim());
+  if (parts.length < 3) {
+    await sendMessage(chatId, '⚠️ 「銀行名, 口座番号, 名義」の形式で入力してください');
+    return;
+  }
+  let bankInfo: any;
+  if (parts.length >= 4) {
+    bankInfo = { bankName: parts[0], branchName: parts[1], accountNumber: parts[2], accountHolder: parts[3] };
+  } else {
+    bankInfo = { bankName: parts[0], branchName: '', accountNumber: parts[1], accountHolder: parts[2] };
+  }
+  chat.data = { ...chat.data, customerBankInfo: bankInfo };
+  chat.state = 'sell_confirm';
+  conversations.set(chatId, chat);
+
+  let estimatedJpy = 0;
+  let sellRate = 0;
+  try {
+    const rateData = await fetchCurrentRates();
+    const d = (rateData as any)[chat.data.crypto.toLowerCase()];
+    if (d?.bestSell) {
+      sellRate = Number(d.bestSell.price);
+      estimatedJpy = Math.floor(chat.data.cryptoAmount * sellRate);
+    }
+  } catch {}
+
+  let depositAddr = '（未設定）';
+  try {
+    const res = await fetch(API_BASE + '/api/wallet');
+    const data = await res.json();
+    if (data.success && data.wallet?.address) depositAddr = data.wallet.address;
+  } catch {}
+
+  await sendMessage(chatId,
+    '📋 <b>売却注文確認</b>\n\n' +
+    '売却通貨: ' + chat.data.crypto + '\n' +
+    '売却数量: ' + chat.data.cryptoAmount + '\n' +
+    '売却レート: ¥' + sellRate.toLocaleString() + '\n' +
+    '受取予定額: <b>¥' + estimatedJpy.toLocaleString() + '</b>\n\n' +
+    '🏦 振込先:\n' +
+    '銀行: ' + bankInfo.bankName + '\n' +
+    '口座番号: ' + bankInfo.accountNumber + '\n' +
+    '名義: ' + bankInfo.accountHolder + '\n\n' +
+    '📥 入金先アドレス (TRC-20):\n<code>' + depositAddr + '</code>\n\n' +
+    '上記の内容でよろしいですか？',
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '✅ 確定する', callback_data: 'sell_confirm_yes' }],
+          [{ text: '❌ キャンセル', callback_data: 'sell_confirm_no' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handleSellConfirm(chatId: number) {
+  const chat = getState(chatId);
+  conversations.set(chatId, { state: 'idle' });
+
+  await sendMessage(chatId, '⏳ 売却注文を作成中...');
+
+  try {
+    const res = await fetch(API_BASE + '/api/orders/sell', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cryptoAmount: chat.data.cryptoAmount,
+        crypto: chat.data.crypto,
+        customerBankInfo: chat.data.customerBankInfo,
+      }),
+    });
+    const data = await res.json();
+
+    if (!data.success || !data.order) {
+      await sendMessage(chatId, '❌ 注文作成に失敗しました: ' + (data.error || '不明なエラー'));
+      return;
+    }
+
+    const order = data.order;
+    await sendMessage(chatId,
+      '✅ <b>売却注文が作成されました</b>\n\n' +
+      '📋 注文ID: <code>' + order.id + '</code>\n' +
+      '💱 売却: ' + order.cryptoAmount + ' ' + order.crypto + '\n' +
+      '💴 受取予定: ¥' + (order.jpyAmount || 0).toLocaleString() + '\n' +
+      '📊 レート: ¥' + (order.rate || 0).toLocaleString() + '\n\n' +
+      '📥 <b>以下のアドレスに' + order.crypto + 'を送金してください:</b>\n' +
+      '<code>' + (order.depositAddress || '') + '</code>\n' +
+      'ネットワーク: ' + (order.depositNetwork || 'TRC-20') + '\n\n' +
+      '⏰ 30分以内に送金してください。\n' +
+      '入金確認後、指定口座へ日本円をお振込みします。',
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '📋 注文状況確認', callback_data: 'status_' + order.id }],
+          ],
+        },
+      }
+    );
+  } catch (e) {
+    console.error('[TelegramBot] Sell order error:', e);
+    await sendMessage(chatId, '❌ サーバーに接続できませんでした。');
+  }
+}
+
+
+async function handleNotify(chatId: number) {
+  const prefs = getNotificationPreferences(chatId);
+  const check = (v: boolean) => v ? '✅' : '❌';
+
+  await sendMessage(chatId,
+    `🔔 <b>通知設定</b>\n\n` +
+    `現在の設定:\n` +
+    `${check(prefs.daily_summary)} 毎朝レートサマリー（9:00）\n` +
+    `${check(prefs.spike_alerts)} レート急変動アラート\n` +
+    `${check(prefs.weekly_summary)} 週間レポート（月曜9:00）\n\n` +
+    `タップして切り替え:`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: `${check(prefs.daily_summary)} 朝のサマリー`, callback_data: 'notify_toggle_daily' }],
+          [{ text: `${check(prefs.spike_alerts)} 急変動`, callback_data: 'notify_toggle_spike' }],
+          [{ text: `${check(prefs.weekly_summary)} 週間`, callback_data: 'notify_toggle_weekly' }],
+        ],
+      },
+    }
+  );
+}
+
 // ━━━━━━━━━━━━━━━━━━ Update Processing ━━━━━━━━━━━━━━━━━━
 
 async function processUpdate(update: any) {
@@ -574,7 +758,13 @@ async function processUpdate(update: any) {
     if (data === 'cb_history') return handleHistory(chatId);
     if (data === 'cb_calc') return handleCalc(chatId);
     if (data === 'cb_alert') return handleAlert(chatId);
+    if (data === 'cb_notify') return handleNotify(chatId);
     if (data === 'cb_help') return handleHelp(chatId);
+    if (data === 'cb_mypage') {
+      await sendMessage(chatId, '📊 マイページを開く', { reply_markup: { inline_keyboard: [[{ text: '📊 マイページを開く', web_app: { url: MYPAGE_URL } }]] } });
+      return;
+    }
+    if (data === 'cb_sell') return handleSell(chatId);
 
     // Legacy callbacks
     if (data === 'buy') return handleBuy(chatId);
@@ -605,11 +795,45 @@ async function processUpdate(update: any) {
       }
     }
 
+    // Sell flow callbacks
+    if (data.startsWith('sell_crypto_')) {
+      const crypto = data.replace('sell_crypto_', '');
+      const chat = getState(chatId);
+      chat.data = { crypto };
+      chat.state = 'sell_awaiting_amount';
+      conversations.set(chatId, chat);
+      await sendMessage(chatId, '💰 売却する ' + crypto + ' の数量を入力してください:\n\n例: <code>100</code> (USDT) / <code>0.01</code> (BTC)');
+      return;
+    }
+    if (data === 'sell_confirm_yes') return handleSellConfirm(chatId);
+    if (data === 'sell_confirm_no') {
+      conversations.set(chatId, { state: 'idle' });
+      await sendMessage(chatId, '❌ 売却注文をキャンセルしました。');
+      return;
+    }
+
     // Alert off from button
     if (data === 'alert_off') {
       userAlerts.delete(chatId);
       await sendMessage(chatId, '✅ アラートを解除しました。');
       return;
+    }
+
+    // Notification toggle callbacks
+    if (data.startsWith('notify_toggle_')) {
+      const typeMap: Record<string, string> = {
+        'notify_toggle_daily': 'daily_summary',
+        'notify_toggle_spike': 'spike_alerts',
+        'notify_toggle_weekly': 'weekly_summary',
+      };
+      const prefType = typeMap[data];
+      if (prefType) {
+        const prefs = getNotificationPreferences(chatId);
+        const current = (prefs as any)[prefType];
+        setNotificationPreference(chatId, prefType, !current);
+        await handleNotify(chatId);
+        return;
+      }
     }
 
     if (data.startsWith('paid_')) return handlePaid(chatId, data.slice(5));
@@ -626,8 +850,13 @@ async function processUpdate(update: any) {
 
   if (text === '/start') return handleStart(chatId);
   if (text === '/buy' || text === 'USDT購入') return handleBuy(chatId);
+  if (text === '/sell') return handleSell(chatId);
   if (text === '/rates') return handleRates(chatId);
   if (text === '/help') return handleHelp(chatId);
+  if (text === '/mypage') {
+    await sendMessage(chatId, '📊 マイページを開く', { reply_markup: { inline_keyboard: [[{ text: '📊 マイページを開く', web_app: { url: MYPAGE_URL } }]] } });
+    return;
+  }
   if (text === '/history') return handleHistory(chatId);
   if (text === '/wallet') return handleWallet(chatId);
 
@@ -641,6 +870,8 @@ async function processUpdate(update: any) {
     return handleAlert(chatId, arg || undefined);
   }
 
+  if (text === '/notify') return handleNotify(chatId);
+
   if (text.startsWith('/status')) {
     const id = text.split(/\s+/)[1];
     if (id) return handleStatus(chatId, id);
@@ -653,6 +884,9 @@ async function processUpdate(update: any) {
   if (chat.state === 'awaiting_amount') {
     return handleAmount(chatId, text);
   }
+
+  if (chat.state === 'sell_awaiting_amount') return handleSellAmount(chatId, text);
+  if (chat.state === 'sell_awaiting_bank') return handleSellBank(chatId, text);
 
   if (chat.state === 'awaiting_order_id') {
     conversations.set(chatId, { state: 'idle' });

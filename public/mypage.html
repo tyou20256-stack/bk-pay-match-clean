@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BK Pay — マイページ</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root {
+  --bg: #ffffff;
+  --text: #1a1a2e;
+  --hint: #8e8e93;
+  --btn: #3390ec;
+  --btn-text: #ffffff;
+  --secondary-bg: #f2f2f7;
+  --green: #34c759;
+  --red: #ff3b30;
+  --orange: #ff9500;
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --card-bg: #ffffff;
+  --border: #e5e5ea;
+  --purple: #af52de;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', sans-serif;
+  background: var(--secondary-bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 0 0 40px;
+  line-height: 1.5;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+}
+.ptr-indicator { text-align: center; padding: 12px; font-size: 12px; color: var(--hint); display: none; }
+.ptr-indicator.active { display: block; }
+.page-header {
+  background: linear-gradient(135deg, var(--btn) 0%, #1a6bd4 100%);
+  color: #fff; padding: 20px 20px 28px;
+}
+.page-header h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.page-header .subtitle { font-size: 12px; opacity: 0.8; }
+.vip-card {
+  background: var(--card-bg); border-radius: 14px; margin: -16px 16px 16px;
+  padding: 20px; box-shadow: var(--card-shadow); position: relative; z-index: 2;
+}
+.vip-rank-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.vip-label { font-size: 11px; color: var(--hint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.vip-rank-name { font-size: 22px; font-weight: 800; }
+.vip-rank-name.bronze { color: #cd7f32; }
+.vip-rank-name.silver { color: #a0aec0; }
+.vip-rank-name.gold { color: #d4a017; }
+.vip-rank-name.platinum { color: #7c3aed; }
+.progress-bar-wrap { background: var(--secondary-bg); border-radius: 6px; height: 10px; overflow: hidden; margin-bottom: 10px; }
+.progress-bar-fill {
+  height: 100%; border-radius: 6px;
+  background: linear-gradient(90deg, var(--btn) 0%, var(--green) 100%);
+  width: 0%; transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.vip-amounts { display: flex; justify-content: space-between; font-size: 11px; color: var(--hint); }
+.vip-amounts span:last-child { font-weight: 600; color: var(--text); }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px; margin-bottom: 16px; }
+.stat-card { background: var(--card-bg); border-radius: 12px; padding: 16px; box-shadow: var(--card-shadow); text-align: center; }
+.stat-value { font-size: 24px; font-weight: 800; margin-bottom: 2px; }
+.stat-value.green { color: var(--green); }
+.stat-value.blue { color: var(--btn); }
+.stat-value.orange { color: var(--orange); }
+.stat-value.purple { color: var(--purple); }
+.stat-label { font-size: 10px; color: var(--hint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.section { background: var(--card-bg); border-radius: 14px; margin: 0 16px 16px; padding: 16px; box-shadow: var(--card-shadow); }
+.section-title {
+  font-size: 13px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px;
+}
+.section-icon { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; }
+.section-icon svg { width: 16px; height: 16px; stroke: var(--hint); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tx-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--secondary-bg); }
+.tx-item:last-child { border-bottom: none; }
+.tx-date { font-size: 11px; color: var(--hint); min-width: 50px; }
+.tx-detail { flex: 1; margin-left: 10px; font-size: 12px; font-weight: 500; }
+.tx-status { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.tx-status.completed { background: rgba(52,199,89,0.1); color: var(--green); }
+.tx-status.pending { background: rgba(255,149,0,0.1); color: var(--orange); }
+.tx-status.cancelled { background: rgba(255,59,48,0.1); color: var(--red); }
+.referral-code-box {
+  background: var(--secondary-bg); border-radius: 8px; padding: 12px;
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.referral-code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+.copy-btn {
+  background: var(--btn); color: #fff; border: none; border-radius: 6px;
+  padding: 6px 14px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.copy-btn:active { opacity: 0.7; }
+.referral-stat { font-size: 12px; color: var(--hint); margin-top: 4px; }
+.referral-stat strong { color: var(--text); }
+.tier-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--secondary-bg); align-items: center; font-size: 11px; }
+.tier-row:last-child { border-bottom: none; }
+.tier-row.current { background: rgba(52,199,89,0.06); border-radius: 6px; padding: 8px; margin: 0 -8px; border-bottom: none; }
+.tier-name { font-weight: 700; min-width: 70px; }
+.tier-name.bronze { color: #cd7f32; }
+.tier-name.silver { color: #a0aec0; }
+.tier-name.gold { color: #d4a017; }
+.tier-name.platinum { color: #7c3aed; }
+.tier-req { color: var(--hint); flex: 1; text-align: center; }
+.tier-benefit { font-weight: 600; min-width: 60px; text-align: right; }
+.tier-current-badge { font-size: 9px; background: var(--green); color: #fff; padding: 1px 6px; border-radius: 3px; margin-left: 6px; font-weight: 700; }
+.loading { text-align: center; padding: 60px 20px; color: var(--hint); }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--btn); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-state { text-align: center; padding: 40px 20px; color: var(--red); font-size: 13px; }
+.retry-btn { margin-top: 12px; background: none; border: 1px solid var(--btn); color: var(--btn); padding: 8px 20px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+</style>
+</head>
+<body>
+<div id="loading" class="loading"><div class="spinner"></div><div>データを読み込み中...</div></div>
+<div id="content" style="display:none">
+  <div id="ptrIndicator" class="ptr-indicator">引っ張って更新</div>
+  <div class="page-header"><h1>マイページ</h1><div class="subtitle" id="userName">BK Pay メンバー</div></div>
+  <div class="vip-card">
+    <div class="vip-rank-row">
+      <div><div class="vip-label">VIPランク</div><div class="vip-rank-name" id="vipRankName">---</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:var(--hint)">達成率</div><div style="font-size:18px;font-weight:800" id="vipPercent">0%</div></div>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+    <div class="vip-amounts"><span>累計: <span id="totalVolume">¥0</span></span><span>次ランク: <span id="nextRankAmount">---</span></span></div>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value blue" id="totalTrades">0</div><div class="stat-label">総取引回数</div></div>
+    <div class="stat-card"><div class="stat-value green" id="monthVolume">¥0</div><div class="stat-label">今月取引額</div></div>
+    <div class="stat-card"><div class="stat-value orange" id="discountRate">0%</div><div class="stat-label">優遇レート</div></div>
+    <div class="stat-card"><div class="stat-value purple" id="referralCount">0</div><div class="stat-label">紹介人数</div></div>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></span>最近の取引</div>
+    <div id="txList"><div style="text-align:center;padding:16px;color:var(--hint);font-size:12px">取引履歴がありません</div></div>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>紹介プログラム</div>
+    <div class="referral-code-box"><span class="referral-code" id="referralCode">---</span><button class="copy-btn" onclick="copyReferral()">コピー</button></div>
+    <div class="referral-stat">累計リワード: <strong id="referralReward">¥0</strong></div>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>VIPランク特典</div>
+    <div id="tierList"></div>
+  </div>
+</div>
+<div id="errorState" class="error-state" style="display:none"><div>データの取得に失敗しました</div><button class="retry-btn" onclick="loadData()">再試行</button></div>
+
+<script>
+var tgApp = window.Telegram && window.Telegram.WebApp;
+if (tgApp) {
+  tgApp.ready();
+  tgApp.expand();
+  var tc = tgApp.themeParams;
+  if (tc) {
+    if (tc.bg_color) document.documentElement.style.setProperty('--bg', tc.bg_color);
+    if (tc.secondary_bg_color) document.documentElement.style.setProperty('--secondary-bg', tc.secondary_bg_color);
+    if (tc.text_color) document.documentElement.style.setProperty('--text', tc.text_color);
+    if (tc.hint_color) document.documentElement.style.setProperty('--hint', tc.hint_color);
+    if (tc.button_color) document.documentElement.style.setProperty('--btn', tc.button_color);
+    if (tc.button_text_color) document.documentElement.style.setProperty('--btn-text', tc.button_text_color);
+  }
+}
+
+var TIERS = [
+  { name: 'Bronze', nameJa: 'ブロンズ', min: 0, discount: '標準', cls: 'bronze' },
+  { name: 'Silver', nameJa: 'シルバー', min: 1000000, discount: '-0.3%', cls: 'silver' },
+  { name: 'Gold', nameJa: 'ゴールド', min: 5000000, discount: '-0.5%', cls: 'gold' },
+  { name: 'Platinum', nameJa: 'プラチナ', min: 20000000, discount: '-1.0%', cls: 'platinum' },
+];
+
+function formatJpy(n) {
+  if (n >= 10000) return '¥' + (n / 10000).toFixed(n % 10000 === 0 ? 0 : 1) + '万';
+  return '¥' + n.toLocaleString();
+}
+function getTelegramId() { try { return tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.user && tgApp.initDataUnsafe.user.id; } catch(e) { return null; } }
+function getCurrentTier(v) { var t = TIERS[0]; for (var i = 0; i < TIERS.length; i++) { if (v >= TIERS[i].min) t = TIERS[i]; } return t; }
+function getNextTier(v) { for (var i = 0; i < TIERS.length; i++) { if (v < TIERS[i].min) return TIERS[i]; } return null; }
+
+function renderTiers(cur) {
+  var el = document.getElementById('tierList');
+  el.innerHTML = TIERS.map(function(t) {
+    var ic = t.name === cur;
+    return '<div class="tier-row' + (ic ? ' current' : '') + '">' +
+      '<span class="tier-name ' + t.cls + '">' + t.nameJa + (ic ? '<span class="tier-current-badge">現在</span>' : '') + '</span>' +
+      '<span class="tier-req">' + (t.min === 0 ? '¥0~' : '¥' + (t.min/10000) + '万~') + '</span>' +
+      '<span class="tier-benefit">' + t.discount + '</span></div>';
+  }).join('');
+}
+
+function renderTransactions(txs) {
+  var el = document.getElementById('txList');
+  if (!txs || !txs.length) { el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--hint);font-size:12px">取引履歴がありません</div>'; return; }
+  el.innerHTML = txs.slice(0, 10).map(function(tx) {
+    var d = new Date(tx.date || tx.createdAt);
+    var ds = (d.getMonth()+1) + '/' + d.getDate();
+    var sc = tx.status === 'completed' ? 'completed' : tx.status === 'cancelled' ? 'cancelled' : 'pending';
+    var sl = tx.status === 'completed' ? '完了' : tx.status === 'cancelled' ? '取消' : '処理中';
+    return '<div class="tx-item"><span class="tx-date">' + ds + '</span><span class="tx-detail">¥' + Number(tx.amount).toLocaleString() + ' → ' + tx.cryptoAmount + ' ' + (tx.crypto||'USDT') + '</span><span class="tx-status ' + sc + '">' + sl + '</span></div>';
+  }).join('');
+}
+
+function renderData(data) {
+  var s = data.stats || data;
+  var user = tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.user;
+  if (user) document.getElementById('userName').textContent = (user.first_name || '') + ' ' + (user.last_name || '');
+
+  var totalVolume = s.totalVolume || 0;
+  var tier = getCurrentTier(totalVolume);
+  var next = getNextTier(totalVolume);
+  var rankEl = document.getElementById('vipRankName');
+  rankEl.textContent = tier.nameJa;
+  rankEl.className = 'vip-rank-name ' + tier.cls;
+
+  var pct = 100;
+  if (next) pct = Math.min(100, Math.round((totalVolume - tier.min) / (next.min - tier.min) * 100));
+  document.getElementById('vipPercent').textContent = pct + '%';
+  document.getElementById('totalVolume').textContent = formatJpy(totalVolume);
+  document.getElementById('nextRankAmount').textContent = next ? formatJpy(next.min) : '最高ランク';
+  requestAnimationFrame(function() { document.getElementById('progressBar').style.width = pct + '%'; });
+
+  document.getElementById('totalTrades').textContent = (s.totalTrades || 0) + '回';
+  document.getElementById('monthVolume').textContent = formatJpy(s.monthVolume || 0);
+  document.getElementById('discountRate').textContent = s.discountRate || tier.discount;
+  document.getElementById('referralCount').textContent = (s.referralCount || 0) + '人';
+  renderTransactions(s.recentTransactions || []);
+  document.getElementById('referralCode').textContent = s.referralCode || '---';
+  document.getElementById('referralReward').textContent = formatJpy(s.referralReward || 0);
+  renderTiers(tier.name);
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+}
+
+function showDemo() {
+  renderData({ stats: { totalVolume: 8500000, totalTrades: 42, monthVolume: 1200000, discountRate: '-0.5%', referralCount: 5, referralCode: 'BK-DEMO01', referralReward: 12500, recentTransactions: [
+    { date: '2026-03-01', amount: 50000, cryptoAmount: '322.58', crypto: 'USDT', status: 'completed' },
+    { date: '2026-03-01', amount: 10000, cryptoAmount: '64.52', crypto: 'USDT', status: 'completed' },
+    { date: '2026-02-28', amount: 30000, cryptoAmount: '193.55', crypto: 'USDT', status: 'completed' },
+  ]}});
+}
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('errorState').style.display = 'none';
+  var tid = getTelegramId();
+  if (!tid) { showDemo(); return; }
+  try {
+    var res = await fetch('/api/customer/' + tid + '/stats');
+    if (!res.ok) throw new Error('API error');
+    var data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed');
+    renderData(data);
+  } catch(e) {
+    console.error('Load error:', e);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+  }
+}
+
+function copyReferral() {
+  var code = document.getElementById('referralCode').textContent;
+  if (!code || code === '---') return;
+  navigator.clipboard.writeText(code).then(function() {
+    if (tgApp && tgApp.HapticFeedback) tgApp.HapticFeedback.notificationOccurred('success');
+    var btn = document.querySelector('.copy-btn');
+    btn.textContent = 'コピー済';
+    setTimeout(function() { btn.textContent = 'コピー'; }, 2000);
+  });
+}
+
+// Pull-to-refresh
+var ptrStartY = 0, ptrActive = false;
+document.addEventListener('touchstart', function(e) { if (window.scrollY === 0) ptrStartY = e.touches[0].clientY; });
+document.addEventListener('touchmove', function(e) {
+  if (ptrStartY && e.touches[0].clientY - ptrStartY > 80 && window.scrollY === 0) {
+    document.getElementById('ptrIndicator').classList.add('active'); ptrActive = true;
+  }
+});
+document.addEventListener('touchend', function() {
+  if (ptrActive) { document.getElementById('ptrIndicator').classList.remove('active'); ptrActive = false; loadData(); }
+  ptrStartY = 0;
+});
+
+loadData();
+</script>
+</body>
+</html>
