@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BK P2P Aggregator</title>
-  <link rel="stylesheet" href="style.css?v=21">
+  <link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
   <!-- Top Bar -->
@@ -68,6 +68,12 @@
       <div class="hero-spread-value" id="bestSpread">--</div>
       
     </div>
+    
+    <div class="hero-card sell-card">
+      <div class="hero-label" data-i18n="best_sell_label">売却 平均価格</div>
+      <div class="hero-price" id="bestSellPrice">--</div>
+      <div class="hero-sub"><span class="hero-exchange" id="bestSellExchange">--</span> <span class="hero-unit"><span class="current-crypto">USDT</span>/JPY</span></div>
+    </div>
     <div class="hero-volume-section">
       <div class="vol-threshold-ctrl">
         <button class="vol-adj-btn" onclick="adjustThreshold(-0.5)">-</button>
@@ -79,11 +85,7 @@
         <div class="hero-vol-item sell-vol"><span class="hero-vol-label">売却可能</span><span class="hero-vol-val" id="volSell5">--</span></div>
       </div>
     </div>
-    <div class="hero-card sell-card">
-      <div class="hero-label" data-i18n="best_sell_label">売却 平均価格</div>
-      <div class="hero-price" id="bestSellPrice">--</div>
-      <div class="hero-sub"><span class="hero-exchange" id="bestSellExchange">--</span> <span class="hero-unit"><span class="current-crypto">USDT</span>/JPY</span></div>
-    </div>
+
   </section>
 
   <!-- Arbitrage Dropdown -->
@@ -131,7 +133,7 @@
   </main>
 
   <footer><span>BK P2P Aggregator &mdash; Bybit / Binance / OKX / HTX</span></footer>
-  <script src="i18n.js?v=21"></script>
-  <script src="app.js?v=21"></script>
+  <script src="i18n.js?v=22"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>
