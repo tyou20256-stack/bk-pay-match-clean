@@ -314,4 +314,20 @@ export function changePassword(token: string, currentPassword: string, newPasswo
   return true;
 }
 
+export function bulkAddBankAccounts(accounts: any[]): number {
+  const insert = db.prepare(`INSERT INTO bank_accounts (bank_name, branch_name, account_type, account_number, account_holder, daily_limit, priority, status, memo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const transaction = db.transaction((accs: any[]) => {
+    let count = 0;
+    for (const acc of accs) {
+      insert.run(
+        acc.bankName, acc.branchName, acc.accountType || '普通', acc.accountNumber, acc.accountHolder,
+        acc.dailyLimit || 3000000, acc.priority || 'medium', acc.status || 'active', acc.memo || ''
+      );
+      count++;
+    }
+    return count;
+  });
+  return transaction(accounts);
+}
+
 export default db;

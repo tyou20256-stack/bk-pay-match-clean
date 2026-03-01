@@ -180,3 +180,37 @@ router.get('/exchange-creds', (req, res) => {
   const creds = exchanges.map(ex => dbSvc.getExchangeCreds(ex)).filter(Boolean);
   res.json({ success: true, credentials: creds });
 });
+
+// === Bulk Import API ===
+router.post('/accounts/bulk', (req, res) => {
+  try {
+    const accounts = req.body;
+    if (!Array.isArray(accounts) || accounts.length === 0) {
+      return res.json({ success: false, error: 'Request body must be a non-empty array of accounts' });
+    }
+    const count = dbSvc.bulkAddBankAccounts(accounts);
+    res.json({ success: true, imported: count });
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// === Reports API ===
+import { getDailyReport, getMonthlyReport, getSummaryReport } from '../services/reportService.js';
+
+router.get('/reports/daily', (req, res) => {
+  const date = req.query.date as string;
+  if (!date) return res.json({ success: false, error: 'date query parameter required (YYYY-MM-DD)' });
+  res.json({ success: true, report: getDailyReport(date) });
+});
+
+router.get('/reports/monthly', (req, res) => {
+  const year = parseInt(req.query.year as string);
+  const month = parseInt(req.query.month as string);
+  if (!year || !month) return res.json({ success: false, error: 'year and month query parameters required' });
+  res.json({ success: true, report: getMonthlyReport(year, month) });
+});
+
+router.get('/reports/summary', (_req, res) => {
+  res.json({ success: true, report: getSummaryReport() });
+});

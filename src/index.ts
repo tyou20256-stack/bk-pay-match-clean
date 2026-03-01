@@ -84,6 +84,7 @@ app.use('/api/epay', authRequired);
 app.use('/api/trader', authRequired);
 app.use('/api/wallet', authRequired);
 app.use('/api/settings', authRequired);
+app.use('/api/reports', authRequired);
 
 // Public API routes (rates, pay orders)
 app.use('/api/orders', orderLimiter);
@@ -91,6 +92,12 @@ app.use('/api', apiRouter);
 
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+
+// Global error handler
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('[Error]', err.message);
+  res.status(500).json({ success: false, error: 'Internal server error' });
 });
 
 async function start() {

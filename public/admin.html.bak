@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BK Pay - 管理画面</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    [data-theme="dark"]{--bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;--border:#243049;--text:#edf0f7;--text2:#a0aec0;--dim:#5a6a85;--green:#34d399;--green-soft:rgba(52,211,153,.1);--green-border:rgba(52,211,153,.25);--red:#f87171;--red-soft:rgba(248,113,113,.08);--blue:#60a5fa;--blue-soft:rgba(96,165,250,.08);--yellow:#fbbf24;--yellow-soft:rgba(251,191,36,.08);--purple:#a78bfa;--input-bg:#0f1520;--shadow:0 2px 12px rgba(0,0,0,.3)}
+    [data-theme="light"]{--bg:#f5f7fa;--bg2:#fff;--card:#fff;--card2:#f8fafc;--border:#e2e8f0;--text:#1a202c;--text2:#4a5568;--dim:#a0aec0;--green:#059669;--green-soft:rgba(5,150,105,.08);--green-border:rgba(5,150,105,.2);--red:#dc2626;--red-soft:rgba(220,38,38,.06);--blue:#2563eb;--blue-soft:rgba(37,99,235,.06);--yellow:#d97706;--yellow-soft:rgba(217,119,6,.06);--purple:#7c3aed;--input-bg:#f1f5f9;--shadow:0 2px 12px rgba(0,0,0,.06)}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Segoe UI',sans-serif;font-size:13px;line-height:1.5}
+
+    .admin-header{padding:12px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:100}
+    .admin-logo{font-size:15px;font-weight:800}.admin-logo span{color:var(--green)}
+    .admin-nav{display:flex;gap:4px}
+    .nav-btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:all .15s}
+    .nav-btn:hover{border-color:var(--text);color:var(--text)}
+    .nav-btn.active{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+    .admin-right{display:flex;gap:6px;align-items:center}
+    .icon-btn{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+
+    .container{max-width:1000px;margin:0 auto;padding:20px}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+
+    /* Section header */
+    .sec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .sec-title{font-size:16px;font-weight:700}
+    .sec-desc{font-size:11px;color:var(--dim);margin-top:2px}
+    .badge{display:inline-flex;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+    .badge-green{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+    .badge-yellow{background:var(--yellow-soft);color:var(--yellow);border:1px solid rgba(251,191,36,.3)}
+    .badge-red{background:var(--red-soft);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+
+    /* Cards */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+    .card-title{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+    /* Forms */
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-group{display:flex;flex-direction:column;gap:3px}
+    .form-group.full{grid-column:1/-1}
+    .form-label{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+    .form-input{padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:12px;font-family:inherit}
+    .form-input:focus{outline:none;border-color:var(--green)}
+    .form-select{padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:12px;font-family:inherit}
+    textarea.form-input{min-height:60px;resize:vertical}
+
+    /* Buttons */
+    .btn{padding:8px 16px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn-green{background:var(--green);color:#fff}.btn-green:hover{opacity:.9}
+    .btn-red{background:none;border:1px solid var(--red);color:var(--red)}.btn-red:hover{background:var(--red-soft)}
+    .btn-outline{background:none;border:1px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--text);color:var(--text)}
+    .btn-group{display:flex;gap:6px;margin-top:12px}
+
+    /* Table */
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{padding:8px 10px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);font-weight:700;border-bottom:1px solid var(--border);background:var(--bg2)}
+    td{padding:8px 10px;border-bottom:1px solid var(--border)}
+    tr:hover td{background:var(--card2)}
+    .status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
+    .status-dot.on{background:var(--green)}.status-dot.off{background:var(--red)}.status-dot.rest{background:var(--yellow)}
+
+    /* Stats */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+    .stat-val{font-size:22px;font-weight:800;margin-bottom:2px}
+    .stat-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+    .stat-val.green{color:var(--green)}.stat-val.yellow{color:var(--yellow)}.stat-val.red{color:var(--red)}.stat-val.blue{color:var(--blue)}
+
+    /* Order list */
+    .order-status{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;text-transform:uppercase}
+    .os-matching{background:var(--blue-soft);color:var(--blue)}
+    .os-pending{background:var(--yellow-soft);color:var(--yellow)}
+    .os-confirming{background:var(--green-soft);color:var(--green)}
+    .os-completed{background:var(--green-soft);color:var(--green)}
+    .os-cancelled{background:var(--red-soft);color:var(--red)}
+    .os-expired{background:var(--red-soft);color:var(--dim)}
+
+    .empty-state{text-align:center;padding:40px;color:var(--dim);font-size:12px}
+
+    /* QR upload */
+    .qr-upload{width:120px;height:120px;border:2px dashed var(--border);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:10px;color:var(--dim);position:relative;overflow:hidden}
+    .qr-upload:hover{border-color:var(--green);color:var(--green)}
+    .qr-upload img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+    .qr-upload input{display:none}
+    .qr-row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .qr-item{display:flex;flex-direction:column;align-items:center;gap:4px}
+    .qr-item-label{font-size:10px;font-weight:600;color:var(--text2)}
+
+    @media(max-width:768px){
+      .form-grid{grid-template-columns:1fr}
+      .stats-grid{grid-template-columns:repeat(2,1fr)}
+      .admin-nav{display:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-header">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="admin-logo">BK <span>Pay</span> Admin</div>
+      <div class="admin-nav">
+        <button class="nav-btn active" onclick="showTab('orders')">注文管理</button>
+        <button class="nav-btn" onclick="showTab('accounts')">銀行口座</button>
+        <button class="nav-btn" onclick="showTab('epay')">電子決済</button>
+        <button class="nav-btn" onclick="showTab('exchange')">取引所API</button>
+        <button class="nav-btn" onclick="showTab('wallet')">ウォレット</button>
+        <button class="nav-btn" onclick="showTab('settings')">設定</button>
+      </div>
+    </div>
+    <div class="admin-right">
+      <a href="/" class="icon-btn" title="ダッシュボード" style="text-decoration:none;font-size:10px">P2P</a>
+      <a href="/pay.html" class="icon-btn" title="決済ページ" style="text-decoration:none;font-size:10px">Pay</a>
+      <button class="icon-btn" onclick="toggleTheme()" id="themeBtn">D</button>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- TAB: Orders -->
+    <div class="tab-panel active" id="tab-orders">
+      <div class="sec-header">
+        <div><div class="sec-title">注文管理</div><div class="sec-desc">BK Payからの注文一覧</div></div>
+        <button class="btn btn-outline" onclick="loadOrders()">更新</button>
+      </div>
+      <div class="stats-grid" id="orderStats">
+        <div class="stat-card"><div class="stat-val blue" id="statTotal">0</div><div class="stat-label">全注文</div></div>
+        <div class="stat-card"><div class="stat-val yellow" id="statPending">0</div><div class="stat-label">支払待ち</div></div>
+        <div class="stat-card"><div class="stat-val green" id="statCompleted">0</div><div class="stat-label">完了</div></div>
+        <div class="stat-card"><div class="stat-val red" id="statCancelled">0</div><div class="stat-label">キャンセル</div></div>
+      </div>
+      <div class="card" style="padding:0;overflow-x:auto">
+        <table>
+          <thead><tr><th>注文ID</th><th>モード</th><th>金額</th><th>USDT</th><th>レート</th><th>取引所</th><th>支払方法</th><th>ステータス</th><th>作成日時</th><th>操作</th></tr></thead>
+          <tbody id="orderTableBody"><tr><td colspan="10" class="empty-state">読み込み中...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: Bank Accounts -->
+    <div class="tab-panel" id="tab-accounts">
+      <div class="sec-header">
+        <div><div class="sec-title">銀行口座管理</div><div class="sec-desc">自社決済フォールバック用の口座</div></div>
+        <button class="btn btn-green" onclick="showAddAccount()">+ 口座を追加</button>
+      </div>
+      <!-- Add form -->
+      <div class="card" id="addAccountForm" style="display:none">
+        <div class="card-title">新規口座追加</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">銀行名</label><input class="form-input" id="accBank" placeholder="例: みずほ銀行"></div>
+          <div class="form-group"><label class="form-label">支店名</label><input class="form-input" id="accBranch" placeholder="例: 渋谷支店"></div>
+          <div class="form-group"><label class="form-label">口座種別</label>
+            <select class="form-select" id="accType"><option value="普通">普通</option><option value="当座">当座</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">口座番号</label><input class="form-input" id="accNumber" placeholder="例: 1234567"></div>
+          <div class="form-group"><label class="form-label">口座名義（カナ）</label><input class="form-input" id="accHolder" placeholder="例: タナカ タロウ"></div>
+          <div class="form-group"><label class="form-label">1日の上限額</label><input class="form-input" type="number" id="accLimit" placeholder="例: 3000000" value="3000000"></div>
+          <div class="form-group"><label class="form-label">優先度</label>
+            <select class="form-select" id="accPriority"><option value="high">高</option><option value="medium" selected>中</option><option value="low">低</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">状態</label>
+            <select class="form-select" id="accStatus"><option value="active">稼働中</option><option value="rest">休止中</option><option value="frozen">凍結</option></select>
+          </div>
+          <div class="form-group full"><label class="form-label">メモ</label><textarea class="form-input" id="accMemo" placeholder="任意のメモ"></textarea></div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-green" onclick="saveAccount()">保存</button>
+          <button class="btn btn-outline" onclick="hideAddAccount()">キャンセル</button>
+        </div>
+      </div>
+      <!-- Account list -->
+      <div class="card" style="padding:0;overflow-x:auto">
+        <table>
+          <thead><tr><th>状態</th><th>銀行名</th><th>支店名</th><th>口座番号</th><th>名義</th><th>1日上限</th><th>今日の使用額</th><th>優先度</th><th>操作</th></tr></thead>
+          <tbody id="accountTableBody"><tr><td colspan="9" class="empty-state">口座が登録されていません</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: Electronic Payments -->
+    <div class="tab-panel" id="tab-epay">
+      <div class="sec-header">
+        <div><div class="sec-title">電子決済設定</div><div class="sec-desc">PayPay / LINE Pay / au PAY の受取設定</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">PayPay</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">PayPay ID</label><input class="form-input" id="paypayId" placeholder="例: bkstock-pay"></div>
+          <div class="form-group"><label class="form-label">表示名</label><input class="form-input" id="paypayName" placeholder="例: BK Stock"></div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="form-label" style="margin-bottom:6px">QRコード画像</div>
+          <div class="qr-row">
+            <div class="qr-item">
+              <div class="qr-upload" onclick="this.querySelector('input').click()" id="paypayQrBox">
+                <span>クリックして<br>アップロード</span>
+                <input type="file" accept="image/*" onchange="previewQr(this,'paypayQrBox','paypay')">
+              </div>
+              <div class="qr-item-label">PayPay QR</div>
+            </div>
+          </div>
+        </div>
+        <div class="btn-group"><button class="btn btn-green" onclick="saveEpay('paypay')">保存</button></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">LINE Pay</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">LINE Pay ID</label><input class="form-input" id="linepayId" placeholder="例: bkstock-line"></div>
+          <div class="form-group"><label class="form-label">送金リンクURL</label><input class="form-input" id="linepayUrl" placeholder="https://..."></div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="form-label" style="margin-bottom:6px">QRコード画像</div>
+          <div class="qr-row">
+            <div class="qr-item">
+              <div class="qr-upload" onclick="this.querySelector('input').click()" id="linepayQrBox">
+                <span>クリックして<br>アップロード</span>
+                <input type="file" accept="image/*" onchange="previewQr(this,'linepayQrBox','linepay')">
+              </div>
+              <div class="qr-item-label">LINE Pay QR</div>
+            </div>
+          </div>
+        </div>
+        <div class="btn-group"><button class="btn btn-green" onclick="saveEpay('linepay')">保存</button></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">au PAY</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">au PAY ID</label><input class="form-input" id="aupayId" placeholder="例: bkstock-aupay"></div>
+          <div class="form-group"><label class="form-label">表示名</label><input class="form-input" id="aupayName" placeholder="例: BK Stock"></div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="form-label" style="margin-bottom:6px">QRコード画像</div>
+          <div class="qr-row">
+            <div class="qr-item">
+              <div class="qr-upload" onclick="this.querySelector('input').click()" id="aupayQrBox">
+                <span>クリックして<br>アップロード</span>
+                <input type="file" accept="image/*" onchange="previewQr(this,'aupayQrBox','aupay')">
+              </div>
+              <div class="qr-item-label">au PAY QR</div>
+            </div>
+          </div>
+        </div>
+        <div class="btn-group"><button class="btn btn-green" onclick="saveEpay('aupay')">保存</button></div>
+      </div>
+    </div>
+
+    <!-- TAB: Exchange API -->
+    <div class="tab-panel" id="tab-exchange">
+      <div class="sec-header">
+        <div><div class="sec-title">取引所API設定</div><div class="sec-desc">Puppeteer自動取引に使用するアカウント情報</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Bybit <span class="badge badge-yellow" id="bybitStatus">未設定</span></div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">メールアドレス</label><input class="form-input" id="bybitEmail" type="email" placeholder="example@email.com"></div>
+          <div class="form-group"><label class="form-label">パスワード</label><input class="form-input" id="bybitPass" type="password" placeholder="********"></div>
+          <div class="form-group"><label class="form-label">API Key（任意）</label><input class="form-input" id="bybitApiKey" placeholder="API Key"></div>
+          <div class="form-group"><label class="form-label">API Secret（任意）</label><input class="form-input" id="bybitApiSecret" type="password" placeholder="API Secret"></div>
+          <div class="form-group"><label class="form-label">2FA TOTP Secret（任意）</label><input class="form-input" id="bybitTotp" placeholder="Base32 secret"></div>
+        </div>
+        <div class="btn-group"><button class="btn btn-green" onclick="saveExchange('Bybit')">保存</button><button class="btn btn-outline" onclick="testExchange('Bybit')">接続テスト</button></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">OKX <span class="badge badge-yellow" id="okxStatus">未設定</span></div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">メールアドレス</label><input class="form-input" id="okxEmail" type="email" placeholder="example@email.com"></div>
+          <div class="form-group"><label class="form-label">パスワード</label><input class="form-input" id="okxPass" type="password" placeholder="********"></div>
+          <div class="form-group"><label class="form-label">API Key（任意）</label><input class="form-input" id="okxApiKey" placeholder="API Key"></div>
+          <div class="form-group"><label class="form-label">API Secret（任意）</label><input class="form-input" id="okxApiSecret" type="password" placeholder="API Secret"></div>
+          <div class="form-group"><label class="form-label">Passphrase（任意）</label><input class="form-input" id="okxPassphrase" type="password" placeholder="Passphrase"></div>
+          <div class="form-group"><label class="form-label">2FA TOTP Secret（任意）</label><input class="form-input" id="okxTotp" placeholder="Base32 secret"></div>
+        </div>
+        <div class="btn-group"><button class="btn btn-green" onclick="saveExchange('OKX')">保存</button><button class="btn btn-outline" onclick="testExchange('OKX')">接続テスト</button></div>
+      </div>
+
+      <div class="card" style="border-left:3px solid var(--blue)">
+        <div class="card-title" style="color:var(--blue)">Puppeteer自動取引ステータス</div>
+        <div id="traderStatus" style="font-size:12px;color:var(--text2)">読み込み中...</div>
+      </div>
+    </div>
+
+    <!-- TAB: Wallet -->
+    <div class="tab-panel" id="tab-wallet">
+      <div class="sec-header">
+        <div><div class="sec-title">受取ウォレット設定</div><div class="sec-desc">顧客からのUSDT送金先アドレス</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">USDT受取アドレス（TRC-20）</div>
+        <div class="form-grid">
+          <div class="form-group full"><label class="form-label">ウォレットアドレス</label><input class="form-input" id="walletAddr" placeholder="Tで始まるTRONアドレス" style="font-family:monospace;font-size:13px"></div>
+          <div class="form-group full"><label class="form-label">ラベル（任意）</label><input class="form-input" id="walletLabel" placeholder="例: メインウォレット"></div>
+        </div>
+        <div class="btn-group"><button class="btn btn-green" onclick="saveWallet()">保存</button></div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--yellow)">
+        <div class="card-title" style="color:var(--yellow)">注意</div>
+        <p style="font-size:11px;color:var(--text2)">ここで設定したアドレスがBK Payの送金先として顧客に表示されます。アドレスを間違えると資金を失います。必ずテスト送金で確認してください。</p>
+      </div>
+    </div>
+
+    <!-- TAB: Settings -->
+    <div class="tab-panel" id="tab-settings">
+      <div class="sec-header">
+        <div><div class="sec-title">一般設定</div><div class="sec-desc">BK Payの動作設定</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">マッチング設定</div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">最低完了率（%）</label><input class="form-input" type="number" id="setMinCompletion" value="90"></div>
+          <div class="form-group"><label class="form-label">注文タイムアウト（分）</label><input class="form-input" type="number" id="setTimeout" value="15"></div>
+          <div class="form-group"><label class="form-label">最低注文額（円）</label><input class="form-input" type="number" id="setMinAmount" value="500"></div>
+          <div class="form-group"><label class="form-label">最大注文額（円）</label><input class="form-input" type="number" id="setMaxAmount" value="1000000"></div>
+          <div class="form-group"><label class="form-label">オンラインのみマッチング</label>
+            <select class="form-select" id="setOnlineOnly"><option value="yes">はい</option><option value="no">いいえ</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">フォールバックモード</label>
+            <select class="form-select" id="setFallback"><option value="self">自社決済</option><option value="reject">注文拒否</option></select>
+          </div>
+        </div>
+        <div class="btn-group"><button class="btn btn-green" onclick="saveSettings()">保存</button></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Theme
+    function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);document.getElementById('themeBtn').textContent=n==='dark'?'D':'L';localStorage.setItem('theme',n);}
+    (function(){var s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
+
+    // Tabs
+    function showTab(t){
+      document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
+      document.getElementById('tab-'+t).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+      event.target.classList.add('active');
+      if(t==='orders')loadOrders();
+      if(t==='accounts')loadAccounts();
+      if(t==='exchange')loadTraderStatus();
+    }
+
+    // Orders
+    async function loadOrders(){
+      try{
+        var r=await fetch('/api/orders');var d=await r.json();
+        if(!d.success)return;
+        var orders=d.orders;
+        document.getElementById('statTotal').textContent=orders.length;
+        document.getElementById('statPending').textContent=orders.filter(function(o){return o.status==='pending_payment';}).length;
+        document.getElementById('statCompleted').textContent=orders.filter(function(o){return o.status==='completed';}).length;
+        document.getElementById('statCancelled').textContent=orders.filter(function(o){return o.status==='cancelled'||o.status==='expired';}).length;
+        var tbody=document.getElementById('orderTableBody');
+        if(!orders.length){tbody.innerHTML='<tr><td colspan="10" class="empty-state">注文がありません</td></tr>';return;}
+        tbody.innerHTML=orders.map(function(o){
+          var sc={'matching':'os-matching','pending_payment':'os-pending','confirming':'os-confirming','completed':'os-completed','cancelled':'os-cancelled','expired':'os-expired'};
+          var sl={'matching':'検索中','pending_payment':'支払待ち','confirming':'確認中','completed':'完了','cancelled':'キャンセル','expired':'期限切れ','paid':'支払済'};
+          var dt=new Date(o.createdAt).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+          return'<tr><td style="font-family:monospace;font-size:10px">'+o.id+'</td>'
+            +'<td><span class="badge '+(o.mode==='auto'?'badge-green':'badge-yellow')+'">'+o.mode.toUpperCase()+'</span></td>'
+            +'<td>¥'+o.amount.toLocaleString()+'</td>'
+            +'<td>'+o.cryptoAmount+'</td>'
+            +'<td>¥'+(o.rate||0).toFixed(1)+'</td>'
+            +'<td>'+(o.exchange||'--')+'</td>'
+            +'<td>'+o.payMethod+'</td>'
+            +'<td><span class="order-status '+(sc[o.status]||'')+'">'+(sl[o.status]||o.status)+'</span></td>'
+            +'<td>'+dt+'</td>'
+            +'<td>'+(o.status==='pending_payment'?'<button class="btn btn-green" style="padding:3px 8px;font-size:9px" onclick="confirmOrder(\''+o.id+'\')">承認</button> <button class="btn btn-red" style="padding:3px 8px;font-size:9px" onclick="cancelOrderAdmin(\''+o.id+'\')">却下</button>':'--')+'</td></tr>';
+        }).join('');
+      }catch(e){}
+    }
+    async function confirmOrder(id){await fetch('/api/orders/'+id+'/paid',{method:'POST'});loadOrders();}
+    async function cancelOrderAdmin(id){await fetch('/api/orders/'+id+'/cancel',{method:'POST'});loadOrders();}
+
+    // Accounts
+    function showAddAccount(){document.getElementById('addAccountForm').style.display='block';}
+    function hideAddAccount(){document.getElementById('addAccountForm').style.display='none';}
+    async function saveAccount(){
+      var acc={bankName:document.getElementById('accBank').value,branchName:document.getElementById('accBranch').value,accountType:document.getElementById('accType').value,accountNumber:document.getElementById('accNumber').value,accountHolder:document.getElementById('accHolder').value,dailyLimit:parseInt(document.getElementById('accLimit').value)||3000000,priority:document.getElementById('accPriority').value,status:document.getElementById('accStatus').value,memo:document.getElementById('accMemo').value};
+      if(!acc.bankName||!acc.accountNumber||!acc.accountHolder){alert('銀行名、口座番号、名義は必須です');return;}
+      await fetch('/api/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(acc)});
+      hideAddAccount();loadAccounts();
+      ['accBank','accBranch','accNumber','accHolder','accMemo'].forEach(function(id){document.getElementById(id).value='';});
+    }
+    async function deleteAccount(id){await fetch('/api/accounts/'+id,{method:'DELETE'});loadAccounts();}
+    async function toggleAccountStatus(id,current){
+      var newStatus=current==='active'?'rest':'active';
+      await fetch('/api/accounts/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:newStatus})});
+      loadAccounts();
+    }
+    async function loadAccounts(){
+      try{
+        var r=await fetch('/api/accounts');var d=await r.json();
+        if(!d.success)return;
+        var accounts=d.accounts;
+        var tbody=document.getElementById('accountTableBody');
+        if(!accounts.length){tbody.innerHTML='<tr><td colspan="9" class="empty-state">口座が登録されていません</td></tr>';return;}
+        tbody.innerHTML=accounts.map(function(a){
+          var sc=a.status==='active'?'on':a.status==='rest'?'rest':'off';
+          var sl=a.status==='active'?'稼働中':a.status==='rest'?'休止中':'凍結';
+          return'<tr><td><span class="status-dot '+sc+'"></span>'+sl+'</td>'
+            +'<td>'+(a.bank_name||'')+'</td><td>'+(a.branch_name||'')+'</td>'
+            +'<td style="font-family:monospace;letter-spacing:1px">'+(a.account_number||'')+'</td>'
+            +'<td>'+(a.account_holder||'')+'</td>'
+            +'<td>¥'+(a.daily_limit||0).toLocaleString()+'</td>'
+            +'<td>¥'+(a.used_today||0).toLocaleString()+'</td>'
+            +'<td>'+(a.priority||'')+'</td>'
+            +'<td><button class="btn btn-outline" style="padding:2px 8px;font-size:9px" onclick="toggleAccountStatus('+a.id+',\''+a.status+'\')">'+(a.status==='active'?'休止':'稼働')+'</button> <button class="btn btn-red" style="padding:2px 8px;font-size:9px" onclick="deleteAccount('+a.id+')">削除</button></td></tr>';
+        }).join('');
+      }catch(e){}
+    }
+
+    // E-pay
+    function previewQr(input,boxId,type){
+      var file=input.files[0];if(!file)return;
+      var reader=new FileReader();
+      reader.onload=function(e){
+        var box=document.getElementById(boxId);
+        box.innerHTML='<img src="'+e.target.result+'" alt="QR"><input type="file" accept="image/*" onchange="previewQr(this,\''+boxId+'\',\''+type+'\')">';
+        localStorage.setItem('bkpay_qr_'+type,e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+    async function saveEpay(type){
+      var data={};
+      if(type==='paypay'){data={payId:document.getElementById('paypayId').value,displayName:document.getElementById('paypayName').value,qrImage:localStorage.getItem('bkpay_qr_paypay')||''};}
+      if(type==='linepay'){data={payId:document.getElementById('linepayId').value,linkUrl:document.getElementById('linepayUrl').value,qrImage:localStorage.getItem('bkpay_qr_linepay')||''};}
+      if(type==='aupay'){data={payId:document.getElementById('aupayId').value,displayName:document.getElementById('aupayName').value,qrImage:localStorage.getItem('bkpay_qr_aupay')||''};}
+      await fetch('/api/epay/'+type,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      alert(type+' の設定を保存しました');
+    }
+
+    // Exchange
+    async function saveExchange(ex){
+      var prefix=ex.toLowerCase();
+      var body={exchange:ex,email:document.getElementById(prefix+'Email').value,password:document.getElementById(prefix+'Pass').value};
+      if(document.getElementById(prefix+'ApiKey'))body.apiKey=document.getElementById(prefix+'ApiKey').value;
+      if(document.getElementById(prefix+'ApiSecret'))body.apiSecret=document.getElementById(prefix+'ApiSecret').value;
+      if(document.getElementById(prefix+'Totp'))body.totpSecret=document.getElementById(prefix+'Totp').value;
+      if(document.getElementById(prefix+'Passphrase'))body.passphrase=document.getElementById(prefix+'Passphrase').value;
+      await fetch('/api/exchange-creds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      var r=await fetch('/api/trader/credentials',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      var d=await r.json();
+      if(d.success){document.getElementById(prefix+'Status').className='badge badge-green';document.getElementById(prefix+'Status').textContent='設定済み';}
+      alert(d.message||d.error);
+    }
+    function testExchange(ex){alert(ex+' の接続テストは準備中です');}
+    async function loadTraderStatus(){
+      try{var r=await fetch('/api/trader/status');var d=await r.json();
+        var s=d.status;
+        document.getElementById('traderStatus').innerHTML=
+          '<div>ブラウザ: '+(s.browserReady?'<span style="color:var(--green)">起動中</span>':'<span style="color:var(--red)">停止中</span>')+'</div>'
+          +'<div>設定済み取引所: '+(s.configuredExchanges.length?s.configuredExchanges.join(', '):'なし')+'</div>'
+          +'<div>対応取引所: '+s.supported.join(', ')+'</div>';
+        s.configuredExchanges.forEach(function(ex){var el=document.getElementById(ex.toLowerCase()+'Status');if(el){el.className='badge badge-green';el.textContent='設定済み';}});
+      }catch(e){}
+    }
+
+    // Wallet
+    async function saveWallet(){
+      var addr=document.getElementById('walletAddr').value;
+      var label=document.getElementById('walletLabel').value;
+      await fetch('/api/wallet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:addr,label:label})});
+      alert('ウォレットアドレスを保存しました');
+    }
+
+    // Settings
+    async function saveSettings(){
+      var data={minCompletion:document.getElementById('setMinCompletion').value,orderTimeout:document.getElementById('setTimeout').value,minAmount:document.getElementById('setMinAmount').value,maxAmount:document.getElementById('setMaxAmount').value,onlineOnly:document.getElementById('setOnlineOnly').value,fallbackMode:document.getElementById('setFallback').value};
+      await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      alert('設定を保存しました');
+    }
+
+    // Init
+    loadOrders();
+    loadAccounts();
+    loadTraderStatus();
+  </script>
+</body>
+</html>

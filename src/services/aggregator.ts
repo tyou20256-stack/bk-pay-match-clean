@@ -1,3 +1,4 @@
+import { recordSnapshot } from './priceHistory.js';
 /**
  * @file aggregator.ts — レート集約エンジン
  * @description 全取引所のP2Pレートを30秒間隔で取得・集約する中核モジュール。
