@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BK P2P Aggregator</title>
-  <link rel="stylesheet" href="style.css?v=23">
+  <link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
   <!-- Top Bar -->
@@ -80,6 +80,11 @@
         <span class="vol-threshold-label">市場レートから <strong id="volThresholdVal">5.0</strong>% 以内で売買可能な総額</span>
         <button class="vol-adj-btn" onclick="adjustThreshold(0.5)">+</button>
       </div>
+      <div class="vol-threshold-ctrl" style="margin-top:8px">
+        <button class="vol-adj-btn" onclick="adjustDeviation(-1)">-</button>
+        <span class="vol-threshold-label">スポットレートから <strong id="devThresholdVal">15</strong>% 以上乖離したオーダーを除外</span>
+        <button class="vol-adj-btn" onclick="adjustDeviation(1)">+</button>
+      </div>
       <div class="hero-volume-bar">
         <div class="hero-vol-item buy-vol"><span class="hero-vol-label">購入可能</span><span class="hero-vol-val" id="volBuy5">--</span></div>
         <div class="hero-vol-item sell-vol"><span class="hero-vol-label">売却可能</span><span class="hero-vol-val" id="volSell5">--</span></div>
@@ -133,7 +138,7 @@
   </main>
 
   <footer><span>BK P2P Aggregator &mdash; Bybit / Binance / OKX / HTX</span></footer>
-  <script src="i18n.js?v=23"></script>
-  <script src="app.js?v=23"></script>
+  <script src="i18n.js?v=25"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>

@@ -26,12 +26,21 @@ export async function fetchAllRates(crypto: string): Promise<AggregatedRates> {
         fetcher.fetchOrders(crypto, 'buy'),
         fetcher.fetchOrders(crypto, 'sell'),
       ]);
-      const bestBuy = buyOrders.length > 0 ? Math.min(...buyOrders.map(o => o.price)) : null;
-      const bestSell = sellOrders.length > 0 ? Math.max(...sellOrders.map(o => o.price)) : null;
+      // Filter out orders with excessive deviation from spot price
+      const maxDev = CONFIG.maxDeviationPct / 100;
+      const filteredBuyOrders = spotPrice ? buyOrders.filter(o => Math.abs(o.price - spotPrice) / spotPrice <= maxDev) : buyOrders;
+      const filteredSellOrders = spotPrice ? sellOrders.filter(o => Math.abs(o.price - spotPrice) / spotPrice <= maxDev) : sellOrders;
+      const removedBuy = buyOrders.length - filteredBuyOrders.length;
+      const removedSell = sellOrders.length - filteredSellOrders.length;
+      if (removedBuy + removedSell > 0) {
+        console.log(`[${fetcher.name}] Filtered out ${removedBuy} buy + ${removedSell} sell orders (>${CONFIG.maxDeviationPct}% deviation)`);
+      }
+      const bestBuy = filteredBuyOrders.length > 0 ? Math.min(...filteredBuyOrders.map(o => o.price)) : null;
+      const bestSell = filteredSellOrders.length > 0 ? Math.max(...filteredSellOrders.map(o => o.price)) : null;
       const spread = bestBuy && bestSell ? bestBuy - bestSell : null;
       const buyPremium = bestBuy && spotPrice ? ((bestBuy - spotPrice) / spotPrice) * 100 : null;
       const sellPremium = bestSell && spotPrice ? ((bestSell - spotPrice) / spotPrice) * 100 : null;
-      return { exchange: fetcher.name, crypto, buyOrders, sellOrders, bestBuy, bestSell, spread, spotPrice, buyPremium, sellPremium, lastUpdated: Date.now() };
+      return { exchange: fetcher.name, crypto, buyOrders: filteredBuyOrders, sellOrders: filteredSellOrders, bestBuy, bestSell, spread, spotPrice, buyPremium, sellPremium, lastUpdated: Date.now() };
     } catch (err: any) {
       return { exchange: fetcher.name, crypto, buyOrders: [], sellOrders: [], bestBuy: null, bestSell: null, spread: null, spotPrice, buyPremium: null, sellPremium: null, lastUpdated: Date.now(), error: err.message };
     }

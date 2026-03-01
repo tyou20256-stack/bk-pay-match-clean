@@ -1,4 +1,10 @@
 var volThreshold=5.0;
+
+function adjustDeviation(delta) {
+  CONFIG.maxDeviationPct = Math.max(1, Math.min(50, CONFIG.maxDeviationPct + delta));
+  document.getElementById('devThresholdVal').textContent = CONFIG.maxDeviationPct.toFixed(0);
+  refreshData();
+}
 function adjustThreshold(d){volThreshold=Math.max(0.5,Math.min(20,volThreshold+d));document.getElementById('volThresholdVal').textContent=volThreshold.toFixed(1);render();}
 let currentCrypto='USDT',countdown=30,rawData=null,arbTab='active';
 let filters={payments:new Set(),exchanges:new Set(),amount:0,completionRate:95,minAvail:0,onlineOnly:false};
