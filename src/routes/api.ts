@@ -58,3 +58,53 @@ router.get('/status', (_req: Request, res: Response) => {
 function fetchers() { return ['Bybit', 'Binance', 'OKX', 'HTX']; }
 
 export default router;
+
+// === Order Management API ===
+import orderManager from '../services/orderManager.js';
+
+router.post('/orders', async (req, res) => {
+  try {
+    const { amount, payMethod, crypto } = req.body;
+    if (!amount || amount < 500) return res.json({ success: false, error: 'Minimum amount is ¥500' });
+    const order = await orderManager.createOrder(amount, payMethod || 'bank', crypto || 'USDT');
+    res.json({ success: true, order });
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+router.get('/orders/:id', (req, res) => {
+  const order = orderManager.getOrder(req.params.id);
+  if (!order) return res.json({ success: false, error: 'Order not found' });
+  res.json({ success: true, order });
+});
+
+router.post('/orders/:id/paid', (req, res) => {
+  const order = orderManager.markPaid(req.params.id);
+  if (!order) return res.json({ success: false, error: 'Order not found' });
+  res.json({ success: true, order });
+});
+
+router.post('/orders/:id/cancel', (req, res) => {
+  const order = orderManager.cancelOrder(req.params.id);
+  if (!order) return res.json({ success: false, error: 'Order not found' });
+  res.json({ success: true, order });
+});
+
+router.get('/orders', (req, res) => {
+  res.json({ success: true, orders: orderManager.getAllOrders() });
+});
+
+// === Puppeteer Trader Config ===
+import trader from '../services/puppeteerTrader.js';
+
+router.get('/trader/status', (req, res) => {
+  res.json({ success: true, status: trader.getStatus() });
+});
+
+router.post('/trader/credentials', (req, res) => {
+  const { exchange, email, password, apiKey, apiSecret, totpSecret } = req.body;
+  if (!exchange) return res.json({ success: false, error: 'exchange required' });
+  trader.setCredentials({ exchange, email, password, apiKey, apiSecret, totpSecret });
+  res.json({ success: true, message: `Credentials set for ${exchange}` });
+});

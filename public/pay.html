@@ -239,7 +239,7 @@
   <div class="pay-footer">BK Pay v2.0 -- Powered by P2P Aggregation</div>
 
   <script>
-    var amount=0,payMethod='bank',matchedOrder=null,isFallback=false,timerSec=900,timerInterval=null;
+    var amount=0,payMethod='bank',currentOrder=null,timerSec=900,timerInterval=null;
 
     // Config
     var WALLET='TXxx...設定してください';
@@ -305,57 +305,97 @@
       document.getElementById('fallbackScreen').style.display='none';
       var log=document.getElementById('matchLog');
       log.innerHTML='';
-      matchedOrder=null;isFallback=false;
 
       addLog(log,'マッチング開始... 金額: ¥'+amount.toLocaleString());
-      await wait(500);
+      await wait(300);
       addLog(log,'支払方法: '+payMethod);
-      await wait(400);
+      await wait(300);
+      addLog(log,'4取引所を検索中...');
+      await wait(200);
 
       try{
-        var r=await fetch('/api/rates/USDT');var j=await r.json();
-        if(!j.success){addLog(log,'API接続失敗','warn');showFallback();return;}
-
-        var candidates=[];
-        addLog(log,'Bybit を検索中...');await wait(300);
-        addLog(log,'Binance を検索中...');await wait(300);
-        addLog(log,'OKX を検索中...');await wait(300);
-        addLog(log,'HTX を検索中...');await wait(300);
-
-        j.data.rates.forEach(function(ex){
-          ex.buyOrders.forEach(function(o){
-            if(o.minLimit<=amount&&(o.maxLimit===0||o.maxLimit>=amount)&&o.merchant.completionRate>=90&&o.merchant.isOnline){
-              var pm=hasPayMethod(o,payMethod);
-              if(pm)candidates.push(o);
-            }
-          });
-        });
-
-        addLog(log,candidates.length+'件の候補が見つかりました',candidates.length>0?'ok':'warn');
-        await wait(500);
-
-        if(candidates.length>0){
-          candidates.sort(function(a,b){return a.price-b.price;});
-          matchedOrder=candidates[0];
-          addLog(log,'最適マーチャント: '+matchedOrder.exchange+' / '+matchedOrder.merchant.name,'ok');
-          addLog(log,'レート: ¥'+fmt(matchedOrder.price)+' / USDT','ok');
-          await wait(800);
-          addLog(log,'注文を作成中...','ok');
-          await wait(1000);
-          addLog(log,'マッチング成功','ok');
-          await wait(500);
-          showPayment();
-        }else{
-          addLog(log,'該当するマーチャントが見つかりません','warn');
-          addLog(log,'自社決済モードに切り替えます...','warn');
-          await wait(800);
+        var res=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:amount,payMethod:payMethod,crypto:'USDT'})});
+        var data=await res.json();
+        
+        if(!data.success){
+          addLog(log,'エラー: '+data.error,'warn');
           showFallback();
+          return;
+        }
+
+        currentOrder=data.order;
+
+        if(currentOrder.mode==='auto'){
+          addLog(log,'Bybit を検索...','ok');await wait(200);
+          addLog(log,'Binance を検索...','ok');await wait(200);
+          addLog(log,'OKX を検索...','ok');await wait(200);
+          addLog(log,'HTX を検索...','ok');await wait(200);
+          addLog(log,'最適マーチャント: '+currentOrder.exchange+' / '+currentOrder.merchantName,'ok');
+          addLog(log,'レート: ¥'+fmt(currentOrder.rate)+' / USDT','ok');
+          addLog(log,'完了率: '+currentOrder.merchantCompletionRate+'%','ok');
+          await wait(500);
+          addLog(log,'注文作成完了','ok');
+          await wait(300);
+          showPaymentFromOrder();
+        }else{
+          addLog(log,'P2Pマッチング: 該当なし','warn');
+          addLog(log,'自社決済に切り替え...','warn');
+          await wait(500);
+          addLog(log,'Account Routerから最適口座を取得','ok');
+          await wait(300);
+          addLog(log,'口座割当完了','ok');
+          await wait(300);
+          showPaymentFromOrder();
         }
       }catch(e){
-        addLog(log,'エラー: '+e.message,'warn');
+        addLog(log,'接続エラー','warn');
         showFallback();
       }
     }
+
+    var currentOrder=null;
+
+    function showPaymentFromOrder(){
+      go(3);
+      var o=currentOrder;
+      var badge=document.getElementById('modeBadge');
+      if(o.mode==='self'){badge.className='mode-badge manual';badge.textContent='SELF MERCHANT';}
+      else{badge.className='mode-badge auto';badge.textContent='AUTO MATCH';}
+
+      // Payment info
+      var info=document.getElementById('paymentInfo');
+      var pi=o.paymentInfo;
+      if(pi.type==='bank'){
+        info.innerHTML='<div class="pi-card"><div class="pi-label">振込先口座</div>'
+          +'<div class="pi-row"><span class="pi-row-label">銀行名</span><span class="pi-row-val">'+pi.bankName+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">支店名</span><span class="pi-row-val">'+pi.branchName+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">口座種別</span><span class="pi-row-val">'+pi.accountType+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">口座番号</span><span class="pi-row-val" style="font-size:18px;letter-spacing:2px;font-weight:800">'+pi.accountNumber+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">口座名義</span><span class="pi-row-val">'+pi.accountHolder+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">振込金額</span><span class="pi-row-val" style="color:var(--green);font-size:18px;font-weight:800">¥'+o.amount.toLocaleString()+'</span></div>'
+          +(o.mode==='auto'?'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+o.merchantName+' (完了率'+o.merchantCompletionRate+'%)</span></div>':'')
+          +'</div>'
+          +'<button class="copy-btn" onclick="copyText(''+pi.accountNumber+'')">口座番号をコピー</button>';
+      }else{
+        var payNames={paypay:'PayPay',linepay:'LINE Pay',aupay:'au PAY'};
+        var pName=payNames[pi.type]||pi.type;
+        info.innerHTML='<div class="pi-card"><div class="pi-label">'+pName+' で支払い</div>'
+          +(pi.qrUrl?'<div class="pi-qr"><img src="'+pi.qrUrl+'" style="max-width:160px;max-height:160px" onerror="this.parentNode.innerHTML=''+pName+' QRコード'"></div>':'<div class="pi-qr">'+pName+' QRコード</div>')
+          +'<div class="pi-row"><span class="pi-row-label">'+pName+' ID</span><span class="pi-row-val" style="font-weight:800">'+(pi.payId||'--')+'</span></div>'
+          +'<div class="pi-row"><span class="pi-row-label">支払金額</span><span class="pi-row-val" style="color:var(--green);font-size:18px;font-weight:800">¥'+o.amount.toLocaleString()+'</span></div>'
+          +(o.merchantName?'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+o.merchantName+'</span></div>':'')
+          +'</div>';
+      }
+
+      // Summary
+      document.getElementById('sumAmt').textContent='¥'+o.amount.toLocaleString();
+      document.getElementById('sumRate').textContent='¥'+fmt(o.rate)+' / USDT';
+      document.getElementById('sumExch').textContent=o.exchange||'--';
+      document.getElementById('sumUsdt').textContent=o.cryptoAmount+' USDT';
+
+      startTimer();
+    }
+
     function addLog(el,msg,cls){el.innerHTML+='<div class="'+(cls||'')+'">['+(new Date).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'] '+msg+'</div>';el.scrollTop=el.scrollHeight;}
     function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
     function showFallback(){
@@ -453,18 +493,20 @@
     function copyText(t){navigator.clipboard.writeText(t).then(function(){var b=event.target;b.textContent='コピーしました';setTimeout(function(){b.textContent='口座番号をコピー';},2000);});}
 
     // Step 4
-    function confirmPaid(){
+    async function confirmPaid(){
       clearInterval(timerInterval);
+      if(currentOrder){await fetch('/api/orders/'+currentOrder.id+'/paid',{method:'POST'});}
       go(4);
-      var usdt=matchedOrder.price?(amount/matchedOrder.price).toFixed(2):'--';
+      var o=currentOrder||{};
       document.getElementById('finalSummary').innerHTML=
-        '<div class="summary-row"><span class="summary-label">入金額</span><span class="summary-val">¥'+amount.toLocaleString()+'</span></div>'
-        +'<div class="summary-row"><span class="summary-label">レート</span><span class="summary-val">¥'+fmt(matchedOrder.price)+' / USDT</span></div>'
-        +'<div class="summary-row"><span class="summary-label">受取り額</span><span class="summary-val big">'+usdt+' USDT</span></div>'
-        +'<div class="summary-row"><span class="summary-label">モード</span><span class="summary-val">'+(isFallback?'自社決済':'自動マッチング')+'</span></div>'
+        '<div class="summary-row"><span class="summary-label">注文ID</span><span class="summary-val">'+(o.id||'--')+'</span></div>'
+        +'<div class="summary-row"><span class="summary-label">入金額</span><span class="summary-val">¥'+amount.toLocaleString()+'</span></div>'
+        +'<div class="summary-row"><span class="summary-label">レート</span><span class="summary-val">¥'+fmt(o.rate||0)+' / USDT</span></div>'
+        +'<div class="summary-row"><span class="summary-label">受取り額</span><span class="summary-val big">'+(o.cryptoAmount||'--')+' USDT</span></div>'
+        +'<div class="summary-row"><span class="summary-label">モード</span><span class="summary-val">'+(o.mode==='self'?'自社決済':'自動マッチング')+'</span></div>'
         +'<div class="summary-row"><span class="summary-label">ステータス</span><span class="summary-val" style="color:var(--green)">確認中</span></div>';
     }
-    function cancelOrder(){clearInterval(timerInterval);go(1);}
+    function cancelOrder(){clearInterval(timerInterval);if(currentOrder)fetch('/api/orders/'+currentOrder.id+'/cancel',{method:'POST'});go(1);}
   </script>
 </body>
 </html>
