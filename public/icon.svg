@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0c1017"/>
+  <rect x="40" y="40" width="432" height="432" rx="72" fill="#1a2233"/>
+  <text x="256" y="200" text-anchor="middle" font-family="Arial Black" font-size="120" font-weight="900" fill="#34d399">BK</text>
+  <text x="256" y="320" text-anchor="middle" font-family="Arial" font-size="72" font-weight="700" fill="#ffffff">Pay</text>
+  <text x="256" y="400" text-anchor="middle" font-family="Arial" font-size="36" fill="#5a6a85">暗号通貨</text>
+</svg>

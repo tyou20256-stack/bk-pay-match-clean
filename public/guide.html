@@ -129,6 +129,13 @@
       .dash-cell:first-child{flex:auto}
     }
   </style>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#34d399">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BK Pay">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 </head>
 <body>
   <div class="topbar">
@@ -438,6 +445,7 @@
   <script>
     function toggleTheme(){const n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);document.getElementById('themeToggle').textContent=n==='dark'?'D':'L';localStorage.setItem('theme',n);}
     (function(){const s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
-  </script>
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
+</script>
 </body>
 </html>

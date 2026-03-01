@@ -398,6 +398,56 @@ router.get('/export/fees', (req, res) => {
   sendCSV(res, csv, `fee_report_${from || 'all'}_${to || 'all'}.csv`);
 });
 
+// === Profit Tracking API ===
+import { getProfitSummary, getDailyProfit, getHourlyProfit, getMonthlyProfit, getProfitGoal, setProfitGoal, get7DayTrend } from '../services/profitTracker.js';
+
+router.get('/profit/summary', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: '認証が必要です' });
+  const summary = getProfitSummary();
+  const goal = getProfitGoal();
+  res.json({ success: true, data: { ...summary, goal } });
+});
+
+router.get('/profit/daily', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: '認証が必要です' });
+  const date = (req.query.date as string) || new Date().toISOString().slice(0, 10);
+  const hourly = getHourlyProfit(date);
+  const daily = getDailyProfit(date);
+  res.json({ success: true, data: { ...daily, hourly } });
+});
+
+router.get('/profit/monthly', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: '認証が必要です' });
+  const now = new Date();
+  const year = parseInt(req.query.year as string) || now.getFullYear();
+  const month = parseInt(req.query.month as string) || (now.getMonth() + 1);
+  res.json({ success: true, data: getMonthlyProfit(year, month) });
+});
+
+router.get('/profit/goal', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: '認証が必要です' });
+  res.json({ success: true, data: { amount: getProfitGoal() } });
+});
+
+router.post('/profit/goal', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: '認証が必要です' });
+  const { amount } = req.body;
+  if (!amount || amount <= 0) return res.json({ success: false, error: '有効な金額を指定してください' });
+  setProfitGoal(amount);
+  res.json({ success: true });
+});
+
+router.get('/profit/trend', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token || req.cookies?.bkpay_token;
+  if (!token || !dbSvc.validateSession(token)) return res.status(401).json({ success: false, error: '認証が必要です' });
+  res.json({ success: true, data: get7DayTrend() });
+});
+
 // === Account Health / Freeze Detection API ===
 import { getHealthDashboard, autoRestUnhealthyAccounts, markTransferFailed } from '../services/freezeDetector.js';
 

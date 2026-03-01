@@ -112,6 +112,13 @@ body {
 .error-state { text-align: center; padding: 40px 20px; color: var(--red); font-size: 13px; }
 .retry-btn { margin-top: 12px; background: none; border: 1px solid var(--btn); color: var(--btn); padding: 8px 20px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
 </style>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#34d399">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BK Pay">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 </head>
 <body>
 <div id="loading" class="loading"><div class="spinner"></div><div>データを読み込み中...</div></div>
@@ -286,6 +293,7 @@ document.addEventListener('touchend', function() {
 });
 
 loadData();
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
 </script>
 </body>
 </html>

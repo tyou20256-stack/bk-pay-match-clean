@@ -16,6 +16,8 @@ import * as dbSvc from './database.js';
 import { getFeeRateForRank } from './database.js';
 import { broadcast } from './websocket.js';
 import { getOptimalSpread, recordOrder as recordSpreadOrder } from './spreadOptimizer.js';
+import { recordProfit } from './profitTracker.js';
+import { getCachedRates } from './aggregator.js';
 
 // Order Manager - Handles both Auto-Match (Puppeteer) and Self-Merchant (Account Router) modes
 
@@ -285,6 +287,12 @@ export function markPaid(orderId: string): Order | null {
       o.status = 'completed';
       o.completedAt = Date.now();
       dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: o.completedAt });
+      // Record profit
+      try {
+        const rates = getCachedRates(o.crypto) as any;
+        const marketRate = rates?.spotPrices?.[o.crypto] || o.rate;
+        recordProfit(o, marketRate);
+      } catch {}
       notifier.notifyCompleted(o);
       broadcast('order', { id: o.id, status: o.status, amount: o.amount });
     }
@@ -424,6 +432,12 @@ export function markWithdrawalComplete(orderId: string): any {
   if (!order) return null;
   dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: Date.now() });
   if (order) { order.status = 'completed'; order.completedAt = Date.now(); }
+  // Record profit
+  try {
+    const rates = getCachedRates(order.crypto) as any;
+    const marketRate = rates?.spotPrices?.[order.crypto] || order.rate;
+    recordProfit(order, marketRate);
+  } catch {}
   notifier.notifyCompleted({ ...order, status: 'completed', completedAt: Date.now() });
   broadcast('order', { id: orderId, status: 'completed' });
   return order;

@@ -405,6 +405,13 @@ h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
   margin-right: 8px;
 }
 </style>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#34d399">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BK Pay">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 </head>
 <body>
 
@@ -921,6 +928,7 @@ document.addEventListener('touchmove', function(e) {
 document.addEventListener('touchend', function() { touchStartY = 0; if (!pulling) $('pullIndicator').style.height = '0'; }, { passive: true });
 
 buildAmountGrid(); fetchRates(); updateButtons(); updateDots();
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
 </script>
 </body>
 </html>

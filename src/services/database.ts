@@ -302,6 +302,20 @@ export function getExchangeCreds(exchange: string): any {
   return { exchange: row.exchange, email: row.email, hasPassword: !!row.password_enc, apiKey: row.api_key, hasApiSecret: !!row.api_secret_enc };
 }
 
+export function getExchangeCredsDecrypted(exchange: string): any {
+  const row = db.prepare('SELECT * FROM exchange_credentials WHERE exchange = ?').get(exchange) as any;
+  if (!row) return null;
+  return {
+    exchange: row.exchange,
+    email: row.email,
+    password: row.password_enc ? decrypt(row.password_enc) : '',
+    apiKey: row.api_key,
+    apiSecret: row.api_secret_enc ? decrypt(row.api_secret_enc) : '',
+    totpSecret: row.totp_secret_enc ? decrypt(row.totp_secret_enc) : '',
+    passphrase: row.passphrase_enc ? decrypt(row.passphrase_enc) : '',
+  };
+}
+
 // === Wallet Config ===
 export function saveWalletConfig(address: string, label: string): void {
   db.prepare('INSERT OR REPLACE INTO wallet_config (id, address, label, updated_at) VALUES (1, ?, ?, ?)').run(address, label, Date.now());

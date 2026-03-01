@@ -1,0 +1,15 @@
+{
+  "name": "BK Pay",
+  "short_name": "BK Pay",
+  "description": "日本円で暗号通貨を簡単購入",
+  "start_url": "/pay.html",
+  "display": "standalone",
+  "background_color": "#0c1017",
+  "theme_color": "#34d399",
+  "orientation": "portrait",
+  "lang": "ja",
+  "icons": [
+    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}

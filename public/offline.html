@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BK Pay - オフライン</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0c1017;color:#edf0f7;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:20px}
+.container{max-width:320px}
+.logo{font-size:28px;font-weight:800;margin-bottom:24px}.logo span{color:#34d399}
+h2{font-size:18px;font-weight:700;margin-bottom:8px}
+p{font-size:13px;color:#5a6a85;margin-bottom:24px;line-height:1.6}
+.btn{display:inline-block;padding:10px 28px;background:#34d399;color:#0c1017;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn:hover{background:#10b981}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">BK <span>Pay</span></div>
+  <h2>現在オフラインです</h2>
+  <p>インターネット接続を確認してください。<br>接続が回復したら再試行してください。</p>
+  <button class="btn" onclick="location.reload()">再試行</button>
+</div>
+</body>
+</html>
