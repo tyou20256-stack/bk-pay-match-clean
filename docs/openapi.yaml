@@ -1,0 +1,456 @@
+openapi: '3.0.3'
+info:
+  title: BK Pay Match — P2P USDT Purchase API
+  description: |
+    Public API for the BK Pay P2P matching system.
+    Provides cryptocurrency rate aggregation, USDT purchase order management,
+    buyer registration for TruPay matching, and referral tracking.
+  version: '1.0.0'
+  contact:
+    name: BK Stock
+servers:
+  - url: https://pay.example.com
+    description: Production
+  - url: http://localhost:3003
+    description: Development
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      tags: [System]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok, degraded]
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: '1.0.0'
+        '503':
+          description: Service is unhealthy
+
+  /api/rates/{crypto}:
+    get:
+      summary: Get aggregated P2P rates for a cryptocurrency
+      operationId: getRatesByCrypto
+      tags: [Rates]
+      parameters:
+        - name: crypto
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [USDT, BTC, ETH]
+          example: USDT
+      responses:
+        '200':
+          description: Aggregated rates from all exchanges
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AggregatedRates'
+
+  /api/p2p-buy/register:
+    post:
+      summary: Register as a USDT buyer (join matching queue)
+      operationId: registerBuyer
+      tags: [P2P Buy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [walletAddress, minAmountJpy, maxAmountJpy]
+              properties:
+                walletAddress:
+                  type: string
+                  description: TRON wallet address (T + 33 chars)
+                  pattern: '^T[1-9A-HJ-NP-Za-km-z]{33}$'
+                  example: TXkF3t4u8E7V9Z2p5rN1yQ8wB6cA3dG4hJ
+                minAmountJpy:
+                  type: number
+                  minimum: 500
+                  example: 10000
+                maxAmountJpy:
+                  type: number
+                  maximum: 10000000
+                  example: 500000
+                telegramChatId:
+                  type: string
+                  description: Optional Telegram chat ID for notifications
+                referralCode:
+                  type: string
+                  description: Optional referral code
+      responses:
+        '200':
+          description: Buyer registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  buyerId:
+                    type: string
+                    example: web_1234567890abcde
+                  buyerToken:
+                    type: string
+                    description: HMAC token for subsequent authenticated requests
+
+  /api/p2p-buy/match/{buyerId}:
+    get:
+      summary: Check match status for a registered buyer
+      operationId: getBuyerMatchStatus
+      tags: [P2P Buy]
+      parameters:
+        - name: buyerId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: web_1234567890abcde
+      responses:
+        '200':
+          description: Current match status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  matched:
+                    type: boolean
+                  match:
+                    $ref: '#/components/schemas/MatchInfo'
+                  queuePosition:
+                    type: integer
+                    description: Position in queue if not yet matched
+
+  /api/p2p-buy/paid/{matchId}:
+    post:
+      summary: Report bank transfer completed (with proof screenshot)
+      operationId: reportPayment
+      tags: [P2P Buy]
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [buyerId, buyerToken, proof]
+              properties:
+                buyerId:
+                  type: string
+                buyerToken:
+                  type: string
+                  description: HMAC authentication token
+                referenceNumber:
+                  type: string
+                  description: Bank transfer reference number
+                proof:
+                  type: string
+                  format: binary
+                  description: Screenshot of transfer receipt (JPEG/PNG/WebP, max 5MB)
+      responses:
+        '200':
+          description: Payment reported and proof submitted for AI analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  proofScore:
+                    type: integer
+                    description: AI confidence score (0-100)
+                  proofAnalysis:
+                    type: string
+                    description: AI analysis summary
+
+  /api/p2p-buy/cancel/{buyerId}:
+    delete:
+      summary: Cancel buyer registration (leave matching queue)
+      operationId: cancelBuyer
+      tags: [P2P Buy]
+      parameters:
+        - name: buyerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Buyer removed from queue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  removed:
+                    type: boolean
+
+  /api/p2p-buy/chat:
+    post:
+      summary: AI support chat for buyers
+      operationId: buyerChat
+      tags: [P2P Buy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  maxLength: 1000
+                  example: How long does the bank transfer take?
+                history:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum: [user, assistant]
+                      content:
+                        type: string
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  reply:
+                    type: string
+
+  /api/p2p-buy/referral/generate:
+    post:
+      summary: Generate a referral code for a buyer
+      operationId: generateReferralCode
+      tags: [Referral]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [telegramId, referralCode]
+              properties:
+                telegramId:
+                  type: string
+                referralCode:
+                  type: string
+      responses:
+        '200':
+          description: Referral code created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  code:
+                    type: string
+                    example: PM7X2K4A
+
+  /api/p2p-buy/referral/{code}:
+    get:
+      summary: Get referral statistics by code
+      operationId: getReferralStats
+      tags: [Referral]
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          example: PM7X2K4A
+      responses:
+        '200':
+          description: Referral statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  stats:
+                    type: object
+                    properties:
+                      conversions:
+                        type: integer
+                      volume:
+                        type: number
+                        description: Total JPY volume
+                      rewards:
+                        type: number
+                        description: Total USDT rewards earned
+
+components:
+  schemas:
+    AggregatedRates:
+      type: object
+      properties:
+        crypto:
+          type: string
+          example: USDT
+        rates:
+          type: array
+          items:
+            type: object
+            properties:
+              exchange:
+                type: string
+                example: Bybit
+              bestBuy:
+                type: number
+                nullable: true
+                example: 149.5
+              bestSell:
+                type: number
+                nullable: true
+                example: 150.2
+              buyOrders:
+                type: array
+                items:
+                  $ref: '#/components/schemas/P2POrder'
+              sellOrders:
+                type: array
+                items:
+                  $ref: '#/components/schemas/P2POrder'
+        bestBuyExchange:
+          type: object
+          nullable: true
+          properties:
+            exchange:
+              type: string
+            price:
+              type: number
+        bestSellExchange:
+          type: object
+          nullable: true
+          properties:
+            exchange:
+              type: string
+            price:
+              type: number
+        updatedAt:
+          type: string
+          format: date-time
+
+    P2POrder:
+      type: object
+      properties:
+        exchange:
+          type: string
+        price:
+          type: number
+          example: 149.5
+        available:
+          type: number
+          example: 5000
+        minLimit:
+          type: number
+          example: 1000
+        maxLimit:
+          type: number
+          example: 500000
+        merchant:
+          type: object
+          properties:
+            name:
+              type: string
+            completionRate:
+              type: number
+              example: 98.5
+            isOnline:
+              type: boolean
+        paymentMethods:
+          type: array
+          items:
+            type: string
+          example: [bank]
+
+    MatchInfo:
+      type: object
+      properties:
+        matchId:
+          type: integer
+        amountJpy:
+          type: number
+          example: 50000
+        amountUsdt:
+          type: number
+          example: 334.45
+        rate:
+          type: number
+          example: 149.5
+        bankName:
+          type: string
+          example: みずほ銀行
+        branchName:
+          type: string
+          example: 渋谷支店
+        accountNumber:
+          type: string
+          example: '1234567'
+        accountName:
+          type: string
+          example: カ）サンプル
+        timeoutAt:
+          type: integer
+          description: Unix timestamp (ms) when match expires
+        status:
+          type: string
+          enum: [waiting_transfer, paid, verified, completed, expired, cancelled]
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: bkpay_token
+      description: Admin session cookie (for protected endpoints not listed here)
+    buyerToken:
+      type: apiKey
+      in: header
+      name: X-Buyer-Token
+      description: HMAC token issued at buyer registration

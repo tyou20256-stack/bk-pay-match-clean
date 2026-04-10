@@ -1,0 +1,21 @@
+FROM node:20-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+WORKDIR /app
+
+# Only copy what's needed for puppeteer service
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY dist/ ./dist/
+COPY public/ ./public/
+
+USER node
+
+CMD ["node", "dist/services/puppeteerWorker.js"]

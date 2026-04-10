@@ -1,0 +1,42 @@
+# Caddyfile — bk-pay-match 本番用
+# Cloudflare Proxied モードで使用
+# Cloudflare が SSL 終端するため、Caddy は内部証明書を使用
+
+bkpay.app {
+    reverse_proxy localhost:3003
+
+    # Cloudflare Proxied: 内部証明書（自己署名）を使用
+    # Cloudflare SSL設定を「Full」に設定すること
+    tls internal
+
+    # セキュリティヘッダー（HSTSはCloudflareが付与するため不要）
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # アクセスログ
+    log {
+        output file /var/log/caddy/bk-pay-match.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+    }
+
+    # gzip圧縮
+    encode gzip
+
+    # 静的アセットキャッシュ（CSS/JS/画像/フォント）
+    @static path *.css *.js *.png *.jpg *.svg *.woff2 *.ico
+    header @static Cache-Control "public, max-age=86400, stale-while-revalidate=3600"
+
+    # HTML: 短いキャッシュ（レート情報が動的に変わるため）
+    @html path *.html /
+    header @html Cache-Control "public, max-age=300, stale-while-revalidate=60"
+
+    # robots.txt / sitemap.xml
+    @seo path /robots.txt /sitemap.xml
+    header @seo Cache-Control "public, max-age=86400"
+}
