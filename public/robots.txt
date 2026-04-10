@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /login.html
+Disallow: /customer-login.html
+Disallow: /customer-dashboard.html
+Disallow: /seller-dashboard.html
+Disallow: /seller-confirm.html
+Disallow: /api/
+Disallow: /proofs/
+
+Sitemap: https://bkpay.app/sitemap.xml

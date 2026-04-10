@@ -4,7 +4,7 @@
 [data-theme="dark"]{
   --bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;
   --border:#243049;--border2:#2d3d5a;
-  --text:#edf0f7;--text2:#a0aec0;--dim:#5a6a85;
+  --text:#edf0f7;--text2:#c0c8d8;--dim:#aab8d0;
   --green:#34d399;--green-soft:rgba(52,211,153,.08);--green-border:rgba(52,211,153,.25);
   --red:#f87171;--red-soft:rgba(248,113,113,.08);--red-border:rgba(248,113,113,.25);
   --blue:#60a5fa;--yellow:#fbbf24;--purple:#a78bfa;--purple-soft:rgba(167,139,250,.1);
@@ -240,7 +240,8 @@ footer{text-align:center;padding:14px;color:var(--dim);font-size:10px;border-top
 @media(max-width:480px){
   header{padding:8px 10px}
   .header-left h1{font-size:13px}
-  .header-right{flex-wrap:wrap}
+  .header-right{flex-wrap:nowrap;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none}
+  .header-right::-webkit-scrollbar{display:none}
   .hero-divider{padding:8px 0}
   .exchange-compare{grid-template-columns:1fr;gap:8px;padding:0 10px}
   .filter-bar{padding:8px 10px}
@@ -355,4 +356,22 @@ footer{text-align:center;padding:14px;color:var(--dim);font-size:10px;border-top
   .hero-divider{flex-direction:row;padding:8px 0}
   .hero-volume-bar{flex-direction:column;gap:6px;width:100%}
   .hero-vol-item{flex-direction:row;justify-content:space-between;padding:8px 14px}
+}
+
+/* Accessibility: focus-visible */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+@media(prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+/* Lighthouse: ensure tap targets */
+button, [role="button"], a, input, select { min-height: 44px; }
+/* Lighthouse: font-size for mobile */
+html { font-size: 16px; }
+/* High contrast mode support */
+@media (forced-colors: active) {
+  .btn, button { border: 1px solid ButtonText; }
+  a { text-decoration: underline; }
 }

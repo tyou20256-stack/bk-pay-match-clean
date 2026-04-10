@@ -7,6 +7,7 @@
 import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
 import { CONFIG } from '../config';
+import logger from '../services/logger.js';
 
 const PAYMENT_NAMES: Record<string, string> = {
   '14': '銀行振込', '78': 'PayPay', '410': 'LINE Pay',
@@ -28,9 +29,9 @@ export class BybitFetcher implements FetcherInterface {
         { headers: { 'Content-Type': 'application/json', 'User-Agent': CONFIG.userAgent }, timeout: CONFIG.requestTimeout }
       );
       const items = res.data?.result?.items || [];
-      return items.map((item: any) => {
+      return items.map((item: Record<string, unknown>) => {
         // recentExecuteRate comes as 0-100 (e.g. 9800 = 98%, or 0.98 = 98%)
-        let compRate = parseFloat(item.recentExecuteRate || '0');
+        let compRate = parseFloat(String(item.recentExecuteRate || '0'));
         // If value > 100, it's in basis points (e.g. 9800 = 98%)
         if (compRate > 100) compRate = compRate / 100;
         // If value <= 1, it's a ratio (e.g. 0.98 = 98%)
@@ -39,25 +40,25 @@ export class BybitFetcher implements FetcherInterface {
 
         return {
           exchange: this.name, side, crypto, fiat: CONFIG.fiat,
-          price: parseFloat(item.price),
-          available: parseFloat(item.quantity),
-          minLimit: parseFloat(item.minAmount),
-          maxLimit: parseFloat(item.maxAmount),
+          price: parseFloat(String(item.price)),
+          available: parseFloat(String(item.quantity)),
+          minLimit: parseFloat(String(item.minAmount)),
+          maxLimit: parseFloat(String(item.maxAmount)),
           merchant: {
-            name: item.nickName || 'Unknown',
+            name: String(item.nickName || 'Unknown'),
             completionRate: compRate,
-            orderCount: parseInt(item.recentOrderNum || '0'),
-            isOnline: item.isOnline === 1,
+            orderCount: parseInt(String(item.recentOrderNum || '0')),
+            isOnline: item.isOnline === true || item.isOnline === 1,
           },
-          paymentMethods: (item.payments || []).map((p: any) => {
-            const id = p.paymentName || String(p);
+          paymentMethods: ((item.payments || []) as unknown[]).map((p) => {
+            const id = String(p);
             return PAYMENT_NAMES[id] || id;
           }),
           fetchedAt: Date.now(),
         };
       });
-    } catch (err: any) {
-      console.error(`[Bybit] ${side} ${crypto}: ${err.message}`);
+    } catch (err: unknown) {
+      logger.error('Fetch orders failed', { exchange: 'Bybit', side, crypto, error: err instanceof Error ? err.message : String(err) });
       return [];
     }
   }

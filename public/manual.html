@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayMatch - 操作マニュアル | TruPay P2Pマッチング完全ガイド</title>
+  <meta name="description" content="PayMatch操作マニュアル。TruPay P2Pマッチング、USDT購入・売却フロー、管理者操作、自動プロセスの詳細ガイド。">
+  <link rel="canonical" href="https://bkpay.app/manual.html">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="PayMatch 操作マニュアル">
+  <meta property="og:description" content="TruPay P2Pマッチングプラットフォームの操作マニュアル。">
+  <meta property="og:url" content="https://bkpay.app/manual.html">
+  <meta property="og:site_name" content="PayMatch">
+  <meta property="og:image" content="https://bkpay.app/og-image.svg">
+  <meta property="og:image:type" content="image/svg+xml">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PayMatch 操作マニュアル">
+  <meta name="twitter:description" content="TruPay P2Pマッチングプラットフォームの操作マニュアル。">
+  <meta name="twitter:image" content="https://bkpay.app/og-image.svg">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    [data-theme="light"]{--bg:#f5f7fa;--bg2:#fff;--card:#fff;--card2:#f8fafc;--border:#e2e8f0;--text:#1a202c;--text2:#4a5568;--dim:#a0aec0;--green:#059669;--green-soft:rgba(5,150,105,.06);--green-border:rgba(5,150,105,.2);--red:#dc2626;--red-soft:rgba(220,38,38,.06);--red-border:rgba(220,38,38,.2);--blue:#2563eb;--blue-soft:rgba(37,99,235,.06);--yellow:#d97706;--yellow-soft:rgba(217,119,6,.06);--purple:#7c3aed;--purple-soft:rgba(124,58,237,.06);--shadow:0 2px 8px rgba(0,0,0,.06)}
+    [data-theme="dark"]{--bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;--border:#243049;--text:#edf0f7;--text2:#a0aec0;--dim:#95a5c0;--green:#34d399;--green-soft:rgba(52,211,153,.08);--green-border:rgba(52,211,153,.25);--red:#f87171;--red-soft:rgba(248,113,113,.08);--red-border:rgba(248,113,113,.25);--blue:#60a5fa;--blue-soft:rgba(96,165,250,.08);--yellow:#fbbf24;--yellow-soft:rgba(251,191,36,.08);--purple:#a78bfa;--purple-soft:rgba(167,139,250,.08);--shadow:0 2px 8px rgba(0,0,0,.3)}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;font-size:14px;line-height:1.7}
+    .topbar{position:sticky;top:0;z-index:100;background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(12px)}
+    .topbar-left{display:flex;align-items:center;gap:12px}
+    .topbar-left a{color:var(--text2);text-decoration:none;font-size:12px;padding:6px 14px;border:1px solid var(--border);border-radius:6px;transition:all .15s}
+    .topbar-left a:hover{border-color:var(--green);color:var(--green)}
+    .topbar-title{font-size:14px;font-weight:700}
+    .container{max-width:840px;margin:0 auto;padding:32px 24px 60px}
+    .hero{text-align:center;margin-bottom:40px;padding:32px 0}
+    .hero h1{font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
+    .hero h1 span{color:var(--green)}
+    .hero p{color:var(--text2);font-size:14px;max-width:560px;margin:0 auto}
+    .toc{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:40px}
+    .toc-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text2);font-size:12px;transition:all .15s}
+    .toc-item:hover{border-color:var(--green);color:var(--text);background:var(--card2)}
+    .toc-num{width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:6px;font-size:10px;font-weight:700;color:var(--dim);flex-shrink:0}
+    .toc-item:hover .toc-num{background:var(--green-soft);color:var(--green)}
+    .section{margin-bottom:48px}
+    .section-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid var(--border)}
+    .section-num{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--green-soft);border:1px solid var(--green-border);border-radius:8px;font-size:14px;font-weight:800;color:var(--green);flex-shrink:0}
+    .section-title{font-size:18px;font-weight:700}
+    h3{font-size:14px;font-weight:700;margin:20px 0 10px;color:var(--text);padding-left:12px;border-left:3px solid var(--green)}
+    p{color:var(--text2);margin-bottom:10px}
+    ul,ol{padding-left:20px;margin-bottom:14px;color:var(--text2)}
+    li{margin-bottom:6px}
+    strong{color:var(--text)}
+    code{background:var(--bg);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--green);font-family:'SF Mono','Fira Code',monospace}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:14px 0;box-shadow:var(--shadow)}
+    .card-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .card-label .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .card.tip{border-left:3px solid var(--green)}.card.tip .card-label{color:var(--green)}.card.tip .dot{background:var(--green)}
+    .card.warn{border-left:3px solid var(--red)}.card.warn .card-label{color:var(--red)}.card.warn .dot{background:var(--red)}
+    .card.info{border-left:3px solid var(--blue)}.card.info .card-label{color:var(--blue)}.card.info .dot{background:var(--blue)}
+    .card.gold{border-left:3px solid var(--yellow)}.card.gold .card-label{color:var(--yellow)}.card.gold .dot{background:var(--yellow)}
+    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px;background:var(--card);border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+    th{background:var(--bg);padding:10px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);font-weight:700}
+    td{padding:10px 12px;border-top:1px solid var(--border);color:var(--text2)}
+    tr:hover td{background:var(--card2)}
+    .flow{display:flex;align-items:stretch;gap:0;margin:16px 0;overflow-x:auto;padding-bottom:4px}
+    .flow-step{flex:1;min-width:110px;padding:14px 10px;text-align:center;font-size:11px;color:var(--text2);line-height:1.5;background:var(--card);border:1px solid var(--border);position:relative}
+    .flow-step:first-child{border-radius:8px 0 0 8px}
+    .flow-step:last-child{border-radius:0 8px 8px 0}
+    .flow-step:not(:last-child){border-right:none}
+    .flow-step:not(:last-child)::after{content:'';position:absolute;right:-8px;top:50%;transform:translateY(-50%);width:0;height:0;border-left:8px solid var(--border);border-top:8px solid transparent;border-bottom:8px solid transparent;z-index:1}
+    .flow-step .step-num{display:block;font-size:9px;font-weight:700;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+    .flow-step strong{color:var(--text);font-size:12px}
+    .flow-step.active-step{background:var(--green-soft);border-color:var(--green-border)}
+    .flow-step.wait-step{background:var(--yellow-soft);border-color:var(--yellow)}
+    .flow-step.done-step{background:var(--blue-soft);border-color:rgba(96,165,250,.25)}
+    .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:.3px}
+    .tag-on{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+    .tag-off{background:var(--red-soft);color:var(--red);border:1px solid var(--red-border)}
+    .tag-wait{background:var(--yellow-soft);color:var(--yellow);border:1px solid var(--yellow)}
+    .tag-info{background:var(--blue-soft);color:var(--blue);border:1px solid rgba(96,165,250,.3)}
+    .bank-box{background:var(--bg);border:1px solid var(--green-border);border-radius:8px;padding:16px;margin:12px 0;font-size:13px}
+    .bank-row{display:flex;justify-content:space-between;padding:5px 0}
+    .bank-row .label{color:var(--dim)}
+    .bank-row .val{font-weight:600;color:var(--text)}
+    .bank-row .val.hl{color:var(--green);font-size:16px}
+    .diagram{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin:16px 0;font-family:'SF Mono','Fira Code',monospace;font-size:12px;line-height:1.8;color:var(--text2);overflow-x:auto;white-space:pre}
+    .diagram .hl{color:var(--green);font-weight:700}
+    .diagram .dim{color:var(--dim)}
+    .diagram .warn{color:var(--yellow)}
+    .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+    .compare-col{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+    .compare-col h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+    .compare-col.a h4{color:var(--green)}
+    .compare-col.b h4{color:var(--purple)}
+    @media(max-width:600px){.toc,.compare-grid{grid-template-columns:1fr}.flow{flex-direction:column}.flow-step{border-radius:0!important}.flow-step:first-child{border-radius:8px 8px 0 0!important}.flow-step:last-child{border-radius:0 0 8px 8px!important}.flow-step:not(:last-child){border-right:1px solid var(--border);border-bottom:none}.flow-step:not(:last-child)::after{display:none}}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-left">
+      <a href="/">Dashboard</a>
+      <a href="/buy-usdt.html" style="background:#10b981;color:#fff;border-color:#10b981;font-weight:700" data-i18n="nav_buy_usdt">USDT購入</a>
+      <a href="/paypay-convert.html" data-i18n="nav_paypay">PayPay変換</a>
+      <a href="/guide.html" data-i18n="nav_guide">ガイド</a>
+      <a href="/about.html" data-i18n="nav_about">サービス紹介</a>
+      <span class="topbar-title" data-i18n="man_title_tag">PayMatch Manual</span>
+      <div style="display:inline-flex;gap:2px;margin-left:8px;vertical-align:middle">
+        <button class="lang-btn" data-lang="ja" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--dim,#888);font-size:10px;cursor:pointer">JA</button>
+        <button class="lang-btn" data-lang="en" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--dim,#888);font-size:10px;cursor:pointer">EN</button>
+        <button class="lang-btn" data-lang="zh" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--dim,#888);font-size:10px;cursor:pointer">ZH</button>
+        <button class="lang-btn" data-lang="vi" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--dim,#888);font-size:10px;cursor:pointer">VI</button>
+      </div>
+      <button id="themeToggleMan" style="background:none;border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--dim,#888);font-size:12px;cursor:pointer;margin-left:4px;vertical-align:middle" aria-label="テーマ切り替え">&#9774;</button>
+    </div>
+  </div>
+
+  <main class="container" id="main-content">
+
+    <!-- Hero -->
+    <div class="hero">
+      <h1>Pay<span>Match</span> <span data-i18n="man_hero_title">Manual</span></h1>
+      <p data-i18n="man_hero_desc">TruPay P2P USDTマッチングプラットフォームの操作マニュアル</p>
+    </div>
+
+    <!-- TOC -->
+    <div class="toc">
+      <a class="toc-item" href="#overview"><div class="toc-num">1</div>システム概要</a>
+      <a class="toc-item" href="#pages"><div class="toc-num">2</div>ページ一覧</a>
+      <a class="toc-item" href="#roles"><div class="toc-num">3</div>登場人物と役割</a>
+      <a class="toc-item" href="#buyer-web"><div class="toc-num">4</div>購入者フロー（Web）</a>
+      <a class="toc-item" href="#buyer-tg"><div class="toc-num">5</div>購入者フロー（Telegram）</a>
+      <a class="toc-item" href="#seller"><div class="toc-num">6</div>USDT売却者（セラー）フロー</a>
+      <a class="toc-item" href="#admin"><div class="toc-num">7</div>管理者の操作</a>
+      <a class="toc-item" href="#auto"><div class="toc-num">8</div>自動プロセス</a>
+      <a class="toc-item" href="#status"><div class="toc-num">9</div>現在のステータス</a>
+      <a class="toc-item" href="#env"><div class="toc-num">10</div>有効化設定</a>
+      <a class="toc-item" href="#faq"><div class="toc-num">11</div>FAQ</a>
+    </div>
+
+    <!-- 1. Overview -->
+    <div class="section" id="overview">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <h2 class="section-title" style="margin:0">システム概要</h2>
+      </div>
+      <div class="card gold">
+        <div class="card-label"><div class="dot"></div>ビジネスモデル</div>
+        <p>TruPayに届く銀行出金依頼を<strong>自社銀行口座から振り込まずに</strong>、USDT購入希望者に直接振り込ませることで、自社の銀行リスクを軽減する。購入者は出金希望者の口座に直接送金し、対価としてUSDTを受け取る。</p>
+      </div>
+
+      <p>PayMatchは3つの機能を持つプラットフォームです。</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:14px 0">
+        <div class="compare-col a">
+          <h4>TruPay出金マッチング</h4>
+          <p style="font-size:12px">TruPay出金依頼とUSDT購入者をマッチ。購入者が出金者口座に直接振込 → 自社銀行リスクゼロ。</p>
+        </div>
+        <div class="compare-col b">
+          <h4>USDT売却者マッチング</h4>
+          <p style="font-size:12px">USDT売却希望者と購入者をP2Pマッチ。自社ウォレット送金不要で購入者にUSDTが届く。</p>
+        </div>
+        <div class="compare-col" style="border-left:3px solid var(--blue)">
+          <h4 style="color:var(--blue)">P2Pレート比較</h4>
+          <p style="font-size:12px">Bybit / Binance / OKX の最安レートをリアルタイム集約。USDT / BTC / ETH対応。</p>
+        </div>
+      </div>
+
+      <h3>USDT購入者へのUSDT供給ルート（2つ）</h3>
+      <table>
+        <thead><tr><th></th><th style="color:var(--green)">ルートA: 自社ウォレット送金</th><th style="color:var(--purple)">ルートB: 売却者マッチング</th></tr></thead>
+        <tbody>
+          <tr><td><strong>USDTの出どころ</strong></td><td>自社TRONウォレット</td><td>USDT売却希望者（セラー）</td></tr>
+          <tr><td><strong>自社リスク</strong></td><td>ウォレット残高リスクあり</td><td>リスクなし（セラーが供給）</td></tr>
+          <tr><td><strong>必要条件</strong></td><td>ウォレットにUSDT+TRX残高</td><td>セラーがデポジット済み</td></tr>
+          <tr><td><strong>速度</strong></td><td>即時（自動送金）</td><td>セラーの確認待ち</td></tr>
+          <tr><td><strong>適用場面</strong></td><td>セラー不在時のフォールバック</td><td>条件が合うセラーが存在する時</td></tr>
+        </tbody>
+      </table>
+
+      <h3>全体フロー</h3>
+      <div class="diagram"><span class="dim">[sloten.io ユーザー]</span>  出金申請（JPY銀行振込）
+        |
+        v
+<span class="hl">[TruPay]</span>              出金を承認（status=31）
+        |                     bank_name, account_number, account_name, amount
+        v
+<span class="hl">[PayMatch Poller]</span>     毎1分: 自動検知 → キュー登録
+        |
+        v
+<span class="hl">[PayMatch Matcher]</span>    毎30秒: USDT購入者とマッチング
+        |
+        v
+<span class="warn">[USDT購入者]</span>          出金者の銀行口座に<span class="hl">直接</span>振込
+        |                     ※ 自社銀行を経由しない
+        v
+<span class="hl">[TruPay Verifier]</span>     着金確認（status=32）
+        |
+        v  <span class="dim">── USDT供給の2ルート ──</span>
+        |
+   ┌────┴────┐
+   v         v
+<span class="hl">[ルートA]</span>    <span class="warn">[ルートB]</span>
+自社ウォレット  売却者マッチング
+から送金      （セラーのUSDT
+   |         デポジットから）
+   v         v
+   └────┬────┘
+        |
+        v
+<span class="hl">[購入者]</span>  USDTをウォレットで受取</div>
+    </div>
+
+    <!-- 2. Pages -->
+    <div class="section" id="pages">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <h2 class="section-title" style="margin:0">ページ一覧</h2>
+      </div>
+      <table>
+        <thead><tr><th>ページ</th><th>URL</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Dashboard</strong></td><td><code>/</code></td><td>レート比較ダッシュボード（公開）</td></tr>
+          <tr><td><strong>USDT購入</strong></td><td><code>/buy-usdt.html</code></td><td>P2P USDT購入ページ（購入者向け）</td></tr>
+          <tr><td><strong>注文フロー</strong></td><td><code>/pay.html</code></td><td>従来のP2P注文フロー</td></tr>
+          <tr><td><strong>管理画面</strong></td><td><code>/admin.html</code></td><td>管理者ダッシュボード</td></tr>
+          <tr><td><strong>管理ログイン</strong></td><td><code>/login.html</code></td><td>管理者認証</td></tr>
+          <tr><td><strong>顧客ログイン</strong></td><td><code>/customer-login.html</code></td><td>顧客アカウント認証</td></tr>
+          <tr><td><strong>顧客ダッシュボード</strong></td><td><code>/customer-dashboard.html</code></td><td>残高・取引履歴</td></tr>
+          <tr><td><strong>セラー登録</strong></td><td><code>/seller-register.html</code></td><td>USDT売却者の新規登録</td></tr>
+          <tr><td><strong>セラー確認</strong></td><td><code>/seller-confirm.html</code></td><td>セラーが入金確認する画面</td></tr>
+          <tr><td><strong>セラーダッシュボード</strong></td><td><code>/seller-dashboard.html</code></td><td>セラーの残高・取引管理</td></tr>
+          <tr><td><strong>マニュアル</strong></td><td><code>/manual.html</code></td><td>このページ</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3. Roles -->
+    <div class="section" id="roles">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <h2 class="section-title" style="margin:0">登場人物と役割</h2>
+      </div>
+      <table>
+        <thead><tr><th>役割</th><th>説明</th><th>操作場所</th></tr></thead>
+        <tbody>
+          <tr><td><strong>出金者</strong></td><td>sloten.ioでJPY出金申請する人。PayMatchを直接操作しない。銀行口座情報がTruPay経由でPayMatchに渡される。</td><td>sloten.io</td></tr>
+          <tr><td><strong>TruPay</strong></td><td>決済バックエンド。出金承認・着金確認を管理。</td><td>admin.trupay.vip</td></tr>
+          <tr><td><strong>USDT購入者</strong></td><td>JPYを出金者の口座に<strong>直接振込</strong>してUSDTを受け取る人。</td><td>buy-usdt.html / Telegram Bot</td></tr>
+          <tr><td><strong>USDT売却者</strong></td><td>USDTをPayMatchにデポジットし、JPYを受け取りたい人。購入者へのUSDT供給源になる（ルートB）。</td><td>seller-register.html / Telegram Bot</td></tr>
+          <tr><td><strong>管理者</strong></td><td>PayMatchの設定・モニタリング・セラー管理。</td><td>admin.html</td></tr>
+        </tbody>
+      </table>
+
+      <div class="card tip">
+        <div class="card-label"><div class="dot"></div>自社銀行リスク軽減の仕組み</div>
+        <p>従来: TruPay出金依頼 → <strong>自社銀行口座から振込</strong> → 自社に銀行リスク発生<br>
+        PayMatch: TruPay出金依頼 → <strong>USDT購入者が出金者口座に直接振込</strong> → 自社銀行は不使用<br><br>
+        さらに、USDT供給も売却者マッチング（ルートB）を使えば自社ウォレットのUSDT在庫リスクもゼロにできます。</p>
+      </div>
+    </div>
+
+    <!-- 4. Buyer Web Flow -->
+    <div class="section" id="buyer-web">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <h2 class="section-title" style="margin:0">購入者フロー（Web UI）</h2>
+      </div>
+      <p>アクセス: <code>/buy-usdt.html</code></p>
+
+      <div class="flow">
+        <div class="flow-step active-step"><span class="step-num">Step 1</span><strong>金額入力</strong><br>JPY金額 + ウォレット</div>
+        <div class="flow-step wait-step"><span class="step-num">Step 2</span><strong>マッチング待機</strong><br>自動マッチング中</div>
+        <div class="flow-step active-step"><span class="step-num">Step 3</span><strong>振込</strong><br>銀行口座に送金</div>
+        <div class="flow-step wait-step"><span class="step-num">Step 4</span><strong>着金確認</strong><br>自動確認中</div>
+        <div class="flow-step done-step"><span class="step-num">Step 5</span><strong>USDT受取</strong><br>ウォレットに着金</div>
+      </div>
+
+      <h3>Step 1: 金額とウォレット入力</h3>
+      <ul>
+        <li>購入したい金額（JPY）を入力（最小 ¥10,000 / 最大 ¥10,000,000）</li>
+        <li>クイック選択ボタン: 5万 / 10万 / 30万 / 50万 / 100万</li>
+        <li>受取ウォレットアドレス（TRC-20、Tで始まる34文字）を入力</li>
+        <li>現在のレートと受取予定USDT量が自動表示される</li>
+        <li>「マッチング開始」ボタンを押す</li>
+      </ul>
+
+      <h3>Step 2: マッチング待機</h3>
+      <ul>
+        <li>TruPayの出金申請と自動でマッチングされるのを待つ</li>
+        <li>5秒ごとにステータスを自動確認</li>
+        <li>マッチング相手が見つかると自動的にStep 3へ遷移</li>
+        <li>キャンセルボタンでいつでも取り消し可能</li>
+      </ul>
+
+      <h3>Step 3: 振込先表示と振込実行</h3>
+      <p>マッチングが成立すると、以下の情報が表示されます：</p>
+      <div class="bank-box">
+        <div class="bank-row"><span class="label">銀行</span><span class="val">みずほ銀行</span></div>
+        <div class="bank-row"><span class="label">支店</span><span class="val">オリーブBLUE支店</span></div>
+        <div class="bank-row"><span class="label">口座番号</span><span class="val">6662426</span></div>
+        <div class="bank-row"><span class="label">名義</span><span class="val">ナカジマケイタ</span></div>
+        <div class="bank-row"><span class="label">振込金額</span><span class="val hl">¥288,000</span></div>
+      </div>
+      <ul>
+        <li>カウントダウンタイマーで残り時間を表示（制限時間: 30分）</li>
+        <li>口座番号はCOPYボタンでコピー可能</li>
+        <li>表示された口座に<strong>指定金額を正確に</strong>振り込む</li>
+        <li>振込完了後、「振込完了を報告」ボタンを押す</li>
+        <li>参照番号の入力は任意（入力すると着金確認が早い場合あり）</li>
+      </ul>
+
+      <h3>Step 4-5: 着金確認とUSDT送金</h3>
+      <ul>
+        <li>着金確認は自動（TruPayが銀行入金を検知）</li>
+        <li>確認後、USDTが自動的にウォレットに送金される</li>
+        <li>TX Hashが画面に表示される</li>
+        <li>通常18-40分で着金確認完了</li>
+      </ul>
+
+      <div class="card warn">
+        <div class="card-label"><div class="dot"></div>注意</div>
+        <p>30分以内に振込しない場合、マッチングはタイムアウトしてキャンセルされます。再度申請が必要です。</p>
+      </div>
+    </div>
+
+    <!-- 5. Buyer Telegram Flow (2 Axes) -->
+    <div class="section" id="buyer-tg">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <h2 class="section-title" style="margin:0">購入者フロー（Telegram Bot）</h2>
+      </div>
+
+      <div class="card info">
+        <div class="card-label"><div class="dot"></div>Telegram Bot有効化が必要</div>
+        <p>Telegram Botは<code>ENABLE_TELEGRAM_BOT=true</code>を設定後に利用可能になります。</p>
+      </div>
+
+      <p>Telegram Botには<strong>2つの購入モード</strong>があります。目的に応じて使い分けてください。</p>
+
+      <div class="compare-grid" style="margin:20px 0">
+        <div class="compare-col a" style="border-color:var(--green-border)">
+          <h4 style="color:var(--green)">A: 取引所レート購入</h4>
+          <p style="font-size:12px">Bybit / Binance / OKX のリアルタイムP2Pレートで購入。USDT / BTC / ETH対応。PayMatchが登録済み銀行口座を振込先に指定。</p>
+          <p style="font-size:11px;color:var(--dim)">ボタン: 「USDT購入」</p>
+        </div>
+        <div class="compare-col b" style="border-color:var(--purple);border-left:3px solid var(--purple)">
+          <h4 style="color:var(--purple)">B: TruPay P2Pマッチング</h4>
+          <p style="font-size:12px">sloten.io出金申請とマッチング。出金者の銀行口座が振込先になる。USDTのみ。着金確認後に自動送金。</p>
+          <p style="font-size:11px;color:var(--dim)">ボタン: 「P2P USDT購入」</p>
+        </div>
+      </div>
+
+      <!-- Comparison Table -->
+      <table>
+        <thead><tr><th>項目</th><th style="color:var(--green)">A: 取引所レート購入</th><th style="color:var(--purple)">B: TruPay P2P</th></tr></thead>
+        <tbody>
+          <tr><td><strong>対応通貨</strong></td><td>USDT / BTC / ETH</td><td>USDTのみ</td></tr>
+          <tr><td><strong>レートソース</strong></td><td>Bybit / Binance / OKX 最安値</td><td>3取引所の中間値</td></tr>
+          <tr><td><strong>振込先</strong></td><td>PayMatch登録口座（固定）</td><td>出金者の口座（毎回異なる）</td></tr>
+          <tr><td><strong>金額範囲</strong></td><td>¥1,000 ~ ¥1,000,000</td><td>¥10,000 ~ ¥10,000,000</td></tr>
+          <tr><td><strong>マッチング</strong></td><td>即時（注文即作成）</td><td>出金キューから自動マッチ（待機あり）</td></tr>
+          <tr><td><strong>着金確認</strong></td><td>管理者が手動確認</td><td>TruPay自動検知（18-40分）</td></tr>
+          <tr><td><strong>タイムアウト</strong></td><td>注文ごとに設定</td><td>30分</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Mode A -->
+      <h3 style="border-left-color:var(--green)">モードA: 取引所レート購入</h3>
+      <p>Bybit / Binance / OKX から最安レートで暗号通貨を購入するフロー。</p>
+
+      <div class="flow">
+        <div class="flow-step active-step"><span class="step-num">1</span><strong>金額入力</strong><br>JPY金額</div>
+        <div class="flow-step active-step"><span class="step-num">2</span><strong>通貨選択</strong><br>USDT/BTC/ETH</div>
+        <div class="flow-step wait-step"><span class="step-num">3</span><strong>注文作成</strong><br>振込先表示</div>
+        <div class="flow-step active-step"><span class="step-num">4</span><strong>振込</strong><br>銀行送金</div>
+        <div class="flow-step done-step"><span class="step-num">5</span><strong>完了</strong><br>暗号通貨受取</div>
+      </div>
+
+      <ol>
+        <li>Telegram Botで <code>/start</code> → 「<strong>USDT購入</strong>」ボタンをタップ</li>
+        <li>金額を入力（例: <code>10000</code> / <code>5万</code>）またはクイック選択</li>
+        <li>3取引所のレートが比較表示される:
+          <div class="card" style="margin:8px 0;padding:12px;font-size:12px;font-family:monospace;line-height:1.6">
+            USDT: 149.80 (Binance)<br>
+            BTC: ¥14,520,000 (OKX)<br>
+            ETH: ¥287,000 (Bybit)
+          </div>
+        </li>
+        <li>購入する通貨を選択（USDT / BTC / ETH）</li>
+        <li>注文が即座に作成され、<strong>PayMatch登録済み銀行口座</strong>が振込先として表示される:
+          <div class="bank-box" style="margin:8px 0">
+            <div class="bank-row"><span class="label">銀行名</span><span class="val">PayMatch指定口座</span></div>
+            <div class="bank-row"><span class="label">口座番号</span><span class="val">(登録口座から自動割当)</span></div>
+            <div class="bank-row"><span class="label">金額</span><span class="val hl">¥10,000</span></div>
+          </div>
+        </li>
+        <li>銀行で振込実行 → 「<strong>振込完了</strong>」ボタン</li>
+        <li>管理者が入金確認 → 暗号通貨がウォレットに送金される</li>
+      </ol>
+
+      <!-- Mode B -->
+      <h3 style="border-left-color:var(--purple)">モードB: TruPay P2Pマッチング</h3>
+      <p>sloten.ioの出金申請と自動マッチング。出金者の銀行口座に直接振り込む。</p>
+
+      <div class="flow">
+        <div class="flow-step active-step"><span class="step-num">1</span><strong>金額+ウォレット</strong><br>USDT受取先</div>
+        <div class="flow-step wait-step"><span class="step-num">2</span><strong>マッチング待機</strong><br>自動マッチ</div>
+        <div class="flow-step active-step"><span class="step-num">3</span><strong>振込</strong><br>出金者口座へ</div>
+        <div class="flow-step wait-step"><span class="step-num">4</span><strong>着金確認</strong><br>TruPay自動</div>
+        <div class="flow-step done-step"><span class="step-num">5</span><strong>USDT受取</strong><br>TRC-20送金</div>
+      </div>
+
+      <ol>
+        <li>Telegram Botで <code>/start</code> → 「<strong>P2P USDT購入</strong>」ボタンをタップ</li>
+        <li>金額を選択（5万 / 10万 / 30万 / 50万 / 100万 / カスタム入力）</li>
+        <li>受取ウォレットアドレス（TRC-20 / Tで始まる34文字）を入力</li>
+        <li>確認画面で「<strong>購入確定</strong>」をタップ</li>
+        <li>マッチング待機 — 出金キューから自動マッチングされるのを待つ</li>
+        <li>マッチング成立 → Bot内に<strong>出金者の銀行口座</strong>が自動通知される:
+          <div class="bank-box" style="margin:8px 0">
+            <div class="bank-row"><span class="label">銀行</span><span class="val">みずほ銀行</span></div>
+            <div class="bank-row"><span class="label">支店</span><span class="val">オリーブBLUE支店</span></div>
+            <div class="bank-row"><span class="label">口座番号</span><span class="val">6662426</span></div>
+            <div class="bank-row"><span class="label">名義</span><span class="val">ナカジマケイタ</span></div>
+            <div class="bank-row"><span class="label">振込金額</span><span class="val hl">¥288,000</span></div>
+            <div class="bank-row"><span class="label">期限</span><span class="val" style="color:var(--yellow)">30分以内</span></div>
+          </div>
+        </li>
+        <li>銀行で振込実行</li>
+        <li>「<strong>振込完了を報告</strong>」ボタン → 参照番号入力（わからなければ「なし」）</li>
+        <li>着金確認（TruPay自動検知 18-40分）</li>
+        <li>USDT自動送金 → Bot内で「<strong>USDT送金完了</strong>」通知 + TX Hash</li>
+      </ol>
+
+      <div class="card warn">
+        <div class="card-label"><div class="dot"></div>P2Pマッチングの注意点</div>
+        <ul style="margin-bottom:0">
+          <li>振込先は<strong>毎回異なる個人口座</strong>（出金者の口座）です</li>
+          <li>30分以内に振込しないとタイムアウト → マッチングキャンセル</li>
+          <li>金額は<strong>指定金額を正確に</strong>振り込んでください</li>
+        </ul>
+      </div>
+
+      <!-- Combined Comparison -->
+      <h3>3つの購入チャネル比較</h3>
+      <table>
+        <thead><tr><th>チャネル</th><th>モード</th><th>特徴</th><th>最適な用途</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Web UI</strong><br><code>/buy-usdt.html</code></td>
+            <td><span class="tag tag-info">TruPay P2P</span></td>
+            <td>ブラウザで完結。アカウント不要。コピーしやすい。</td>
+            <td>初回利用 / PC操作</td>
+          </tr>
+          <tr>
+            <td><strong>Telegram Bot</strong><br>「USDT購入」</td>
+            <td><span class="tag tag-on">取引所レート</span></td>
+            <td>USDT/BTC/ETH対応。3取引所最安値。即時注文。</td>
+            <td>暗号通貨を安く買いたい</td>
+          </tr>
+          <tr>
+            <td><strong>Telegram Bot</strong><br>「P2P USDT購入」</td>
+            <td><span class="tag" style="background:var(--purple-soft);color:var(--purple);border:1px solid rgba(167,139,250,.3)">TruPay P2P</span></td>
+            <td>プッシュ通知。ページ不要。ステータス追跡。</td>
+            <td>モバイル / リピーター</td>
+          </tr>
+          <tr>
+            <td><strong>Web UI</strong><br><code>/pay.html</code></td>
+            <td><span class="tag tag-on">取引所レート</span></td>
+            <td>フル機能の注文フロー。通貨選択・支払方法。</td>
+            <td>カスタム注文 / 詳細設定</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 6. Seller Flow -->
+    <div class="section" id="seller">
+      <div class="section-header">
+        <div class="section-num">6</div>
+        <h2 class="section-title" style="margin:0">USDT売却者（セラー）フロー</h2>
+      </div>
+
+      <p>USDT売却者（セラー）はUSDTをPayMatchにデポジットし、購入者に供給する役割を担います。セラーが存在する場合、自社ウォレットからのUSDT送金（ルートA）が不要になり、<strong>自社のUSDT在庫リスクもゼロ</strong>にできます。</p>
+
+      <h3>セラーの仕組み</h3>
+      <div class="diagram"><span class="hl">[セラー]</span>  USDTをPayMatchにデポジット
+       |        残高がロック管理される
+       v
+<span class="hl">[PayMatch]</span>  購入者の振込が着金確認される
+       |
+       v
+<span class="hl">[自動]</span>     セラーのデポジットから購入者にUSDT送金
+       |        セラーの残高が減少
+       v
+<span class="warn">[セラー]</span>   JPYの受取 = 購入者が出金者口座に振り込んだ金額
+              （出金者への振込 = セラーへの実質的な支払い）</div>
+
+      <h3>セラー登録</h3>
+      <p>アクセス: <code>/seller-register.html</code></p>
+      <ol>
+        <li>名前・メール・パスワードを入力</li>
+        <li>受取方法を設定（PayPay / LINE Pay / au PAY のいずれか）</li>
+        <li>最小・最大取引金額を設定</li>
+        <li>登録完了 → 確認トークン発行</li>
+      </ol>
+
+      <h3>セラーの運用フロー</h3>
+      <div class="flow">
+        <div class="flow-step active-step"><span class="step-num">1</span><strong>登録</strong><br>アカウント作成</div>
+        <div class="flow-step active-step"><span class="step-num">2</span><strong>デポジット</strong><br>USDT入金</div>
+        <div class="flow-step wait-step"><span class="step-num">3</span><strong>待機</strong><br>自動マッチング</div>
+        <div class="flow-step active-step"><span class="step-num">4</span><strong>確認</strong><br>入金確認</div>
+        <div class="flow-step done-step"><span class="step-num">5</span><strong>完了</strong><br>JPY受取</div>
+      </div>
+
+      <ol>
+        <li><strong>セラー登録</strong> → <code>/seller-register.html</code> でアカウント作成</li>
+        <li><strong>USDTデポジット</strong> → PayMatchウォレットにUSDTを送金。残高に反映される。</li>
+        <li><strong>自動マッチング</strong> → 購入者の取引が発生すると、条件に合うセラーが自動選択される（取引数順）</li>
+        <li><strong>入金確認</strong> → <code>/seller-confirm.html</code> で購入者の振込を確認（または自動確認）</li>
+        <li><strong>完了</strong> → セラーの残高からUSDTが差し引かれ、購入者に送金される</li>
+      </ol>
+
+      <div class="card tip">
+        <div class="card-label"><div class="dot"></div>セラーのメリット</div>
+        <ul style="margin-bottom:0">
+          <li>USDTをJPYに換金できる（出金者への振込 = 実質的なJPY受取）</li>
+          <li>取引所を使わずにUSDT → JPYの換金が可能</li>
+          <li>デポジット額の範囲内で自動的に取引が回る</li>
+        </ul>
+      </div>
+
+      <div class="card info">
+        <div class="card-label"><div class="dot"></div>三角マッチングの全体像</div>
+        <p>
+          <strong>出金者</strong>（JPYが欲しい） ← <strong>購入者</strong>が直接振込<br>
+          <strong>購入者</strong>（USDTが欲しい） ← <strong>セラー</strong>のデポジットから送金<br>
+          <strong>セラー</strong>（JPYが欲しい） ← 購入者の振込が実質的なJPY支払い<br><br>
+          全員が欲しいものを得て、<strong>自社の銀行口座もウォレットも使わない</strong>完全P2Pモデルが実現できます。
+        </p>
+      </div>
+    </div>
+
+    <!-- 7. Admin -->
+    <div class="section" id="admin">
+      <div class="section-header">
+        <div class="section-num">7</div>
+        <h2 class="section-title" style="margin:0">管理者の操作</h2>
+      </div>
+
+      <h3>ログイン</h3>
+      <p>URL: <code>/login.html</code></p>
+      <p>ユーザー名: <code>admin</code> / パスワード: <code>.env</code>の<code>BK_ADMIN_PASSWORD</code></p>
+
+      <h3>管理画面でできること</h3>
+      <table>
+        <thead><tr><th>機能</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td><strong>レート一覧</strong></td><td>Bybit / Binance / OKX のリアルタイムP2Pレート</td></tr>
+          <tr><td><strong>アービトラージ</strong></td><td>取引所間の価格差・利益機会の自動検出</td></tr>
+          <tr><td><strong>注文管理</strong></td><td>全注文の一覧・ステータス変更・検索</td></tr>
+          <tr><td><strong>顧客管理</strong></td><td>登録者の確認・アカウント停止/有効化</td></tr>
+          <tr><td><strong>TruPay出金キュー</strong></td><td>検知された出金一覧・マッチング状況</td></tr>
+          <tr><td><strong>TruPayマッチ</strong></td><td>マッチング履歴・ステータス追跡</td></tr>
+          <tr><td><strong>ウォレット</strong></td><td>TRON残高・送金履歴・Sweep設定</td></tr>
+          <tr><td><strong>設定</strong></td><td>手数料・レート・銀行口座・APIキー管理</td></tr>
+        </tbody>
+      </table>
+
+      <h3>TruPay連携（自動稼働中）</h3>
+      <p>管理者の操作なしで以下が自動実行されています：</p>
+      <table>
+        <thead><tr><th>プロセス</th><th>間隔</th><th>説明</th></tr></thead>
+        <tbody>
+          <tr><td>TruPay Poller</td><td>60秒</td><td>承認済み出金（status=31）を検知 → キュー登録</td></tr>
+          <tr><td>TruPay Matcher</td><td>30秒</td><td>キュー内出金と購入者を自動マッチ</td></tr>
+          <tr><td>TruPay Verifier</td><td>60秒</td><td>着金確認（status=32検知）→ USDT送金トリガー</td></tr>
+          <tr><td>JWT Refresh</td><td>12時間</td><td>TruPay APIトークン自動更新（手動不要）</td></tr>
+          <tr><td>Rate Updater</td><td>30秒</td><td>3取引所のレート集約</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 8. Auto Processes -->
+    <div class="section" id="auto">
+      <div class="section-header">
+        <div class="section-num">8</div>
+        <h2 class="section-title" style="margin:0">自動プロセスの詳細</h2>
+      </div>
+
+      <h3>TruPay出金検知 → USDT送金の流れ</h3>
+      <div class="diagram"><span class="hl">[TruPay API]</span> GET /withdrawals?new_status=31
+       |
+       v
+<span class="hl">[Poller]</span> 新規出金を検知 → withdrawal_orders テーブルに登録
+       |  status: <span class="warn">'queued'</span>
+       v
+<span class="hl">[Matcher]</span> 購入者キューと金額マッチング
+       |  マッチ成立 → p2p_matches テーブルに記録
+       |  status: <span class="warn">'waiting_transfer'</span>
+       |  → 購入者に<span class="hl">出金者の振込先</span>を通知（Telegram / Web）
+       v
+<span class="dim">[購入者]</span> <span class="hl">出金者の口座に直接</span>振込 → 「振込完了」報告
+       |  ※ 自社銀行は一切使わない
+       v
+<span class="hl">[Verifier]</span> TruPay status=32（着金完了）を検知
+       |  または POST /scrapper/match で手動確認
+       |  status: <span class="warn">'transfer_confirmed'</span>
+       v
+<span class="dim">── USDT供給ルート判定 ──</span>
+       |
+  ┌────┴─────┐
+  v          v
+<span class="hl">[ルートA]</span>     <span class="warn">[ルートB]</span>
+自社ウォレット  セラーマッチング
+USDT送金      findSellerForUsdtSupply()
+(TRC-20)     セラーのデポジットから送金
+  |          |
+  └────┬─────┘
+       |  status: <span class="hl">'usdt_sent'</span> → <span class="hl">'completed'</span>
+       v
+<span class="dim">[完了]</span> 購入者にTX Hash通知</div>
+
+      <div class="card info">
+        <div class="card-label"><div class="dot"></div>ルート判定ロジック</div>
+        <p><strong>ルートB優先:</strong> 必要USDT量を保有する売却者（セラー）がデポジット済みの場合、セラーのUSDTが購入者に送金される。セラーのデポジットが不足する場合のみ、ルートA（自社ウォレット）にフォールバック。</p>
+      </div>
+
+      <h3>着金確認の2つの方式</h3>
+      <div class="compare-grid">
+        <div class="compare-col a">
+          <h4>方式A: 自動確認</h4>
+          <p>TruPayのステータスが<code>new_status=32</code>（completed）になったのをPollerが検知。通常18-40分。</p>
+        </div>
+        <div class="compare-col b">
+          <h4>方式B: 手動確認</h4>
+          <p>購入者が参照番号を入力 → <code>POST /scrapper/match</code>でTruPayに送信。即時確認の可能性あり。</p>
+        </div>
+      </div>
+
+      <h3>タイムアウト処理</h3>
+      <ul>
+        <li>マッチング成立から<strong>30分</strong>以内に振込がない場合、自動タイムアウト</li>
+        <li>出金はキュー（queued状態）に戻され、次の購入者とマッチング可能</li>
+        <li>購入者にタイムアウト通知が送信される</li>
+      </ul>
+    </div>
+
+    <!-- 9. Status -->
+    <div class="section" id="status">
+      <div class="section-header">
+        <div class="section-num">9</div>
+        <h2 class="section-title" style="margin:0">現在のステータス</h2>
+      </div>
+      <table>
+        <thead><tr><th>機能</th><th>状態</th><th>備考</th></tr></thead>
+        <tbody>
+          <tr><td>レート集約（Bybit/Binance/OKX）</td><td><span class="tag tag-on">稼働中</span></td><td>30秒更新</td></tr>
+          <tr><td>TruPay JWT自動更新</td><td><span class="tag tag-on">稼働中</span></td><td>12時間ごと、手動不要</td></tr>
+          <tr><td>TruPay出金ポーリング</td><td><span class="tag tag-on">稼働中</span></td><td>出金を自動キュー登録中</td></tr>
+          <tr><td>マッチングエンジン</td><td><span class="tag tag-on">稼働中</span></td><td>購入者登録で即マッチ</td></tr>
+          <tr><td>着金確認</td><td><span class="tag tag-on">稼働中</span></td><td>自動 + 手動の2方式</td></tr>
+          <tr><td>USDT自動送金</td><td><span class="tag tag-wait">設定待ち</span></td><td>TRON秘密鍵 + USDT/TRX入金が必要</td></tr>
+          <tr><td>Telegram Bot</td><td><span class="tag tag-wait">設定待ち</span></td><td>ENABLE_TELEGRAM_BOT=true で有効化</td></tr>
+          <tr><td>Telegram通知</td><td><span class="tag tag-wait">設定待ち</span></td><td>ENABLE_NOTIFIER=true で有効化</td></tr>
+          <tr><td>購入者Web UI</td><td><span class="tag tag-on">利用可能</span></td><td>/buy-usdt.html</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 10. Env Settings -->
+    <div class="section" id="env">
+      <div class="section-header">
+        <div class="section-num">10</div>
+        <h2 class="section-title" style="margin:0">有効化設定</h2>
+      </div>
+      <p>以下の設定を <code>.env</code> に追記して <code>docker compose down && docker compose up -d</code> で反映。</p>
+
+      <h3>Telegram Bot + 通知</h3>
+      <div class="card tip">
+        <div class="card-label"><div class="dot"></div>設定項目</div>
+        <p>
+          <code>ENABLE_NOTIFIER=true</code><br>
+          <code>ENABLE_TELEGRAM_BOT=true</code><br>
+          <code>TELEGRAM_BOT_TOKEN=（BotFatherで取得）</code><br>
+          <code>TELEGRAM_STAFF_CHAT_ID=（通知先チャットID）</code>
+        </p>
+      </div>
+
+      <h3>USDT自動送金</h3>
+      <div class="card tip">
+        <div class="card-label"><div class="dot"></div>設定項目</div>
+        <p>
+          <code>TRON_WALLET_PRIVATE_KEY=（TRONウォレット秘密鍵）</code><br>
+          <code>TRONGRID_API_KEY=（TronGrid APIキー）</code>
+        </p>
+      </div>
+      <div class="card warn">
+        <div class="card-label"><div class="dot"></div>送金前の必須条件</div>
+        <p>ウォレットに<strong>USDT（TRC-20）</strong>と手数料用の<strong>TRX</strong>（最低20 TRX推奨）を入金してください。USDT残高が0の場合、送金処理でエラーになります。</p>
+      </div>
+
+      <h3>TruPay連携（設定済み）</h3>
+      <div class="card gold">
+        <div class="card-label"><div class="dot"></div>自動設定済み</div>
+        <p>
+          <code>ENABLE_TRUPAY=true</code><br>
+          <code>TRUPAY_EMAIL=（設定済み）</code><br>
+          <code>TRUPAY_PASSWORD=（設定済み）</code><br>
+          JWTは12時間ごとに自動更新されるため、手動操作は不要です。
+        </p>
+      </div>
+    </div>
+
+    <!-- 11. FAQ -->
+    <div class="section" id="faq">
+      <div class="section-header">
+        <div class="section-num">11</div>
+        <h2 class="section-title" style="margin:0">FAQ</h2>
+      </div>
+
+      <h3>Q: 購入者が振込先を見るにはどうする？</h3>
+      <p><code>/buy-usdt.html</code> で金額とウォレットを入力してマッチング開始。成立すると画面に振込先が表示されます。Telegram Botでも同様にBot内で通知されます。</p>
+
+      <h3>Q: マッチングにどのくらい時間がかかる？</h3>
+      <p>TruPayに承認済み出金がキューにあれば即座にマッチングされます（30秒以内）。出金がない場合は、新しい出金が来るまで待機します。</p>
+
+      <h3>Q: 着金確認はどのくらいかかる？</h3>
+      <p>TruPayの実測値: 最速18分、平均20-40分、最遅30分以上。タイムアウトは30分に設定されています。</p>
+
+      <h3>Q: JWT（TruPayトークン）は手動更新が必要？</h3>
+      <p>不要です。アプリ起動時にログインAPIで自動取得し、12時間ごとに自動更新されます。401エラー時も即座に再ログインします。</p>
+
+      <h3>Q: サーバーを再起動するには？</h3>
+      <div class="card tip">
+        <div class="card-label"><div class="dot"></div>コマンド</div>
+        <p>
+          通常再起動: <code>docker compose restart</code><br>
+          .env変更時: <code>docker compose down && docker compose up -d</code><br>
+          コード変更時: <code>docker compose down && docker compose up -d --build</code>
+        </p>
+      </div>
+
+      <h3>Q: 閉鎖された取引所のエラーが出る</h3>
+      <p>2026-03時点で稼働確認済みの取引所は<strong>Bybit / Binance / OKX</strong>の3つのみです。その他（MEXC, KuCoin, Paxful, AgoraDesk等）は無効化済みです。</p>
+    </div>
+
+    <div style="text-align:center;color:var(--dim);font-size:11px;padding:40px 0 20px;border-top:1px solid var(--border)">
+      PayMatch Manual v1.0 | Last updated: 2026-03-23
+    </div>
+
+  </main>
+  <script src="/i18n.js"></script>
+  <script src="/floating-cta.js"></script>
+  <script>
+    (function(){
+      var savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      var themeBtn = document.getElementById('themeToggleMan');
+      if (themeBtn) {
+        themeBtn.innerHTML = savedTheme === 'dark' ? '&#9774;' : '&#9728;';
+        themeBtn.addEventListener('click', function() {
+          var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('theme', next);
+          themeBtn.innerHTML = next === 'dark' ? '&#9774;' : '&#9728;';
+        });
+      }
+      document.querySelectorAll('.lang-btn[data-lang]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (typeof setLanguage === 'function') setLanguage(this.dataset.lang);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

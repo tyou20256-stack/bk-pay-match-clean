@@ -5,18 +5,19 @@
  */
 
 import { getNotificationPreferences, setNotificationPreference, setAlertThreshold } from './database.js';
+import logger from './logger.js';
 
-const BOT_TOKEN = '8447506670:AAGY2bcpbZxTe9OL3Jzxpdo86CHkb47XIig';
-const API_BASE = 'http://localhost:3003';
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const API_BASE = process.env.API_BASE || 'http://localhost:3003';
 import * as dbSvc from './database.js';
-const MINIAPP_URL = process.env.MINIAPP_URL || 'https://debi-unominous-overcasually.ngrok-free.dev/miniapp.html';
+const MINIAPP_URL = process.env.MINIAPP_URL || '';
 const MYPAGE_URL = MINIAPP_URL.replace('miniapp.html', 'mypage.html');
 
 type ConversationState = 'idle' | 'awaiting_amount' | 'awaiting_crypto_selection' | 'awaiting_order_id' | 'sell_awaiting_crypto' | 'sell_awaiting_amount' | 'sell_awaiting_bank' | 'sell_confirm';
 
 interface ChatState {
   state: ConversationState;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 interface AlertSetting {
@@ -175,7 +176,7 @@ function parseJapaneseAmount(text: string): number | null {
   return total > 0 ? total : null;
 }
 
-async function tg(method: string, body: any): Promise<any> {
+async function tg(method: string, body: Record<string, unknown>): Promise<unknown> {
   try {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
       method: 'POST',
@@ -184,12 +185,12 @@ async function tg(method: string, body: any): Promise<any> {
     });
     return await res.json();
   } catch (e) {
-    console.error(`[TelegramBot] API error (${method}):`, e);
+    logger.error('Telegram API error', { method, error: e instanceof Error ? e.message : String(e) });
     return null;
   }
 }
 
-async function sendMessage(chatId: number, text: string, opts?: { reply_markup?: any; parse_mode?: string }) {
+async function sendMessage(chatId: number, text: string, opts?: { reply_markup?: Record<string, unknown>; parse_mode?: string }) {
   return tg('sendMessage', { chat_id: chatId, text, parse_mode: opts?.parse_mode || 'HTML', ...opts });
 }
 
@@ -213,6 +214,9 @@ async function handleStart(chatId: number) {
           [
             { text: '💰 USDT購入', callback_data: 'cb_buy' },
             { text: bt(chatId, 'sell_btn'), callback_data: 'cb_sell' },
+          ],
+          [
+            { text: '🤝 P2P USDT購入', callback_data: 'cb_p2p_buy' },
           ],
           [
             { text: bt(chatId, 'rates_btn'), callback_data: 'cb_rates' },
@@ -262,27 +266,30 @@ async function handleBuy(chatId: number) {
   );
 }
 
-async function fetchCurrentRates(): Promise<{ usdt?: any; btc?: any; eth?: any }> {
-  const result: any = {};
+interface CryptoRateInfo { bestBuy: { price: number; exchange: string } | null; bestSell: { price: number; exchange: string } | null; spread: string | null; spot: number | null; exchanges: Array<{ name: string; buy: number | null; sell: number | null }> }
+async function fetchCurrentRates(): Promise<Record<string, CryptoRateInfo | undefined>> {
+  const result: Record<string, CryptoRateInfo | undefined> = {};
   for (const crypto of ['USDT', 'BTC', 'ETH']) {
     try {
       const res = await fetch(`${API_BASE}/api/rates/${crypto}`);
-      const data = await res.json();
+      const data = await res.json() as { success?: boolean; data?: { rates?: Array<{ buyOrders?: Array<{ price: number; exchange: string }>; sellOrders?: Array<{ price: number; exchange: string }> }> } };
       if (data.success && data.data) {
         const exchanges = data.data.rates || [];
-        const allBuy: any[] = [];
-        const allSell: any[] = [];
+        const allBuy: Array<{ price: number; exchange: string }> = [];
+        const allSell: Array<{ price: number; exchange: string }> = [];
         for (const ex of exchanges) {
           for (const o of (ex.buyOrders || [])) allBuy.push(o);
           for (const o of (ex.sellOrders || [])) allSell.push(o);
         }
-        allBuy.sort((a: any, b: any) => Number(a.price) - Number(b.price));
-        allSell.sort((a: any, b: any) => Number(b.price) - Number(a.price));
+        allBuy.sort((a, b) => Number(a.price) - Number(b.price));
+        allSell.sort((a, b) => Number(b.price) - Number(a.price));
         if (allBuy.length > 0 || allSell.length > 0) {
           result[crypto.toLowerCase()] = {
             bestBuy: allBuy[0] || { price: 0, exchange: '-' },
             bestSell: allSell[0] || { price: 0, exchange: '-' },
             spread: allBuy[0] && allSell[0] ? (Number(allBuy[0].price) - Number(allSell[0].price)).toFixed(2) : '0',
+            spot: null,
+            exchanges: [],
           };
         }
       }
@@ -297,7 +304,7 @@ async function showCryptoSelection(chatId: number, amount: number) {
   let text = `🧮 <b>金額シミュレーション</b>\n\n💴 入金額: ¥${amount.toLocaleString()}\n\n`;
 
   const calcLine = (crypto: string, key: string, label: string) => {
-    const d = (rateData as any)[key];
+    const d = (rateData as Record<string, CryptoRateInfo | undefined>)[key];
     if (!d?.bestBuy) return { text: '', amount: '---', exchange: '' };
     const price = Number(d.bestBuy.price);
     const cryptoAmt = (amount / price).toFixed(crypto === 'USDT' ? 2 : 6);
@@ -360,7 +367,7 @@ async function handleCreateOrder(chatId: number, crypto: string, amount: number)
         source: 'telegram',
       }),
     });
-    const data = await res.json();
+    const data = await res.json() as { success?: boolean; error?: string; order?: Record<string, unknown>; account?: Record<string, unknown> };
 
     if (!data.success || !data.order) {
       await sendMessage(chatId, `❌ 注文作成に失敗しました: ${data.error || '不明なエラー'}`);
@@ -368,7 +375,7 @@ async function handleCreateOrder(chatId: number, crypto: string, amount: number)
     }
 
     const order = data.order;
-    const account = data.account || order.bankAccount || {};
+    const account = data.account || (order.bankAccount as Record<string, unknown>) || {};
 
     let paymentInfo = `✅ <b>注文が作成されました</b>\n\n`;
     paymentInfo += `📋 注文ID: <code>${order.id}</code>\n`;
@@ -384,7 +391,7 @@ async function handleCreateOrder(chatId: number, crypto: string, amount: number)
     paymentInfo += `⏰ 制限時間内にお振込みください。\n`;
 
     // Track customer volume and referral rewards
-    processReferralReward(chatId, order.id, amount).catch(e => console.error('[TelegramBot] Referral tracking error:', e));
+    processReferralReward(chatId, String(order.id), amount).catch(e => logger.error('Referral tracking error', { error: e instanceof Error ? e.message : String(e) }));
     paymentInfo += `振込完了後、下のボタンを押してください。`;
 
     await sendMessage(chatId, paymentInfo, {
@@ -396,7 +403,7 @@ async function handleCreateOrder(chatId: number, crypto: string, amount: number)
       },
     });
   } catch (e) {
-    console.error('[TelegramBot] Order creation error:', e);
+    logger.error('Order creation error', { error: e instanceof Error ? e.message : String(e) });
     await sendMessage(chatId, '❌ サーバーに接続できませんでした。しばらくしてから再度お試しください。');
   }
 }
@@ -404,7 +411,7 @@ async function handleCreateOrder(chatId: number, crypto: string, amount: number)
 async function handleStatus(chatId: number, orderId: string) {
   try {
     const res = await fetch(`${API_BASE}/api/orders/${orderId}`);
-    const data = await res.json();
+    const data = await res.json() as { success?: boolean; order?: Record<string, unknown> };
 
     if (!data.success || !data.order) {
       await sendMessage(chatId, `❌ 注文 <code>${orderId}</code> が見つかりません。`);
@@ -423,11 +430,11 @@ async function handleStatus(chatId: number, orderId: string) {
     await sendMessage(chatId,
       `📋 <b>注文状況</b>\n\n` +
       `ID: <code>${o.id}</code>\n` +
-      `状態: ${statusMap[o.status] || o.status}\n` +
-      `金額: ¥${o.amount?.toLocaleString()}\n` +
+      `状態: ${statusMap[String(o.status)] || o.status}\n` +
+      `金額: ¥${Number(o.amount)?.toLocaleString()}\n` +
       `${o.crypto || 'USDT'}: ${o.cryptoAmount}\n` +
       `レート: ¥${o.rate}\n` +
-      `作成: ${new Date(o.createdAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`
+      `作成: ${new Date(o.createdAt as string | number).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`
     );
   } catch (e) {
     await sendMessage(chatId, '❌ ステータスの取得に失敗しました。');
@@ -441,16 +448,16 @@ async function handleRates(chatId: number) {
 
     let text = `📊 <b>現在のレート（リアルタイム）</b>\n\n`;
 
-    const formatCryptoRate = (label: string, data: any) => {
+    const formatCryptoRate = (label: string, data: CryptoRateInfo | undefined) => {
       if (!data?.bestBuy) return `━━ ${label} ━━\nデータなし\n\n`;
       const buyPrice = Number(data.bestBuy.price);
-      const sellPrice = Number(data.bestSell.price);
+      const sellPrice = data.bestSell ? Number(data.bestSell.price) : 0;
       const spread = Math.abs(sellPrice - buyPrice);
       const spreadPct = ((spread / buyPrice) * 100).toFixed(2);
 
       let s = `━━ ${label} ━━\n`;
       s += `🟢 購入: ¥${buyPrice.toLocaleString()}（${data.bestBuy.exchange}最安）\n`;
-      s += `🔴 売却: ¥${sellPrice.toLocaleString()}（${data.bestSell.exchange}最高）\n`;
+      s += `🔴 売却: ¥${sellPrice.toLocaleString()}（${data.bestSell?.exchange || '-'}最高）\n`;
       s += `📈 スプレッド: ¥${spread.toLocaleString()} (${spreadPct}%)\n\n`;
       return s;
     };
@@ -534,7 +541,7 @@ async function handleHistory(chatId: number) {
     const res = await fetch(`${API_BASE}/api/orders`, {
       headers: { 'X-Telegram-Chat-Id': String(chatId) },
     });
-    const data = await res.json();
+    const data = await res.json() as Record<string, unknown>;
 
     const orders = data.orders || data.data || [];
     if (!Array.isArray(orders) || orders.length === 0) {
@@ -559,12 +566,12 @@ async function handleHistory(chatId: number) {
 
     let text = `📋 <b>最近の注文</b>\n\n`;
     const recent = orders.slice(0, 5);
-    recent.forEach((o: any, i: number) => {
-      const date = new Date(o.createdAt).toLocaleString('ja-JP', {
+    recent.forEach((o: Record<string, unknown>, i: number) => {
+      const date = new Date(o.createdAt as string | number).toLocaleString('ja-JP', {
         timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
       });
-      const emoji = statusEmoji[o.status] || '❓';
-      const label = statusLabel[o.status] || o.status;
+      const emoji = statusEmoji[String(o.status)] || '❓';
+      const label = statusLabel[String(o.status)] || o.status;
       text += `${i + 1}. <code>${o.id}</code> | ¥${Number(o.amount).toLocaleString()} → ${o.cryptoAmount} ${o.crypto || 'USDT'} | ${emoji}${label}\n   ${date}\n\n`;
     });
 
@@ -621,10 +628,10 @@ async function handleAlert(chatId: number, args?: string) {
 async function handleWallet(chatId: number) {
   try {
     const res = await fetch(`${API_BASE}/api/wallet`);
-    const data = await res.json();
+    const data = await res.json() as Record<string, unknown>;
 
     if (data.success && data.wallet) {
-      const w = data.wallet;
+      const w = data.wallet as Record<string, unknown>;
       await sendMessage(chatId,
         `👛 <b>USDT受取ウォレット</b>\n\n` +
         `ネットワーク: ${w.network || 'TRC-20 (TRON)'}\n` +
@@ -642,7 +649,7 @@ async function handleWallet(chatId: number) {
 async function handlePaid(chatId: number, orderId: string) {
   try {
     const res = await fetch(`${API_BASE}/api/orders/${orderId}/paid`, { method: 'POST' });
-    const data = await res.json();
+    const data = await res.json() as Record<string, unknown>;
     if (data.success) {
       await sendMessage(chatId,
         `✅ <b>振込完了を受け付けました</b>\n\n` +
@@ -662,7 +669,7 @@ async function checkAlerts() {
   const rateData = await fetchCurrentRates();
 
   for (const [chatId, alert] of Array.from(userAlerts)) {
-    const data = (rateData as any)[alert.crypto.toLowerCase()];
+    const data = (rateData as Record<string, CryptoRateInfo | undefined>)[alert.crypto.toLowerCase()];
     if (!data?.bestBuy) continue;
     const price = Number(data.bestBuy.price);
     if (price <= alert.threshold) {
@@ -730,7 +737,7 @@ async function handleSellBank(chatId: number, text: string) {
     await sendMessage(chatId, '⚠️ 「銀行名, 口座番号, 名義」の形式で入力してください');
     return;
   }
-  let bankInfo: any;
+  let bankInfo: Record<string, string>;
   if (parts.length >= 4) {
     bankInfo = { bankName: parts[0], branchName: parts[1], accountNumber: parts[2], accountHolder: parts[3] };
   } else {
@@ -744,24 +751,25 @@ async function handleSellBank(chatId: number, text: string) {
   let sellRate = 0;
   try {
     const rateData = await fetchCurrentRates();
-    const d = (rateData as any)[chat.data.crypto.toLowerCase()];
+    const d = (rateData as Record<string, CryptoRateInfo | undefined>)[String(chat.data?.crypto).toLowerCase()];
     if (d?.bestSell) {
       sellRate = Number(d.bestSell.price);
-      estimatedJpy = Math.floor(chat.data.cryptoAmount * sellRate);
+      estimatedJpy = Math.floor(Number(chat.data?.cryptoAmount) * sellRate);
     }
   } catch {}
 
   let depositAddr = '（未設定）';
   try {
     const res = await fetch(API_BASE + '/api/wallet');
-    const data = await res.json();
-    if (data.success && data.wallet?.address) depositAddr = data.wallet.address;
+    const data = await res.json() as Record<string, unknown>;
+    const wallet = data.wallet as Record<string, unknown> | undefined;
+    if (data.success && wallet?.address) depositAddr = String(wallet.address);
   } catch {}
 
   await sendMessage(chatId,
     '📋 <b>売却注文確認</b>\n\n' +
-    '売却通貨: ' + chat.data.crypto + '\n' +
-    '売却数量: ' + chat.data.cryptoAmount + '\n' +
+    '売却通貨: ' + (chat.data?.crypto ?? '') + '\n' +
+    '売却数量: ' + (chat.data?.cryptoAmount ?? '') + '\n' +
     '売却レート: ¥' + sellRate.toLocaleString() + '\n' +
     '受取予定額: <b>¥' + estimatedJpy.toLocaleString() + '</b>\n\n' +
     '🏦 振込先:\n' +
@@ -792,25 +800,25 @@ async function handleSellConfirm(chatId: number) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        cryptoAmount: chat.data.cryptoAmount,
-        crypto: chat.data.crypto,
-        customerBankInfo: chat.data.customerBankInfo,
+        cryptoAmount: chat.data?.cryptoAmount,
+        crypto: chat.data?.crypto,
+        customerBankInfo: chat.data?.customerBankInfo,
       }),
     });
-    const data = await res.json();
+    const data = await res.json() as Record<string, unknown>;
 
     if (!data.success || !data.order) {
       await sendMessage(chatId, '❌ 注文作成に失敗しました: ' + (data.error || '不明なエラー'));
       return;
     }
 
-    const order = data.order;
+    const order = data.order as Record<string, unknown>;
     await sendMessage(chatId,
       '✅ <b>売却注文が作成されました</b>\n\n' +
       '📋 注文ID: <code>' + order.id + '</code>\n' +
       '💱 売却: ' + order.cryptoAmount + ' ' + order.crypto + '\n' +
-      '💴 受取予定: ¥' + (order.jpyAmount || 0).toLocaleString() + '\n' +
-      '📊 レート: ¥' + (order.rate || 0).toLocaleString() + '\n\n' +
+      '💴 受取予定: ¥' + Number(order.jpyAmount || 0).toLocaleString() + '\n' +
+      '📊 レート: ¥' + Number(order.rate || 0).toLocaleString() + '\n\n' +
       '📥 <b>以下のアドレスに' + order.crypto + 'を送金してください:</b>\n' +
       '<code>' + (order.depositAddress || '') + '</code>\n' +
       'ネットワーク: ' + (order.depositNetwork || 'TRC-20') + '\n\n' +
@@ -825,7 +833,7 @@ async function handleSellConfirm(chatId: number) {
       }
     );
   } catch (e) {
-    console.error('[TelegramBot] Sell order error:', e);
+    logger.error('Sell order error', { error: e instanceof Error ? e.message : String(e) });
     await sendMessage(chatId, '❌ サーバーに接続できませんでした。');
   }
 }
@@ -961,7 +969,7 @@ async function processReferralReward(chatId: number, orderId: string, amount: nu
   const customer = dbSvc.getOrCreateCustomer(telegramId);
   if (customer.referred_by) {
     const referrer = dbSvc.getCustomerByReferralCode(customer.referred_by);
-    if (referrer) {
+    if (referrer && referrer.telegram_id) {
       const reward = amount * 0.005;
       dbSvc.addReferralReward(referrer.telegram_id, telegramId, orderId, reward);
     }
@@ -970,14 +978,14 @@ async function processReferralReward(chatId: number, orderId: string, amount: nu
 
 // ━━━━━━━━━━━━━━━━━━ Update Processing ━━━━━━━━━━━━━━━━━━
 
-async function processUpdate(update: any) {
+async function processUpdate(update: Record<string, unknown>) {
   if (update.callback_query) {
-    const cb = update.callback_query;
+    const cb = update.callback_query as { id?: string; data?: string; message?: { chat?: { id?: number } }; from?: { id?: number } };
     const chatId = cb.message?.chat?.id;
     const data = cb.data as string;
     if (!chatId) return;
 
-    await answerCallback(cb.id);
+    await answerCallback(String(cb.id));
 
     if (data === 'cb_buy') return handleBuy(chatId);
     if (data === 'cb_rates') return handleRates(chatId);
@@ -1005,6 +1013,68 @@ async function processUpdate(update: any) {
       return;
     }
     if (data === 'cb_sell') return handleSell(chatId);
+
+    // Settle withdrawal (remove from queue)
+    if (data.startsWith('settle_')) {
+      const withdrawalDbId = parseInt(data.slice(7));
+      if (!isNaN(withdrawalDbId)) {
+        try {
+          const { updateTruPayWithdrawalStatus } = await import('./database.js');
+          updateTruPayWithdrawalStatus(withdrawalDbId, 'completed_external', { completed_at: Date.now() });
+          await sendMessage(chatId, `✅ WID #${withdrawalDbId} をセトル済みとしてキューから除外しました。`);
+          // Edit original message to show settled status
+          if (cb.message) {
+            const msgId = (cb.message as Record<string, unknown>).message_id;
+            if (msgId) {
+              await tg('editMessageReplyMarkup', {
+                chat_id: chatId,
+                message_id: msgId,
+                reply_markup: { inline_keyboard: [[{ text: '✅ セトル済み', callback_data: 'noop' }]] }
+              });
+            }
+          }
+        } catch (e) {
+          await sendMessage(chatId, `❌ エラー: ${e instanceof Error ? e.message : String(e)}`);
+        }
+      }
+      return;
+    }
+
+    // TruPay P2P callbacks
+    if (data === 'cb_p2p_buy') return handleTruPayBuy(chatId);
+    if (data.startsWith('p2p_amt_')) {
+      const amount = parseInt(data.slice(8));
+      return handleTruPayAmountSelected(chatId, amount);
+    }
+    if (data.startsWith('p2p_wallet_')) {
+      // User confirmed wallet for P2P
+      return handleTruPayWalletPrompt(chatId);
+    }
+    if (data.startsWith('p2p_confirm_')) {
+      return handleTruPayConfirmBuy(chatId);
+    }
+    if (data.startsWith('p2p_cancel_')) {
+      const matchId = data.replace('p2p_cancel_', '');
+      return handleTruPayCancelMatch(chatId, matchId);
+    }
+    if (data.startsWith('p2p_paid_')) {
+      const matchId = data.replace('p2p_paid_', '');
+      return handleTruPayPaidReport(chatId, matchId);
+    }
+    if (data.startsWith('p2p_status_')) {
+      const matchId = data.replace('p2p_status_', '');
+      return handleTruPayMatchStatus(chatId, matchId);
+    }
+
+    // Proof approval/rejection (admin)
+    if (data.startsWith('proof_approve_')) {
+      const matchId = parseInt(data.replace('proof_approve_', ''));
+      return handleProofApprove(chatId, matchId);
+    }
+    if (data.startsWith('proof_reject_')) {
+      const matchId = parseInt(data.replace('proof_reject_', ''));
+      return handleProofReject(chatId, matchId);
+    }
 
     // Legacy callbacks
     if (data === 'buy') return handleBuy(chatId);
@@ -1069,7 +1139,7 @@ async function processUpdate(update: any) {
       const prefType = typeMap[data];
       if (prefType) {
         const prefs = getNotificationPreferences(chatId);
-        const current = (prefs as any)[prefType];
+        const current = (prefs as Record<string, boolean>)[prefType];
         setNotificationPreference(chatId, prefType, !current);
         await handleNotify(chatId);
         return;
@@ -1091,7 +1161,7 @@ async function processUpdate(update: any) {
     return;
   }
 
-  const msg = update.message;
+  const msg = update.message as { text?: string; chat?: { id?: number }; from?: { id?: number } } | undefined;
   if (!msg?.text || !msg.chat?.id) return;
 
   const chatId = msg.chat.id;
@@ -1100,6 +1170,7 @@ async function processUpdate(update: any) {
 
   if (text === '/start') return handleStart(chatId);
   if (text === '/buy' || text === 'USDT購入') return handleBuy(chatId);
+  if (text === '/p2p' || text === 'P2P購入') return handleTruPayBuy(chatId);
   if (text === '/sell') return handleSell(chatId);
   if (text === '/rates') return handleRates(chatId);
   if (text === '/help') return handleHelp(chatId);
@@ -1143,7 +1214,7 @@ async function processUpdate(update: any) {
   // Support waiting states
   const supportState = supportWaiting.get(chatId);
   if (supportState === 'staff_message') {
-    return handleStaffMessage(chatId, text, msg.from);
+    return handleStaffMessage(chatId, text, (msg.from || {}) as Record<string, unknown>);
   }
   if (supportState === 'order_id_input') {
     return handleSupportOrderId(chatId, text);
@@ -1156,9 +1227,412 @@ async function processUpdate(update: any) {
   if (chat.state === 'sell_awaiting_amount') return handleSellAmount(chatId, text);
   if (chat.state === 'sell_awaiting_bank') return handleSellBank(chatId, text);
 
+  // TruPay P2P states
+  if (chat.state === 'p2p_awaiting_amount' as ConversationState) return handleTruPayAmountInput(chatId, text);
+  if (chat.state === 'p2p_awaiting_wallet' as ConversationState) return handleTruPayWalletInput(chatId, text);
+  if (chat.state === 'p2p_awaiting_ref' as ConversationState) return handleTruPayRefInput(chatId, text);
+
   if (chat.state === 'awaiting_order_id') {
     conversations.set(chatId, { state: 'idle' });
     return handleStatus(chatId, text);
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━ TruPay P2P USDT Purchase ━━━━━━━━━━━━━━━━━━
+
+import { registerBuyer, removeBuyer } from './trupayMatcher.js';
+import { getTruPayMatch, getTruPayMatches, getTruPayMatchByWithdrawalId, getTruPayWithdrawalById, updateTruPayMatchStatus } from './database.js';
+import { manualConfirm } from './trupayVerifier.js';
+import { isEnabled as isTruPayEnabled } from './trupayClient.js';
+
+// Track P2P buy state per chat
+const p2pBuyState = new Map<number, { amount?: number; wallet?: string; matchId?: number }>();
+
+async function handleTruPayBuy(chatId: number) {
+  if (!isTruPayEnabled()) {
+    await sendMessage(chatId, '⚠️ P2P USDT購入は現在利用できません。');
+    return;
+  }
+  p2pBuyState.set(chatId, {});
+  conversations.set(chatId, { state: 'p2p_awaiting_amount' as ConversationState });
+  await sendMessage(chatId,
+    `🤝 <b>P2P USDT購入</b>\n\n` +
+    `銀行振込でUSDTを購入できます。\n` +
+    `購入金額（日本円）を選択または入力してください。\n\n` +
+    `最小: ¥10,000 / 最大: ¥10,000,000`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '¥50,000', callback_data: 'p2p_amt_50000' },
+            { text: '¥100,000', callback_data: 'p2p_amt_100000' },
+          ],
+          [
+            { text: '¥300,000', callback_data: 'p2p_amt_300000' },
+            { text: '¥500,000', callback_data: 'p2p_amt_500000' },
+          ],
+          [
+            { text: '¥1,000,000', callback_data: 'p2p_amt_1000000' },
+          ],
+        ],
+      },
+    }
+  );
+}
+
+async function handleTruPayAmountInput(chatId: number, text: string) {
+  const amount = parseJapaneseAmount(text);
+  if (!amount || amount < 10000 || amount > 10000000) {
+    await sendMessage(chatId, '⚠️ ¥10,000〜¥10,000,000の範囲で入力してください。');
+    return;
+  }
+  return handleTruPayAmountSelected(chatId, amount);
+}
+
+async function handleTruPayAmountSelected(chatId: number, amount: number) {
+  const state = p2pBuyState.get(chatId) || {};
+  state.amount = amount;
+  p2pBuyState.set(chatId, state);
+
+  // Get current rate
+  let rateStr = '--';
+  let usdtStr = '--';
+  try {
+    const res = await fetch(`${API_BASE}/api/rates/USDT`);
+    const data = await res.json() as { success?: boolean; data?: { bestBuyExchange?: { price: number } } };
+    if (data.success && data.data?.bestBuyExchange?.price) {
+      const rate = data.data.bestBuyExchange.price;
+      rateStr = `¥${rate.toFixed(2)}`;
+      usdtStr = `${(amount / rate).toFixed(2)} USDT`;
+    }
+  } catch { /* ignore */ }
+
+  conversations.set(chatId, { state: 'p2p_awaiting_wallet' as ConversationState });
+  await sendMessage(chatId,
+    `💰 <b>購入金額: ¥${amount.toLocaleString()}</b>\n` +
+    `レート: ${rateStr}\n` +
+    `受取予定: 約 ${usdtStr}\n\n` +
+    `USDTの受取先ウォレットアドレスを入力してください。\n` +
+    `<i>（TRC-20 / Tで始まるTRONアドレス）</i>`,
+  );
+}
+
+async function handleTruPayWalletPrompt(chatId: number) {
+  conversations.set(chatId, { state: 'p2p_awaiting_wallet' as ConversationState });
+  await sendMessage(chatId, 'USDTの受取先ウォレットアドレスを入力してください。\n<i>（TRC-20 / Tで始まるTRONアドレス）</i>');
+}
+
+async function handleTruPayWalletInput(chatId: number, text: string) {
+  const wallet = text.trim();
+  if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(wallet)) {
+    await sendMessage(chatId, '⚠️ 無効なTRONアドレスです。Tで始まる34文字のアドレスを入力してください。');
+    return;
+  }
+
+  const state = p2pBuyState.get(chatId) || {};
+  state.wallet = wallet;
+  p2pBuyState.set(chatId, state);
+
+  // Get current rate for display
+  let rateStr = '--';
+  let usdtStr = '--';
+  let rate = 0;
+  try {
+    const res = await fetch(`${API_BASE}/api/rates/USDT`);
+    const data = await res.json() as { success?: boolean; data?: { bestBuyExchange?: { price: number } } };
+    if (data.success && data.data?.bestBuyExchange?.price) {
+      rate = data.data.bestBuyExchange.price;
+      rateStr = `¥${rate.toFixed(2)}`;
+      usdtStr = `${(state.amount! / rate).toFixed(2)} USDT`;
+    }
+  } catch { /* ignore */ }
+
+  conversations.set(chatId, { state: 'idle' });
+  await sendMessage(chatId,
+    `━━━ 注文確認 ━━━\n\n` +
+    `💴 金額: ¥${state.amount!.toLocaleString()}\n` +
+    `💱 レート: ${rateStr}\n` +
+    `💎 受取予定: 約 ${usdtStr}\n` +
+    `📬 宛先: <code>${wallet}</code>\n\n` +
+    `マッチング相手が見つかると、振込先銀行口座が通知されます。\n` +
+    `振込後、着金確認でUSDTが自動送金されます。\n\n` +
+    `━━━━━━━━━━━━━━\n` +
+    `購入を確定しますか？`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '✅ 購入確定', callback_data: 'p2p_confirm_' + chatId }],
+          [{ text: '❌ キャンセル', callback_data: 'cb_menu' }],
+        ],
+      },
+    }
+  );
+}
+
+async function handleTruPayConfirmBuy(chatId: number) {
+  const state = p2pBuyState.get(chatId);
+  if (!state?.amount || !state?.wallet) {
+    await sendMessage(chatId, '⚠️ セッションが無効です。もう一度やり直してください。');
+    return handleTruPayBuy(chatId);
+  }
+
+  const buyerId = `tg_${chatId}`;
+
+  // Register as buyer in the matching queue
+  registerBuyer({
+    id: buyerId,
+    walletAddress: state.wallet,
+    minAmountJpy: 0,
+    maxAmountJpy: state.amount * 1.1, // ±10% flexibility
+    registeredAt: Date.now(),
+  });
+
+  await sendMessage(chatId,
+    `✅ <b>購入申請完了</b>\n\n` +
+    `金額: ¥${state.amount.toLocaleString()}\n` +
+    `宛先: <code>${state.wallet}</code>\n\n` +
+    `⏳ マッチング中...\n` +
+    `出金申請とマッチングされるとこちらに振込先が通知されます。\n\n` +
+    `<i>※ マッチング待ち時間は出金状況によります</i>`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '❌ キャンセル', callback_data: `p2p_cancel_${buyerId}` }],
+        ],
+      },
+    }
+  );
+
+  p2pBuyState.delete(chatId);
+}
+
+async function handleTruPayCancelMatch(chatId: number, buyerId: string) {
+  const removed = removeBuyer(buyerId);
+  if (removed) {
+    await sendMessage(chatId, '❌ P2P購入申請をキャンセルしました。');
+  } else {
+    await sendMessage(chatId, '既にマッチング済みまたはキャンセル済みです。');
+  }
+}
+
+async function handleTruPayPaidReport(chatId: number, matchIdStr: string) {
+  const matchId = parseInt(matchIdStr);
+  const match = getTruPayMatch(matchId);
+  if (!match || match.status !== 'waiting_transfer') {
+    await sendMessage(chatId, '⚠️ このマッチングは既に処理済みまたは存在しません。');
+    return;
+  }
+
+  p2pBuyState.set(chatId, { matchId });
+  conversations.set(chatId, { state: 'p2p_awaiting_ref' as ConversationState });
+  await sendMessage(chatId,
+    `振込の参照番号を入力してください。\n\n` +
+    `<i>（銀行振込時の参照番号・振込番号。わからない場合は「なし」と入力）</i>`
+  );
+}
+
+async function handleTruPayRefInput(chatId: number, text: string) {
+  const state = p2pBuyState.get(chatId);
+  if (!state?.matchId) {
+    conversations.set(chatId, { state: 'idle' });
+    await sendMessage(chatId, '⚠️ セッションが無効です。');
+    return;
+  }
+
+  const ref = text.trim() === 'なし' ? 'MANUAL' : text.trim();
+  conversations.set(chatId, { state: 'idle' });
+
+  await sendMessage(chatId, '⏳ 着金確認中...');
+
+  const result = await manualConfirm(state.matchId, ref);
+  if (result.success) {
+    await sendMessage(chatId,
+      `✅ <b>着金確認完了</b>\n\n` +
+      `Match #${state.matchId}\n` +
+      `USDT送金を開始しました。数分以内にウォレットに届きます。`
+    );
+  } else {
+    await sendMessage(chatId,
+      `⚠️ 着金確認に失敗しました: ${result.error}\n\n` +
+      `スタッフに問い合わせてください。`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: 'スタッフに相談', callback_data: 'support_contact_staff' }],
+          ],
+        },
+      }
+    );
+  }
+
+  p2pBuyState.delete(chatId);
+}
+
+async function handleTruPayMatchStatus(chatId: number, matchIdStr: string) {
+  const matchId = parseInt(matchIdStr);
+  const match = getTruPayMatch(matchId);
+  if (!match) {
+    await sendMessage(chatId, '⚠️ マッチングが見つかりません。');
+    return;
+  }
+
+  const statusLabels: Record<string, string> = {
+    waiting_transfer: '⏳ 振込待ち',
+    transfer_confirmed: '✅ 着金確認済み',
+    usdt_sent: '💎 USDT送金済み',
+    completed: '🎉 完了',
+    timeout: '⏰ タイムアウト',
+    cancelled: '❌ キャンセル',
+    error: '⚠️ エラー',
+  };
+
+  let msg =
+    `━━ P2Pマッチ #${match.id} ━━\n\n` +
+    `ステータス: ${statusLabels[match.status] || match.status}\n` +
+    `金額: ¥${match.amount_jpy.toLocaleString()}\n` +
+    `USDT: ${match.amount_usdt.toFixed(2)}\n` +
+    `レート: ¥${match.rate_jpy_usdt.toFixed(2)}\n`;
+
+  if (match.usdt_tx_hash) {
+    msg += `TX: <code>${match.usdt_tx_hash}</code>\n`;
+  }
+
+  const buttons: Array<Array<{ text: string; callback_data: string }>> = [];
+  if (match.status === 'waiting_transfer') {
+    buttons.push([{ text: '✅ 振込完了を報告', callback_data: `p2p_paid_${match.id}` }]);
+  }
+
+  await sendMessage(chatId, msg, buttons.length > 0 ? { reply_markup: { inline_keyboard: buttons } } : undefined);
+}
+
+/**
+ * 購入者にマッチング成立を通知（Pollerから呼ばれる）
+ */
+export function notifyBuyerMatchCreated(buyerId: string, data: {
+  matchId: number;
+  amountJpy: number;
+  amountUsdt: number;
+  rate: number;
+  bankName: string;
+  branchName: string;
+  accountNumber: string;
+  accountName: string;
+  timeoutAt: number;
+}): void {
+  // buyerId format: tg_<chatId>
+  if (!buyerId.startsWith('tg_')) return;
+  const chatId = parseInt(buyerId.slice(3));
+  if (isNaN(chatId)) return;
+
+  const deadline = new Date(data.timeoutAt).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo' });
+
+  sendMessage(chatId,
+    `🎉 <b>マッチング成立！</b>\n\n` +
+    `Match #${data.matchId}\n` +
+    `金額: ¥${data.amountJpy.toLocaleString()}\n` +
+    `受取: ${data.amountUsdt.toFixed(2)} USDT\n` +
+    `レート: ¥${data.rate.toFixed(2)}\n\n` +
+    `━━━ 振込先情報 ━━━\n` +
+    `🏦 銀行: ${data.bankName}\n` +
+    `🏢 支店: ${data.branchName || '-'}\n` +
+    `📝 口座番号: <code>${data.accountNumber}</code>\n` +
+    `👤 名義: ${data.accountName}\n` +
+    `💴 振込金額: <b>¥${data.amountJpy.toLocaleString()}</b>\n` +
+    `━━━━━━━━━━━━━━\n\n` +
+    `⏰ 期限: ${deadline}\n\n` +
+    `上記の口座に振り込んだら「振込完了」ボタンを押してください。`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '✅ 振込完了を報告', callback_data: `p2p_paid_${data.matchId}` }],
+          [{ text: '📊 ステータス確認', callback_data: `p2p_status_${data.matchId}` }],
+        ],
+      },
+    }
+  );
+}
+
+/**
+ * 購入者にUSDT送金完了を通知
+ */
+export function notifyBuyerUsdtSent(buyerId: string, matchId: number, amountUsdt: number, txHash: string): void {
+  if (!buyerId.startsWith('tg_')) return;
+  const chatId = parseInt(buyerId.slice(3));
+  if (isNaN(chatId)) return;
+
+  sendMessage(chatId,
+    `💎 <b>USDT送金完了！</b>\n\n` +
+    `Match #${matchId}\n` +
+    `送金量: ${amountUsdt.toFixed(2)} USDT\n` +
+    `TX: <code>${txHash}</code>\n\n` +
+    `ウォレットをご確認ください。`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🤝 もう一度P2P購入', callback_data: 'cb_p2p_buy' }],
+          [{ text: '🏠 メニューに戻る', callback_data: 'cb_menu' }],
+        ],
+      },
+    }
+  );
+}
+
+// === Proof Approval / Rejection (Admin) ===
+
+async function handleProofApprove(chatId: number, matchId: number) {
+  try {
+    const match = getTruPayMatch(matchId);
+    if (!match) {
+      await sendMessage(chatId, '⚠️ マッチングが見つかりません。');
+      return;
+    }
+    if (match.status !== 'needs_review') {
+      await sendMessage(chatId, `ℹ️ Match #${matchId} は既に処理済み (${match.status})`);
+      return;
+    }
+    updateTruPayMatchStatus(matchId, 'buyer_paid');
+    await sendMessage(chatId,
+      `✅ Match #${matchId} を承認しました。\n着金確認待ちに移行します。`
+    );
+    logger.info('Proof manually approved', { matchId, approvedBy: chatId });
+  } catch (e) {
+    await sendMessage(chatId, '⚠️ エラーが発生しました。');
+  }
+}
+
+async function handleProofReject(chatId: number, matchId: number) {
+  try {
+    const match = getTruPayMatch(matchId);
+    if (!match) {
+      await sendMessage(chatId, '⚠️ マッチングが見つかりません。');
+      return;
+    }
+    updateTruPayMatchStatus(matchId, 'waiting_transfer');
+    await sendMessage(chatId,
+      `❌ Match #${matchId} を却下しました。\n購入者に再振込を求めます。`
+    );
+
+    // 購入者に通知
+    if (match.buyer_id.startsWith('tg_')) {
+      const buyerChatId = parseInt(match.buyer_id.slice(3));
+      if (!isNaN(buyerChatId)) {
+        await sendMessage(buyerChatId,
+          `⚠️ <b>振込明細が確認できませんでした</b>\n\n` +
+          `Match #${matchId}\n` +
+          `振込を再度行い、明確な振込明細のスクリーンショットを提出してください。`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '✅ 振込完了を報告', callback_data: `p2p_paid_${matchId}` }],
+              ],
+            },
+          }
+        );
+      }
+    }
+    logger.info('Proof manually rejected', { matchId, rejectedBy: chatId });
+  } catch (e) {
+    await sendMessage(chatId, '⚠️ エラーが発生しました。');
   }
 }
 
@@ -1172,17 +1646,17 @@ async function poll() {
       const res = await fetch(
         `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${updateOffset}&timeout=30&allowed_updates=["message","callback_query"]`
       );
-      const data = await res.json();
-      console.log("[TelegramBot] Poll response:", data.ok, "updates:", data.result?.length || 0);
+      const data = await res.json() as { ok?: boolean; result?: Array<Record<string, unknown> & { update_id: number }> };
+      logger.debug('Poll response', { ok: data.ok, updates: data.result?.length || 0 });
 
       if (data.ok && data.result?.length) {
         for (const update of data.result) {
           updateOffset = update.update_id + 1;
-          processUpdate(update).catch(e => console.error('[TelegramBot] Update error:', e));
+          processUpdate(update).catch(e => logger.error('Update error', { error: e instanceof Error ? e.message : String(e) }));
         }
       }
     } catch (e) {
-      console.error('[TelegramBot] Polling error:', e);
+      logger.error('Polling error', { error: e instanceof Error ? e.message : String(e) });
       await new Promise(r => setTimeout(r, 5000));
     }
   }
@@ -1191,12 +1665,12 @@ async function poll() {
 export function startTelegramBot() {
   if (running) return;
   running = true;
-  console.log('[TelegramBot] Starting long polling...');
+  logger.info('Starting long polling');
   poll();
 
   // Check alerts every 60 seconds
   alertCheckInterval = setInterval(() => {
-    checkAlerts().catch(e => console.error('[TelegramBot] Alert check error:', e));
+    checkAlerts().catch(e => logger.error('Alert check error', { error: e instanceof Error ? e.message : String(e) }));
   }, 60000);
 }
 
@@ -1211,7 +1685,7 @@ export function stopTelegramBot() {
 
 // ━━━━━━━━━━━━━━━━━━ Customer Support Bot ━━━━━━━━━━━━━━━━━━
 
-const STAFF_CHAT_ID = 5791086501;
+const STAFF_CHAT_ID = parseInt(process.env.TELEGRAM_STAFF_CHAT_ID || '0');
 const supportWaiting = new Map<number, string>(); // chatId -> context (e.g. 'staff_message', 'order_id_input')
 
 async function handleSupport(chatId: number) {
@@ -1349,7 +1823,7 @@ async function handleSupportInputOrderId(chatId: number) {
   await sendMessage(chatId, '注文IDを入力してください:\n\n例: <code>ORD-xxxxx</code>');
 }
 
-async function handleStaffMessage(chatId: number, text: string, from: any) {
+async function handleStaffMessage(chatId: number, text: string, from: Record<string, unknown>) {
   supportWaiting.delete(chatId);
   const userName = from?.first_name || from?.username || 'Unknown';
   const userId = from?.id || chatId;

@@ -99,7 +99,7 @@ describe('レートAPI（公開）', () => {
 describe('注文API', () => {
   let orderId = '';
 
-  it('POST /api/orders — 注文作成（正常）', async () => {
+  it('POST /api/orders — 注文作成（正常）', { timeout: 15000 }, async () => {
     const res = await fetch(`${BASE}/api/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

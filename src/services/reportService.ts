@@ -19,13 +19,13 @@ export function getDailyReport(date: string): DailyReport {
 
   const rows = db.prepare(
     'SELECT * FROM orders WHERE created_at >= ? AND created_at < ?'
-  ).all(startMs, endMs) as any[];
+  ).all(startMs, endMs) as { status: string; amount: number; crypto_amount: number; rate: number; pay_method: string }[];
 
   const completed = rows.filter(r => r.status === 'completed');
-  const totalJpy = completed.reduce((s: number, r: any) => s + (r.amount || 0), 0);
-  const totalUsdt = completed.reduce((s: number, r: any) => s + (r.crypto_amount || 0), 0);
+  const totalJpy = completed.reduce((s: number, r) => s + (r.amount || 0), 0);
+  const totalUsdt = completed.reduce((s: number, r) => s + (r.crypto_amount || 0), 0);
   const avgRate = completed.length > 0
-    ? completed.reduce((s: number, r: any) => s + (r.rate || 0), 0) / completed.length
+    ? completed.reduce((s: number, r) => s + (r.rate || 0), 0) / completed.length
     : 0;
 
   const byMethod: Record<string, { orders: number; jpyVolume: number; usdtVolume: number }> = {};

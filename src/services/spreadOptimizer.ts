@@ -60,7 +60,7 @@ export function getSpreadConfig(crypto?: string): SpreadConfig[] {
   const query = crypto
     ? db.prepare('SELECT * FROM spread_config WHERE crypto = ?').all(crypto)
     : db.prepare('SELECT * FROM spread_config').all();
-  return (query as any[]).map(r => ({
+  return (query as { crypto: string; buy_markup: number; sell_discount: number; auto_adjust: number; min_markup: number; max_markup: number }[]).map(r => ({
     crypto: r.crypto,
     buyMarkup: r.buy_markup,
     sellDiscount: r.sell_discount,
@@ -72,7 +72,7 @@ export function getSpreadConfig(crypto?: string): SpreadConfig[] {
 
 export function updateSpreadConfig(crypto: string, data: Partial<SpreadConfig>): void {
   const fields: string[] = [];
-  const vals: any[] = [];
+  const vals: (string | number)[] = [];
   if (data.buyMarkup !== undefined) { fields.push('buy_markup = ?'); vals.push(data.buyMarkup); }
   if (data.sellDiscount !== undefined) { fields.push('sell_discount = ?'); vals.push(data.sellDiscount); }
   if (data.autoAdjust !== undefined) { fields.push('auto_adjust = ?'); vals.push(data.autoAdjust ? 1 : 0); }
@@ -110,7 +110,7 @@ function getHourlyStats(crypto: string): { hour: number; avgOrders: number; avgV
       CAST(AVG(total_volume) AS REAL) as avg_volume
     FROM spread_stats WHERE crypto = ?
     GROUP BY hour ORDER BY hour
-  `).all(crypto) as any[];
+  `).all(crypto) as { hour: number; avg_orders: number | null; avg_volume: number | null }[];
   return rows.map(r => ({ hour: r.hour, avgOrders: r.avg_orders || 0, avgVolume: r.avg_volume || 0 }));
 }
 
@@ -141,7 +141,7 @@ function getTimeAdjustment(): number {
 async function getCompetitorOffset(crypto: string, _side: 'buy' | 'sell'): Promise<number> {
   try {
     const res = await fetch(`http://localhost:3003/api/rates/${crypto}`);
-    const data = await res.json() as any;
+    const data = await res.json() as { success?: boolean; data?: { rates?: Array<{ buyOrders?: Array<{ price: number }>; sellOrders?: Array<{ price: number }> }> } };
     if (!data.success || !data.data?.rates) return 0;
     const prices: number[] = [];
     for (const ex of data.data.rates) {
@@ -195,10 +195,16 @@ export async function getOptimalSpread(crypto: string, side: 'buy' | 'sell'): Pr
 
 // === Report ===
 
-export async function getSpreadReport(): Promise<any> {
+interface SpreadReport {
+  configs: SpreadConfig[];
+  recommendations: { crypto: string; buy: SpreadRecommendation; sell: SpreadRecommendation }[];
+  hourlyStats: { crypto: string; stats: { hour: number; avgOrders: number; avgVolume: number }[] }[];
+}
+
+export async function getSpreadReport(): Promise<SpreadReport> {
   const configs = getSpreadConfig();
-  const recommendations: any[] = [];
-  const hourlyStats: any[] = [];
+  const recommendations: SpreadReport['recommendations'] = [];
+  const hourlyStats: SpreadReport['hourlyStats'] = [];
 
   for (const c of configs) {
     const buy = await getOptimalSpread(c.crypto, 'buy');
@@ -210,13 +216,20 @@ export async function getSpreadReport(): Promise<any> {
   return { configs, recommendations, hourlyStats };
 }
 
-export function get24hStats(): any[] {
+interface SpreadStatRow {
+  crypto: string;
+  hour: number;
+  order_count: number;
+  total_volume: number;
+}
+
+export function get24hStats(): { crypto: string; hour: number; orderCount: number; totalVolume: number }[] {
   const rows = db.prepare(`
-    SELECT crypto, hour, order_count, total_volume 
-    FROM spread_stats 
+    SELECT crypto, hour, order_count, total_volume
+    FROM spread_stats
     WHERE updated_at >= datetime('now', '-24 hours')
     ORDER BY crypto, hour
-  `).all() as any[];
+  `).all() as SpreadStatRow[];
   return rows.map(r => ({ crypto: r.crypto, hour: r.hour, orderCount: r.order_count, totalVolume: r.total_volume }));
 }
 

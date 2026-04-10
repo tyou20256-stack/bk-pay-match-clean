@@ -9,6 +9,7 @@ const BASE = 'http://localhost:3003';
 const ACCOUNT_ROUTER = 'http://localhost:3002';
 
 let accountRouterAvailable = false;
+let sharedAuthCookie = '';
 
 async function isReachable(url: string): Promise<boolean> {
   try {
@@ -21,6 +22,13 @@ beforeAll(async () => {
   const bkPayUp = await isReachable(`${BASE}/api/status`);
   if (!bkPayUp) throw new Error('BK Pay is not running on localhost:3003');
   accountRouterAvailable = await isReachable(`${ACCOUNT_ROUTER}/api/accounts`);
+  // Login once for all tests that need auth
+  const loginRes = await fetch(`${BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'admin', password: process.env.BK_ADMIN_PASSWORD || 'bkpay2026' }),
+  });
+  sharedAuthCookie = loginRes.headers.get('set-cookie') || '';
 });
 
 // 1. Account Router connection
@@ -220,14 +228,14 @@ describe('Price history', () => {
     const res = await fetch(`${BASE}/api/history/USDT?hours=1`);
     expect(res.ok).toBe(true);
     const data = await res.json();
-    const history = data.history ?? data;
+    const history = data.data ?? data.history ?? data;
     expect(Array.isArray(history)).toBe(true);
   });
 
   it('history entries have correct structure', async () => {
     const res = await fetch(`${BASE}/api/history/USDT?hours=1`);
     const data = await res.json();
-    const history = data.history ?? data;
+    const history = data.data ?? data.history ?? data;
     if (Array.isArray(history) && history.length > 0) {
       const entry = history[0];
       expect(entry).toHaveProperty('timestamp');
@@ -286,7 +294,7 @@ describe('WebSocket', () => {
 
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => { sock.close(); reject(new Error('WebSocket timeout')); }, 5000);
-      const sock = new WS('ws://localhost:3003/ws');
+      const sock = new WS('ws://localhost:3003/ws', { headers: { cookie: sharedAuthCookie } });
       sock.on('message', (msg: Buffer) => {
         clearTimeout(timeout);
         const data = JSON.parse(msg.toString());

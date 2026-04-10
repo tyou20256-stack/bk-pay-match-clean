@@ -3,7 +3,8 @@
  * @description 注文完了時の利益を記録・集計するサービス。
  */
 import db from './database.js';
-import { getSetting, setSetting } from './database.js';
+import { getSetting, setSetting, getTotalTransactionCost } from './database.js';
+import logger from './logger.js';
 
 // === Schema ===
 db.exec(`
@@ -35,7 +36,57 @@ export interface ProfitRecord {
   timestamp: string;
 }
 
-export function recordProfit(order: any, marketRate?: number): void {
+interface ProfitOrderInput {
+  id: string;
+  direction?: string;
+  crypto?: string;
+  amount?: number;
+  rate?: number;
+  cryptoAmount?: number;
+  feeJpy?: number;
+  estimatedCost?: number;
+}
+
+interface ProfitAggregateRow {
+  totalProfit: number;
+  spreadProfit: number;
+  feeProfit: number;
+  totalCost: number;
+  netProfit: number;
+  orderCount: number;
+}
+
+interface ProfitDailyRow {
+  date: string;
+  totalProfit: number;
+  spreadProfit: number;
+  feeProfit: number;
+  totalCost: number;
+  netProfit: number;
+  orderCount: number;
+}
+
+interface ProfitHourlyRow {
+  hour: number;
+  totalProfit: number;
+  spreadProfit: number;
+  feeProfit: number;
+  orderCount: number;
+}
+
+interface ProfitCryptoRow {
+  crypto: string;
+  totalProfit: number;
+  orderCount: number;
+}
+
+interface ProfitTrendRow {
+  date: string;
+  totalProfit: number;
+  orderCount: number;
+}
+
+export function recordProfit(order: ProfitOrderInput, marketRate?: number): void {
   const direction = order.direction || 'buy';
   const crypto = order.crypto || 'USDT';
   const customerJpy = order.amount || 0;
@@ -53,14 +104,26 @@ export function recordProfit(order: any, marketRate?: number): void {
   const feeProfit = order.feeJpy || 0;
   const totalProfit = spreadProfit + feeProfit;
 
+  // Calculate actual costs recorded for this order
+  let totalCost = 0;
   try {
-    db.prepare(`INSERT OR REPLACE INTO profit_records (order_id, direction, crypto, customer_jpy, market_rate, customer_rate, spread_profit, fee_profit, total_profit)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    totalCost = getTotalTransactionCost(order.id);
+  } catch { /* cost table may not have entries yet */ }
+  // Fall back to estimated cost if no actual costs recorded
+  if (totalCost === 0 && order.estimatedCost) {
+    totalCost = order.estimatedCost;
+  }
+  const netProfit = totalProfit - totalCost;
+
+  try {
+    db.prepare(`INSERT OR REPLACE INTO profit_records (order_id, direction, crypto, customer_jpy, market_rate, customer_rate, spread_profit, fee_profit, total_profit, total_cost, net_profit)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
       order.id, direction, crypto, customerJpy, mRate, customerRate,
-      Math.round(spreadProfit), Math.round(feeProfit), Math.round(totalProfit)
+      Math.round(spreadProfit), Math.round(feeProfit), Math.round(totalProfit),
+      Math.round(totalCost), Math.round(netProfit)
     );
-  } catch (e: any) {
-    console.error('[ProfitTracker] Failed to record:', e.message);
+  } catch (e: unknown) {
+    logger.error('Failed to record profit', { error: e instanceof Error ? e.message : String(e) });
   }
 }
 
@@ -69,31 +132,37 @@ export function getDailyProfit(date: string) {
     SELECT COALESCE(SUM(total_profit),0) as totalProfit,
            COALESCE(SUM(spread_profit),0) as spreadProfit,
            COALESCE(SUM(fee_profit),0) as feeProfit,
+           COALESCE(SUM(total_cost),0) as totalCost,
+           COALESCE(SUM(net_profit),0) as netProfit,
            COUNT(*) as orderCount
     FROM profit_records WHERE date(created_at) = ?
-  `).get(date) as any;
+  `).get(date) as ProfitAggregateRow;
   return {
     totalProfit: row.totalProfit,
     spreadProfit: row.spreadProfit,
     feeProfit: row.feeProfit,
+    totalCost: row.totalCost,
+    netProfit: row.netProfit,
     orderCount: row.orderCount,
     avgProfitPerOrder: row.orderCount > 0 ? Math.round(row.totalProfit / row.orderCount) : 0,
   };
 }
 
-export function getMonthlyProfit(year: number, month: number): any[] {
+export function getMonthlyProfit(year: number, month: number): ProfitDailyRow[] {
   const monthStr = `${year}-${String(month).padStart(2, '0')}`;
   return db.prepare(`
     SELECT date(created_at) as date,
            COALESCE(SUM(total_profit),0) as totalProfit,
            COALESCE(SUM(spread_profit),0) as spreadProfit,
            COALESCE(SUM(fee_profit),0) as feeProfit,
+           COALESCE(SUM(total_cost),0) as totalCost,
+           COALESCE(SUM(net_profit),0) as netProfit,
            COUNT(*) as orderCount
     FROM profit_records
     WHERE strftime('%Y-%m', created_at) = ?
     GROUP BY date(created_at)
     ORDER BY date(created_at)
-  `).all(monthStr) as any[];
+  `).all(monthStr) as ProfitDailyRow[];
 }
 
 export function getProfitSummary() {
@@ -104,25 +173,31 @@ export function getProfitSummary() {
     SELECT COALESCE(SUM(total_profit),0) as totalProfit,
            COALESCE(SUM(spread_profit),0) as spreadProfit,
            COALESCE(SUM(fee_profit),0) as feeProfit,
+           COALESCE(SUM(total_cost),0) as totalCost,
+           COALESCE(SUM(net_profit),0) as netProfit,
            COUNT(*) as orderCount
     FROM profit_records WHERE date(created_at) >= date('now', '-7 days')
-  `).get() as any;
+  `).get() as ProfitAggregateRow;
 
   const monthRow = db.prepare(`
     SELECT COALESCE(SUM(total_profit),0) as totalProfit,
            COALESCE(SUM(spread_profit),0) as spreadProfit,
            COALESCE(SUM(fee_profit),0) as feeProfit,
+           COALESCE(SUM(total_cost),0) as totalCost,
+           COALESCE(SUM(net_profit),0) as netProfit,
            COUNT(*) as orderCount
     FROM profit_records WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')
-  `).get() as any;
+  `).get() as ProfitAggregateRow;
 
   const allRow = db.prepare(`
     SELECT COALESCE(SUM(total_profit),0) as totalProfit,
            COALESCE(SUM(spread_profit),0) as spreadProfit,
            COALESCE(SUM(fee_profit),0) as feeProfit,
+           COALESCE(SUM(total_cost),0) as totalCost,
+           COALESCE(SUM(net_profit),0) as netProfit,
            COUNT(*) as orderCount
     FROM profit_records
-  `).get() as any;
+  `).get() as ProfitAggregateRow;
 
   const byCrypto = db.prepare(`
     SELECT crypto,
@@ -130,9 +205,9 @@ export function getProfitSummary() {
            COUNT(*) as orderCount
     FROM profit_records WHERE date(created_at) = date('now')
     GROUP BY crypto
-  `).all() as any[];
+  `).all() as ProfitCryptoRow[];
 
-  const mkSummary = (r: any) => ({
+  const mkSummary = (r: ProfitAggregateRow) => ({
     ...r,
     avgProfitPerOrder: r.orderCount > 0 ? Math.round(r.totalProfit / r.orderCount) : 0,
   });
@@ -146,7 +221,7 @@ export function getProfitSummary() {
   };
 }
 
-export function getHourlyProfit(date: string): any[] {
+export function getHourlyProfit(date: string): ProfitHourlyRow[] {
   const rows = db.prepare(`
     SELECT CAST(strftime('%H', created_at) AS INTEGER) as hour,
            COALESCE(SUM(total_profit),0) as totalProfit,
@@ -155,9 +230,9 @@ export function getHourlyProfit(date: string): any[] {
            COUNT(*) as orderCount
     FROM profit_records WHERE date(created_at) = ?
     GROUP BY hour ORDER BY hour
-  `).all(date) as any[];
+  `).all(date) as ProfitHourlyRow[];
 
-  const hourMap = new Map(rows.map((r: any) => [r.hour, r]));
+  const hourMap = new Map(rows.map((r) => [r.hour, r]));
   const result = [];
   for (let h = 0; h < 24; h++) {
     const data = hourMap.get(h);
@@ -181,7 +256,7 @@ export function setProfitGoal(amount: number): void {
   setSetting('profitGoalDaily', String(amount));
 }
 
-export function get7DayTrend(): any[] {
+export function get7DayTrend(): ProfitTrendRow[] {
   return db.prepare(`
     SELECT date(created_at) as date,
            COALESCE(SUM(total_profit),0) as totalProfit,
@@ -190,5 +265,5 @@ export function get7DayTrend(): any[] {
     WHERE date(created_at) >= date('now', '-7 days')
     GROUP BY date(created_at)
     ORDER BY date(created_at)
-  `).all() as any[];
+  `).all() as ProfitTrendRow[];
 }

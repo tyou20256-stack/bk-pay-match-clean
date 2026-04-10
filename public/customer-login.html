@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay Match — Customer Login</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#6c5ce7">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pay Match">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+
+    [data-theme="dark"]{
+      --primary:#6c5ce7;
+      --primary-hover:#5a4bd6;
+      --primary-soft:rgba(108,92,231,.12);
+      --bg:#0c1017;
+      --bg2:#141a25;
+      --card:#1a2233;
+      --card2:#1e2a3d;
+      --border:#243049;
+      --text:#edf0f7;
+      --text2:#c0c8d8;
+      --dim:#aab8d0;
+      --green:#34d399;
+      --green-soft:rgba(52,211,153,.1);
+      --red:#f87171;
+      --red-soft:rgba(248,113,113,.08);
+      --input-bg:#0f1520;
+      --shadow:0 4px 24px rgba(0,0,0,.4);
+      --focus-ring:0 0 0 3px rgba(108,92,231,.35)
+    }
+
+    body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Segoe UI',sans-serif;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+      padding:20px;
+      line-height:1.5
+    }
+
+    .login-container{
+      width:100%;
+      max-width:420px
+    }
+
+    .login-box{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:36px 32px;
+      box-shadow:var(--shadow)
+    }
+
+    .login-logo{
+      text-align:center;
+      margin-bottom:8px;
+      font-size:22px;
+      font-weight:800;
+      letter-spacing:-.3px
+    }
+    .login-logo .brand{color:var(--primary)}
+
+    .login-subtitle{
+      text-align:center;
+      font-size:12px;
+      color:var(--dim);
+      margin-bottom:28px
+    }
+
+    /* Tab switcher */
+    .tab-switcher{
+      display:flex;
+      gap:4px;
+      background:var(--bg2);
+      border-radius:10px;
+      padding:4px;
+      margin-bottom:24px
+    }
+    .tab-btn{
+      flex:1;
+      padding:10px 0;
+      border:none;
+      border-radius:8px;
+      background:none;
+      color:var(--dim);
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+      font-family:inherit;
+      transition:all .2s
+    }
+    .tab-btn.active{
+      background:var(--primary);
+      color:#fff;
+      box-shadow:0 2px 8px rgba(108,92,231,.3)
+    }
+    .tab-btn:not(.active):hover{
+      color:var(--text2)
+    }
+
+    /* Form */
+    .form-group{margin-bottom:16px}
+    .form-label{
+      display:block;
+      font-size:11px;
+      font-weight:700;
+      color:var(--dim);
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      margin-bottom:6px
+    }
+    .form-input{
+      width:100%;
+      padding:11px 14px;
+      border-radius:8px;
+      border:1px solid var(--border);
+      background:var(--input-bg);
+      color:var(--text);
+      font-size:14px;
+      font-family:inherit;
+      transition:border-color .2s, box-shadow .2s
+    }
+    .form-input:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:var(--focus-ring)
+    }
+    .form-input::placeholder{color:var(--dim)}
+    .form-input.error{border-color:var(--red)}
+
+    .password-wrapper{position:relative}
+    .password-toggle{
+      position:absolute;
+      right:12px;
+      top:50%;
+      transform:translateY(-50%);
+      background:none;
+      border:none;
+      color:var(--dim);
+      cursor:pointer;
+      font-size:16px;
+      padding:4px;
+      line-height:1
+    }
+    .password-toggle:hover{color:var(--text2)}
+
+    .btn-primary{
+      width:100%;
+      padding:12px;
+      border-radius:8px;
+      border:none;
+      background:var(--primary);
+      color:#fff;
+      font-size:14px;
+      font-weight:700;
+      cursor:pointer;
+      font-family:inherit;
+      margin-top:8px;
+      transition:background .2s, transform .1s, opacity .2s
+    }
+    .btn-primary:hover{background:var(--primary-hover)}
+    .btn-primary:active{transform:scale(.98)}
+    .btn-primary:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+      transform:none
+    }
+
+    /* Messages */
+    .message{
+      font-size:12px;
+      text-align:center;
+      margin-top:14px;
+      padding:10px 14px;
+      border-radius:8px;
+      display:none;
+      animation:fadeIn .2s ease
+    }
+    .message.error{
+      display:block;
+      background:var(--red-soft);
+      color:var(--red);
+      border:1px solid rgba(248,113,113,.2)
+    }
+    .message.success{
+      display:block;
+      background:var(--green-soft);
+      color:var(--green);
+      border:1px solid rgba(52,211,153,.2)
+    }
+
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+    /* Form sections */
+    .form-section{display:none}
+    .form-section.active{display:block}
+
+    /* Footer */
+    .login-footer{
+      text-align:center;
+      margin-top:20px;
+      font-size:11px;
+      color:var(--dim)
+    }
+    .login-footer a{
+      color:var(--primary);
+      text-decoration:none
+    }
+    .login-footer a:hover{text-decoration:underline}
+
+    /* Language selector */
+    .lang-selector{
+      display:flex;
+      justify-content:center;
+      gap:4px;
+      margin-bottom:20px
+    }
+    .lang-btn{
+      padding:4px 10px;
+      font-size:10px;
+      font-weight:600;
+      border:1px solid var(--border);
+      background:none;
+      color:var(--dim);
+      border-radius:4px;
+      cursor:pointer;
+      font-family:inherit;
+      transition:all .2s
+    }
+    .lang-btn:hover{border-color:var(--text2);color:var(--text2)}
+    .lang-btn.active{
+      border-color:var(--primary);
+      color:var(--primary);
+      background:var(--primary-soft)
+    }
+
+    /* Loading spinner on button */
+    .btn-spinner{
+      display:inline-block;
+      width:14px;
+      height:14px;
+      border:2px solid rgba(255,255,255,.3);
+      border-top-color:#fff;
+      border-radius:50%;
+      animation:spin .6s linear infinite;
+      vertical-align:middle;
+      margin-right:6px
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Field hint */
+    .field-hint{
+      font-size:10px;
+      color:var(--dim);
+      margin-top:4px
+    }
+    .field-error{
+      font-size:10px;
+      color:var(--red);
+      margin-top:4px;
+      display:none
+    }
+
+    /* Responsive */
+    @media(max-width:480px){
+      .login-box{padding:28px 20px}
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <!-- Language selector -->
+    <div class="lang-selector">
+      <button class="lang-btn active" data-lang="ja">JP</button>
+      <button class="lang-btn" data-lang="en">EN</button>
+      <button class="lang-btn" data-lang="zh">ZH</button>
+      <button class="lang-btn" data-lang="vi">VI</button>
+    </div>
+
+    <div class="login-box">
+      <div class="login-logo">Pay <span class="brand">Match</span></div>
+      <div class="login-subtitle" data-i18n="cust_login_subtitle">P2P Payment Platform</div>
+
+      <!-- Tab switcher -->
+      <div class="tab-switcher" role="tablist" aria-label="Login or Register">
+        <button class="tab-btn active" id="tabLogin" data-i18n="cust_tab_login" role="tab" aria-selected="true" aria-controls="loginForm" aria-label="Login tab">Login</button>
+        <button class="tab-btn" id="tabRegister" data-i18n="cust_tab_register" role="tab" aria-selected="false" aria-controls="registerForm" aria-label="Register tab">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <div class="form-section active" id="loginForm" role="tabpanel" aria-labelledby="tabLogin">
+        <div class="form-group">
+          <label class="form-label" for="loginEmail" data-i18n="cust_email">Email</label>
+          <input class="form-input" id="loginEmail" type="email" autocomplete="email"
+                 data-i18n-placeholder="cust_email_placeholder">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="loginPassword" data-i18n="cust_password">Password</label>
+          <div class="password-wrapper">
+            <input class="form-input" id="loginPassword" type="password" autocomplete="current-password"
+                   data-i18n-placeholder="cust_password_placeholder">
+            <button class="password-toggle" type="button" data-target="loginPassword" aria-label="Toggle password visibility">&#x1F441;</button>
+          </div>
+        </div>
+        <button class="btn-primary" id="loginBtn" data-i18n="cust_login_btn">Login</button>
+        <div class="message" id="loginMessage"></div>
+      </div>
+
+      <!-- Register Form -->
+      <div class="form-section" id="registerForm" role="tabpanel" aria-labelledby="tabRegister">
+        <div class="form-group">
+          <label class="form-label" for="regEmail" data-i18n="cust_email">Email</label>
+          <input class="form-input" id="regEmail" type="email" autocomplete="email"
+                 data-i18n-placeholder="cust_email_placeholder" aria-describedby="regEmailError">
+          <div class="field-error" id="regEmailError"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regDisplayName" data-i18n="cust_display_name">Display Name</label>
+          <input class="form-input" id="regDisplayName" type="text" autocomplete="name"
+                 data-i18n-placeholder="cust_display_name_placeholder">
+          <div class="field-hint" data-i18n="cust_display_name_hint">Optional</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regPassword" data-i18n="cust_password">Password</label>
+          <div class="password-wrapper">
+            <input class="form-input" id="regPassword" type="password" autocomplete="new-password"
+                   data-i18n-placeholder="cust_password_placeholder" aria-describedby="regPasswordError">
+            <button class="password-toggle" type="button" data-target="regPassword" aria-label="Toggle password visibility">&#x1F441;</button>
+          </div>
+          <div class="field-hint" data-i18n="cust_password_hint">8 characters minimum</div>
+          <div class="field-error" id="regPasswordError"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="regConfirmPassword" data-i18n="cust_confirm_password">Confirm Password</label>
+          <div class="password-wrapper">
+            <input class="form-input" id="regConfirmPassword" type="password" autocomplete="new-password"
+                   data-i18n-placeholder="cust_confirm_password_placeholder" aria-describedby="regConfirmError">
+            <button class="password-toggle" type="button" data-target="regConfirmPassword" aria-label="Toggle password visibility">&#x1F441;</button>
+          </div>
+          <div class="field-error" id="regConfirmError"></div>
+        </div>
+        <button class="btn-primary" id="registerBtn" data-i18n="cust_register_btn">Create Account</button>
+        <div class="message" id="registerMessage"></div>
+      </div>
+    </div>
+
+    <div class="login-footer">
+      <a href="/index.html" data-i18n="cust_back_home">Back to Home</a>
+    </div>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="customer-login-app.js"></script>
+</body>
+</html>

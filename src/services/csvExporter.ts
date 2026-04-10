@@ -6,7 +6,33 @@ import * as dbSvc from './database.js';
 
 type ExportFormat = 'standard' | 'freee' | 'yayoi';
 
-function escapeCSV(val: any): string {
+interface OrderRow {
+  id: string;
+  createdAt: number;
+  direction: string;
+  amount: number;
+  crypto: string;
+  cryptoAmount: number;
+  rate: number;
+  exchange?: string | null;
+  status: string;
+  payMethod: string;
+}
+
+interface BankAccountRow {
+  id: number;
+  bank_name: string;
+  branch_name: string;
+  account_type: string;
+  account_number: string;
+  account_holder: string;
+  daily_limit: number;
+  priority: number | string;
+  status: string;
+  memo?: string | null;
+}
+
+function escapeCSV(val: unknown): string {
   if (val == null) return '';
   const s = String(val);
   if (s.includes(',') || s.includes('"') || s.includes('\n')) {
@@ -15,7 +41,7 @@ function escapeCSV(val: any): string {
   return s;
 }
 
-function toCSV(headers: string[], rows: any[][]): string {
+function toCSV(headers: string[], rows: unknown[][]): string {
   const lines = [headers.map(escapeCSV).join(',')];
   for (const row of rows) {
     lines.push(row.map(escapeCSV).join(','));
@@ -23,7 +49,7 @@ function toCSV(headers: string[], rows: any[][]): string {
   return lines.join('\n');
 }
 
-function filterByDate(orders: any[], from?: string, to?: string): any[] {
+function filterByDate(orders: OrderRow[], from?: string, to?: string): OrderRow[] {
   let filtered = orders;
   if (from) {
     const fromTs = new Date(from).getTime();
@@ -44,11 +70,11 @@ function formatDateTime(ts: number): string {
   return new Date(ts).toISOString().replace('T', ' ').slice(0, 19);
 }
 
-function directionLabel(order: any): string {
+function directionLabel(order: OrderRow): string {
   return order.direction === 'sell' ? '売却' : '購入';
 }
 
-function calcFee(order: any): number {
+function calcFee(order: OrderRow): number {
   return Math.round(order.amount * 0.02);
 }
 
@@ -88,7 +114,7 @@ export function exportFreee(from?: string, to?: string): string {
   const orders = filterByDate(allOrders, from, to).filter(o => o.status === 'completed');
 
   const headers = ['取引日', '勘定科目', '税区分', '金額', '取引先', '品目', 'メモ'];
-  const rows: any[][] = [];
+  const rows: unknown[][] = [];
 
   for (const o of orders) {
     const date = formatDate(o.createdAt);
@@ -109,7 +135,7 @@ export function exportYayoi(from?: string, to?: string): string {
   const orders = filterByDate(allOrders, from, to).filter(o => o.status === 'completed');
 
   const headers = ['日付', '伝票番号', '借方科目', '借方金額', '貸方科目', '貸方金額', '摘要'];
-  const rows: any[][] = [];
+  const rows: unknown[][] = [];
   let slipNo = 1;
 
   for (const o of orders) {
@@ -128,7 +154,7 @@ export function exportYayoi(from?: string, to?: string): string {
 export function exportAccounts(): string {
   const accounts = dbSvc.getBankAccounts();
   const headers = ['ID', '銀行名', '支店名', '口座種別', '口座番号', '口座名義', '1日上限額', '優先度', 'ステータス', 'メモ'];
-  const rows = accounts.map((a: any) => [
+  const rows = accounts.map((a: BankAccountRow) => [
     a.id, a.bank_name, a.branch_name, a.account_type, a.account_number,
     a.account_holder, a.daily_limit, a.priority, a.status, a.memo || ''
   ]);

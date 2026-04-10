@@ -1,0 +1,5 @@
+# Pre-commit quality gate:
+#  - ESLint: zero errors required, warnings tolerated (74 legacy warnings exist
+#    after ESLint v9 migration; will be cleaned up incrementally in future PRs)
+#  - tsc: strict type check
+npx eslint src/ && npx tsc --noEmit

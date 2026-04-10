@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://bkpay.app/</loc>
+    <priority>1.0</priority>
+    <changefreq>hourly</changefreq>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://bkpay.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://bkpay.app/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://bkpay.app/?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="vi" href="https://bkpay.app/?lang=vi"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://bkpay.app/"/>
+  </url>
+  <url>
+    <loc>https://bkpay.app/buy-usdt.html</loc>
+    <priority>0.9</priority>
+    <changefreq>hourly</changefreq>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://bkpay.app/buy-usdt.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://bkpay.app/buy-usdt.html?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://bkpay.app/buy-usdt.html?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="vi" href="https://bkpay.app/buy-usdt.html?lang=vi"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://bkpay.app/buy-usdt.html"/>
+  </url>
+  <url>
+    <loc>https://bkpay.app/pay.html</loc>
+    <priority>0.9</priority>
+    <changefreq>hourly</changefreq>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://bkpay.app/pay.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://bkpay.app/pay.html?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://bkpay.app/pay.html?lang=zh"/>
+    <xhtml:link rel="alternate" hreflang="vi" href="https://bkpay.app/pay.html?lang=vi"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://bkpay.app/pay.html"/>
+  </url>
+  <url>
+    <loc>https://bkpay.app/seller-register.html</loc>
+    <priority>0.7</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://bkpay.app/guide.html</loc>
+    <priority>0.7</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://bkpay.app/manual.html</loc>
+    <priority>0.6</priority>
+    <changefreq>weekly</changefreq>
+  </url>
+<url>
+    <loc>https://bkpay.app/lp/usdt-buy.html</loc>
+    <priority>0.9</priority>
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://bkpay.app/terms.html</loc>
+    <priority>0.4</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://bkpay.app/privacy.html</loc>
+    <priority>0.4</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+</urlset>

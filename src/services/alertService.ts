@@ -3,11 +3,13 @@
  * @description レートを60秒ごとに監視し、重要な変動をスタッフにTelegram通知。
  */
 
-const BOT_TOKEN = '8447506670:AAGY2bcpbZxTe9OL3Jzxpdo86CHkb47XIig';
-const STAFF_CHAT_ID = '5791086501';
-const API_BASE = 'http://localhost:3003';
+import logger from './logger.js';
+
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const STAFF_CHAT_ID = process.env.TELEGRAM_STAFF_CHAT_ID || '';
+const API_BASE = process.env.API_BASE || 'http://localhost:3003';
 const CHECK_INTERVAL = 60_000;
-const MIN_ALERT_INTERVAL = 5 * 60_000; // 5 minutes between same type alerts
+const MIN_ALERT_INTERVAL = 60 * 60_000; // 1 hour between same type alerts
 
 interface RateSnapshot {
   price: number;
@@ -26,7 +28,7 @@ async function sendAlert(text: string): Promise<void> {
       body: JSON.stringify({ chat_id: STAFF_CHAT_ID, text, parse_mode: 'HTML' }),
     });
   } catch (e) {
-    console.error('[AlertService] Send failed:', e);
+    logger.error('Alert send failed', { error: e instanceof Error ? e.message : String(e) });
   }
 }
 
@@ -40,13 +42,13 @@ function canAlert(type: string): boolean {
 async function checkRates() {
   try {
     const res = await fetch(`${API_BASE}/api/rates/USDT`);
-    const data = await res.json();
+    const data = await res.json() as { success?: boolean; rates?: Record<string, unknown>[]; data?: Record<string, unknown>[] };
     if (!data.success) return;
 
     const rates = data.rates || data.data || [];
     if (!Array.isArray(rates) || rates.length === 0) return;
 
-    const prices = rates.map((r: any) => Number(r.price)).filter((p: number) => p > 0);
+    const prices = rates.map((r) => Number((r as Record<string, unknown>).price)).filter((p: number) => p > 0);
     if (prices.length === 0) return;
 
     const minPrice = Math.min(...prices);
@@ -74,7 +76,7 @@ async function checkRates() {
       }
     }
 
-    // Check 2: Arbitrage opportunity > 2%
+    // Check 2: Arbitrage opportunity > 10% (P2P spreads are normally 5-20%)
     if (rates.length >= 2) {
       for (let i = 0; i < rates.length; i++) {
         for (let j = i + 1; j < rates.length; j++) {
@@ -82,7 +84,7 @@ async function checkRates() {
           const p2 = Number(rates[j].price);
           if (p1 <= 0 || p2 <= 0) continue;
           const diff = Math.abs(p1 - p2) / Math.min(p1, p2) * 100;
-          if (diff > 2 && canAlert(`arb_${rates[i].exchange}_${rates[j].exchange}`)) {
+          if (diff > 10 && canAlert(`arb_${rates[i].exchange}_${rates[j].exchange}`)) {
             const [cheap, expensive] = p1 < p2
               ? [rates[i], rates[j]]
               : [rates[j], rates[i]];
@@ -112,13 +114,13 @@ async function checkRates() {
       }
     }
   } catch (e) {
-    console.error('[AlertService] Check error:', e);
+    logger.error('Rate check error', { error: e instanceof Error ? e.message : String(e) });
   }
 }
 
 export function startAlerts() {
   if (intervalId) return;
-  console.log('[AlertService] Starting rate monitoring (60s interval)...');
+  logger.info('Starting rate monitoring (60s interval)');
   checkRates(); // Initial check
   intervalId = setInterval(checkRates, CHECK_INTERVAL);
 }

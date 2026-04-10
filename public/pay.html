@@ -2,163 +2,63 @@
 <html lang="ja" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Pay Match — 振り込むだけ。暗号通貨が届く。</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    [data-theme="dark"]{--bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;--border:#243049;--text:#edf0f7;--text2:#a0aec0;--dim:#5a6a85;--green:#34d399;--green2:#10b981;--green-soft:rgba(52,211,153,.1);--green-border:rgba(52,211,153,.25);--red:#f87171;--red-soft:rgba(248,113,113,.08);--blue:#60a5fa;--blue-soft:rgba(96,165,250,.08);--yellow:#fbbf24;--yellow-soft:rgba(251,191,36,.08);--purple:#a78bfa;--input-bg:#0f1520;--shadow:0 2px 12px rgba(0,0,0,.3)}
-    [data-theme="light"]{--bg:#f5f7fa;--bg2:#fff;--card:#fff;--card2:#f8fafc;--border:#e2e8f0;--text:#1a202c;--text2:#4a5568;--dim:#a0aec0;--green:#059669;--green2:#047857;--green-soft:rgba(5,150,105,.08);--green-border:rgba(5,150,105,.2);--red:#dc2626;--red-soft:rgba(220,38,38,.06);--blue:#2563eb;--blue-soft:rgba(37,99,235,.06);--yellow:#d97706;--yellow-soft:rgba(217,119,6,.06);--purple:#7c3aed;--input-bg:#f1f5f9;--shadow:0 2px 12px rgba(0,0,0,.06)}
-    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Segoe UI',sans-serif;font-size:14px;line-height:1.6;min-height:100vh;display:flex;flex-direction:column}
-
-    .pay-header{padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--card)}
-    .pay-logo{font-size:16px;font-weight:800;letter-spacing:-.5px}.pay-logo span{color:var(--green)}
-    .pay-header-right{display:flex;gap:6px}
-    .pay-icon-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
-    .pay-container{max-width:480px;margin:0 auto;padding:20px 16px;flex:1;width:100%}
-
-    /* Steps */
-    .steps{display:flex;gap:0;margin-bottom:20px}
-    .step-ind{flex:1;text-align:center;padding:8px 0;font-size:10px;font-weight:600;color:var(--dim)}
-    .step-ind .step-num{display:block;width:26px;height:26px;border-radius:50%;border:2px solid var(--border);margin:0 auto 3px;line-height:22px;font-size:11px;font-weight:800;transition:all .2s}
-    .step-ind.active{color:var(--green)}.step-ind.active .step-num{border-color:var(--green);background:var(--green);color:#fff}
-    .step-ind.done{color:var(--text2)}.step-ind.done .step-num{border-color:var(--green);background:var(--green-soft);color:var(--green)}
-    .step-ind:not(:last-child){position:relative}
-    .step-ind:not(:last-child)::after{content:'';position:absolute;top:21px;left:calc(50% + 18px);right:calc(-50% + 18px);height:2px;background:var(--border)}
-    .step-ind.done:not(:last-child)::after{background:var(--green)}
-
-    .panel{display:none}.panel.active{display:block}
-    .section-title{font-size:17px;font-weight:700;text-align:center;margin-bottom:4px}
-    .section-desc{font-size:12px;color:var(--text2);text-align:center;margin-bottom:18px}
-
-    /* Amount input */
-    .amount-input-wrap{position:relative;margin-bottom:12px}
-    .amount-prefix{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:20px;font-weight:700;color:var(--dim)}
-    .amount-input{width:100%;padding:14px 14px 14px 36px;font-size:24px;font-weight:700;background:var(--input-bg);border:2px solid var(--border);border-radius:12px;color:var(--text);font-family:inherit;text-align:center;transition:border-color .2s}
-    .amount-input:focus{outline:none;border-color:var(--green)}
-    .amount-input::placeholder{color:var(--dim);font-weight:400;font-size:16px}
-    .quick-amounts{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:14px}
-    .quick-btn{padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
-    .quick-btn:hover,.quick-btn.active{border-color:var(--green);color:var(--green);background:var(--green-soft)}
-
-    /* Convert preview */
-    .convert-box{padding:10px 14px;background:var(--card);border-radius:8px;border:1px solid var(--border);margin-bottom:14px}
-    .convert-row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
-    .convert-label{color:var(--dim)}.convert-val{font-weight:600}
-    .convert-val.hl{color:var(--green);font-size:14px}
-
-    /* Payment method select */
-    .pay-methods{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}
-    .pay-method{padding:12px;border-radius:10px;border:2px solid var(--border);background:var(--card);cursor:pointer;text-align:center;transition:all .15s}
-    .pay-method:hover,.pay-method.selected{border-color:var(--green);background:var(--green-soft)}
-    .pay-method-name{font-size:13px;font-weight:700;margin-bottom:2px}
-    .pay-method-desc{font-size:10px;color:var(--dim)}
-
-    /* Matching animation */
-    .matching-screen{text-align:center;padding:40px 0}
-    .matching-spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .matching-text{font-size:14px;font-weight:600;margin-bottom:6px}
-    .matching-sub{font-size:11px;color:var(--dim)}
-    .matching-log{margin-top:16px;text-align:left;padding:10px;background:var(--input-bg);border-radius:8px;font-size:10px;color:var(--dim);max-height:120px;overflow-y:auto;font-family:'SF Mono',Monaco,monospace}
-    .matching-log div{padding:2px 0}
-    .matching-log .ok{color:var(--green)}
-    .matching-log .warn{color:var(--yellow)}
-
-    /* Payment info display */
-    .payment-info{margin-bottom:16px}
-    .pi-card{padding:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:10px}
-    .pi-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px}
-    .pi-value{font-size:15px;font-weight:700;color:var(--text);word-break:break-all;margin-bottom:4px}
-    .pi-sub{font-size:11px;color:var(--text2)}
-    .pi-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
-    .pi-row:last-child{border-bottom:none}
-    .pi-row-label{color:var(--dim)}.pi-row-val{font-weight:600}
-    .pi-qr{width:180px;height:180px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin:10px auto;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--dim)}
-
-    /* Timer */
-    .timer-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--yellow-soft);border:1px solid rgba(251,191,36,.3);border-radius:8px;margin-bottom:14px}
-    .timer-icon{font-size:16px;flex-shrink:0}
-    .timer-text{font-size:11px;color:var(--text2);flex:1}
-    .timer-count{font-size:18px;font-weight:800;color:var(--yellow);flex-shrink:0;min-width:50px;text-align:right}
-    .timer-bar.urgent{background:var(--red-soft);border-color:rgba(248,113,113,.3)}
-    .timer-bar.urgent .timer-count{color:var(--red)}
-
-    /* Status */
-    .status-card{text-align:center;padding:24px;background:var(--card);border-radius:12px;border:1px solid var(--border);margin-bottom:14px}
-    .status-icon{font-size:40px;margin-bottom:10px}
-    .status-title{font-size:16px;font-weight:700;margin-bottom:4px}
-    .status-desc{font-size:12px;color:var(--text2)}
-    .status-card.success{border-color:var(--green-border);background:var(--green-soft)}
-    .status-card.success .status-title{color:var(--green)}
-    .status-card.fallback{border-color:rgba(251,191,36,.3);background:var(--yellow-soft)}
-
-    /* Mode badge */
-    .mode-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
-    .mode-badge.auto{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
-    .mode-badge.manual{background:var(--yellow-soft);color:var(--yellow);border:1px solid rgba(251,191,36,.3)}
-
-    /* Buttons */
-    .btn-primary{width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
-    .btn-primary:hover{background:var(--green2)}.btn-primary:disabled{opacity:.4;cursor:not-allowed}
-    .btn-secondary{width:100%;padding:11px;border-radius:10px;border:1px solid var(--border);background:none;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px}
-    .btn-secondary:hover{border-color:var(--text);color:var(--text)}
-    .btn-danger{background:var(--red)}.btn-danger:hover{opacity:.9}
-    .copy-btn{width:100%;padding:10px;border-radius:8px;border:1px solid var(--green-border);background:var(--green-soft);color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:6px}
-    .copy-btn:hover{background:var(--green);color:#fff}
-
-    /* Summary */
-    .summary{padding:12px 14px;background:var(--card);border-radius:10px;border:1px solid var(--border);margin-bottom:14px}
-    .summary-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
-    .summary-label{color:var(--dim)}.summary-val{font-weight:600}
-    .summary-val.big{font-size:16px;color:var(--green)}
-
-    .trust-bar{display:flex;gap:16px;justify-content:center;padding:14px 0;margin-top:12px;border-top:1px solid var(--border)}
-    .trust-item{text-align:center}.trust-icon{font-size:14px;margin-bottom:2px}.trust-text{font-size:9px;color:var(--dim)}
-
-
-    /* Buy/Sell tabs */
-    .direction-tabs{display:flex;gap:0;margin-bottom:16px;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
-    .dir-tab{flex:1;padding:12px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;background:var(--card);color:var(--text2);transition:all .15s;border:none;font-family:inherit}
-    .dir-tab.active{background:var(--green);color:#fff}
-    .dir-tab:first-child{border-right:1px solid var(--border)}
-    .sell-panel{display:none}.sell-panel.active{display:block}
-    .bank-form{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-    .bank-form input{padding:10px 14px;font-size:13px;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit}
-    .bank-form input:focus{outline:none;border-color:var(--green)}
-    .bank-form label{font-size:11px;color:var(--dim);font-weight:600}
-    .deposit-addr{padding:12px;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;word-break:break-all;font-size:13px;font-weight:600;text-align:center;margin-bottom:8px}
-
-    .pay-footer{text-align:center;padding:14px;font-size:9px;color:var(--dim);border-top:1px solid var(--border)}
-
-    .embed .pay-header,.embed .pay-footer{display:none}.embed .pay-container{padding:12px}
-    @media(max-width:380px){.quick-amounts{grid-template-columns:repeat(3,1fr)}.amount-input{font-size:20px}}
-  </style>
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#34d399">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Pay Match">
-<link rel="apple-touch-icon" href="/icon-192.png">
-<link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>暗号通貨購入 - 銀行振込でUSDT/BTC/ETHをP2P購入 | PayMatch</title>
+  <meta name="description" content="銀行振込・PayPay・LINE Payで暗号通貨を購入。3つのP2P取引所から最安レートを自動マッチング。USDT・BTC・ETH対応。5-15分で完了。">
+  <meta name="keywords" content="暗号通貨 購入, USDT 銀行振込, BTC 購入 日本円, ETH 購入, P2P 取引, PayPay 暗号通貨, PayMatch">
+  <link rel="canonical" href="https://bkpay.app/pay.html">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="暗号通貨購入 - 銀行振込でP2P最安レート | PayMatch">
+  <meta property="og:description" content="銀行振込・PayPay・LINE Payで暗号通貨を購入。3取引所から最安レートを自動マッチング。">
+  <meta property="og:url" content="https://bkpay.app/pay.html">
+  <meta property="og:site_name" content="PayMatch">
+  <meta property="og:image" content="https://bkpay.app/og-image.svg">
+  <meta property="og:image:type" content="image/svg+xml">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="暗号通貨購入 - P2P最安レート | PayMatch">
+  <meta name="twitter:description" content="銀行振込でUSDT/BTC/ETHを最安レートで購入。5-15分で完了。">
+  <meta name="twitter:image" content="https://bkpay.app/og-image.svg">
+  <link rel="alternate" hreflang="ja" href="https://bkpay.app/pay.html">
+  <link rel="alternate" hreflang="en" href="https://bkpay.app/pay.html?lang=en">
+  <link rel="alternate" hreflang="zh" href="https://bkpay.app/pay.html?lang=zh">
+  <link rel="alternate" hreflang="vi" href="https://bkpay.app/pay.html?lang=vi">
+  <link rel="alternate" hreflang="x-default" href="https://bkpay.app/pay.html">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"WebApplication","name":"PayMatch Payment","description":"Buy cryptocurrency with JPY via bank transfer, PayPay, LINE Pay at the best P2P rate","url":"https://bkpay.app/pay.html","applicationCategory":"FinanceApplication","operatingSystem":"Web","offers":{"@type":"AggregateOffer","priceCurrency":"JPY","lowPrice":"1000","highPrice":"1000000","offerCount":"3"}}
+  </script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"PayMatch","item":"https://bkpay.app/"},{"@type":"ListItem","position":2,"name":"暗号通貨購入","item":"https://bkpay.app/pay.html"}]}
+  </script>
+  <link rel="stylesheet" href="pay.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#34d399">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PayMatch">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
 </head>
 <body>
   <div class="pay-header">
     <div class="pay-logo">Pay <span>Match</span></div>
-    <div class="pay-header-right"><div class="lang-selector" style="display:inline-flex;gap:2px"><button class="lang-btn active" data-lang="ja" onclick="setLanguage('ja')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">JP</button><button class="lang-btn" data-lang="en" onclick="setLanguage('en')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">EN</button><button class="lang-btn" data-lang="zh" onclick="setLanguage('zh')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">中</button><button class="lang-btn" data-lang="vi" onclick="setLanguage('vi')" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">VI</button></div><button class="pay-icon-btn" onclick="toggleTheme()" id="themeBtn">D</button></div>
+    <div class="pay-header-right"><a href="/buy-usdt.html" style="text-decoration:none;padding:6px 16px;background:#10b981;color:#fff;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap">USDT購入</a><div class="lang-selector" style="display:inline-flex;gap:2px"><button class="lang-btn active" data-lang="ja" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">JP</button><button class="lang-btn" data-lang="en" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">EN</button><button class="lang-btn" data-lang="zh" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">中</button><button class="lang-btn" data-lang="vi" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">VI</button></div><button class="pay-icon-btn" id="themeBtn">D</button></div>
   </div>
 
   <div class="pay-container">
 
-    <div class="direction-tabs" id="directionTabs">
-      <button class="dir-tab active" onclick="setDirection('buy',this)">購入（円→暗号通貨）</button>
-      <button class="dir-tab" onclick="setDirection('sell',this)">売却（暗号通貨→円）</button>
+    <div class="direction-tabs" id="directionTabs" role="tablist" aria-label="取引方向">
+      <button class="dir-tab active" data-dir="buy" role="tab" aria-selected="true" aria-controls="buySteps" id="tabBuy">購入（円→暗号通貨）</button>
+      <button class="dir-tab" data-dir="sell" role="tab" aria-selected="false" aria-controls="sellFlow" id="tabSell">売却（暗号通貨→円）</button>
     </div>
 
-    <div class="steps" id="buySteps">
-      <div class="step-ind active" id="s1"><span class="step-num">1</span data-i18n="step1">金額・方法</div>
-      <div class="step-ind" id="s2"><span class="step-num">2</span data-i18n="matching">マッチング</div>
-      <div class="step-ind" id="s3"><span class="step-num">3</span data-i18n="confirm_payment">お支払い</div>
-      <div class="step-ind" id="s4"><span class="step-num">4</span data-i18n="completed">完了</div>
+    <div class="steps" id="buySteps" role="tabpanel" aria-labelledby="tabBuy">
+      <div class="step-ind active" id="s1"><span class="step-num">1</span><span data-i18n="step1">金額・方法</span></div>
+      <div class="step-ind" id="s2"><span class="step-num">2</span><span data-i18n="matching">マッチング</span></div>
+      <div class="step-ind" id="s3"><span class="step-num">3</span><span data-i18n="confirm_payment">お支払い</span></div>
+      <div class="step-ind" id="s4"><span class="step-num">4</span><span data-i18n="completed">完了</span></div>
     </div>
 
     <!-- STEP 1: Amount & Payment Method -->
@@ -166,37 +66,42 @@
       <div class="section-title" data-i18n="enter_amount">入金額と支払方法</div>
       <div class="section-desc">購入する暗号資産と日本円の金額を選択してください</div>
       <div style="display:flex;gap:6px;margin-bottom:14px;justify-content:center" id="cryptoSelector">
-        <button class="quick-btn active" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selCrypto('USDT',this)">USDT</button>
-        <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selCrypto('BTC',this)">BTC</button>
-        <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selCrypto('ETH',this)">ETH</button>
+        <button class="quick-btn active" style="flex:1;padding:10px;font-size:13px;font-weight:700" data-crypto="USDT">USDT</button>
+        <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" data-crypto="BTC">BTC</button>
+        <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" data-crypto="ETH">ETH</button>
       </div>
       <div class="amount-input-wrap">
         <span class="amount-prefix">¥</span>
-        <input type="tel" class="amount-input" id="inAmount" placeholder="10000" inputmode="numeric" pattern="[0-9]*" oninput="onAmountChange()">
+        <input type="tel" class="amount-input" id="inAmount" placeholder="10000" inputmode="numeric" pattern="[0-9]*" aria-label="金額（日本円）">
       </div>
       <div class="quick-amounts">
-        <button class="quick-btn" onclick="setAmt(5000,this)">¥5,000</button>
-        <button class="quick-btn" onclick="setAmt(10000,this)">¥10,000</button>
-        <button class="quick-btn" onclick="setAmt(30000,this)">¥30,000</button>
-        <button class="quick-btn" onclick="setAmt(50000,this)">¥50,000</button>
-        <button class="quick-btn" onclick="setAmt(100000,this)">¥100,000</button>
-        <button class="quick-btn" onclick="setAmt(300000,this)">¥300,000</button>
-        <button class="quick-btn" onclick="setAmt(500000,this)">¥500,000</button>
-        <button class="quick-btn" onclick="setAmt(1000000,this)">¥1,000,000</button>
+        <button class="quick-btn" data-amount="5000">¥5,000</button>
+        <button class="quick-btn" data-amount="10000">¥10,000</button>
+        <button class="quick-btn" data-amount="30000">¥30,000</button>
+        <button class="quick-btn" data-amount="50000">¥50,000</button>
+        <button class="quick-btn" data-amount="100000">¥100,000</button>
+        <button class="quick-btn" data-amount="300000">¥300,000</button>
+        <button class="quick-btn" data-amount="500000">¥500,000</button>
+        <button class="quick-btn" data-amount="1000000">¥1,000,000</button>
       </div>
       <div class="section-desc" style="margin-top:4px">支払方法を選択</div>
       <div class="pay-methods">
-        <div class="pay-method selected" onclick="selPay('bank',this)"><div class="pay-method-name">銀行振込</div><div class="pay-method-desc">全銀行対応</div></div>
-        <div class="pay-method" onclick="selPay('paypay',this)"><div class="pay-method-name">PayPay</div><div class="pay-method-desc">即時決済</div></div>
-        <div class="pay-method" onclick="selPay('linepay',this)"><div class="pay-method-name">LINE Pay</div><div class="pay-method-desc">即時決済</div></div>
-        <div class="pay-method" onclick="selPay('aupay',this)"><div class="pay-method-name">au PAY</div><div class="pay-method-desc">即時決済</div></div>
+        <div class="pay-method selected" data-pay="bank"><div class="pay-method-name">銀行振込</div><div class="pay-method-desc">全銀行対応</div></div>
+        <div class="pay-method" data-pay="paypay"><div class="pay-method-name">PayPay</div><div class="pay-method-desc">即時決済</div></div>
+        <div class="pay-method" data-pay="linepay"><div class="pay-method-name">LINE Pay</div><div class="pay-method-desc">即時決済</div></div>
+        <div class="pay-method" data-pay="aupay"><div class="pay-method-name">au PAY</div><div class="pay-method-desc">即時決済</div></div>
       </div>
       <div class="convert-box" id="convertBox" style="display:none">
         <div class="convert-row"><span class="convert-label">現在の最安レート</span><span class="convert-val" id="cvRate">--</span></div>
         <div class="convert-row"><span class="convert-label">受取り予定額</span><span class="convert-val hl" id="cvUsdt">--</span></div>
         <div class="convert-row"><span class="convert-label">手数料 (2.0%)</span><span class="convert-val" id="cvFee">--</span></div>
       </div>
-      <button class="btn-primary" id="btnGo" onclick="startMatching()" disabled>マッチング開始</button>
+      <div class="wallet-input-wrap" id="walletInputWrap" style="display:none;margin-bottom:12px">
+        <div class="section-desc" style="margin-bottom:4px">受取ウォレットアドレス（TRC-20）</div>
+        <input type="text" class="amount-input" id="inWalletAddr" placeholder="Tで始まるTRONアドレスを入力" style="font-size:12px;padding-left:14px;letter-spacing:0.5px;font-family:monospace" aria-label="受取ウォレットアドレス（TRC-20）">
+        <div style="font-size:9px;color:var(--dim);margin-top:2px">USDTの受取先アドレスを入力してください（必須）</div>
+      </div>
+      <button class="btn-primary" id="btnGo" disabled>マッチング開始</button>
       <div class="trust-bar">
         <div class="trust-item"><div class="trust-icon">&#x1F512;</div><div class="trust-text">エスクロー保護</div></div>
         <div class="trust-item"><div class="trust-icon">&#x26A1;</div><div class="trust-text">5-15分で完了</div></div>
@@ -220,8 +125,8 @@
           <div class="status-title">自社決済に切り替えます</div>
           <div class="status-desc">現在マッチング可能なマーチャントが見つかりませんでした。<br>自社アカウントで対応します。</div>
         </div>
-        <button class="btn-primary" onclick="useFallback()">自社決済で続ける</button>
-        <button class="btn-secondary" onclick="go(1)">金額を変更する</button>
+        <button class="btn-primary" id="btnUseFallback">自社決済で続ける</button>
+        <button class="btn-secondary" data-go-step="1" id="btnBackToAmount">金額を変更する</button>
       </div>
     </div>
 
@@ -253,25 +158,25 @@
         <div class="summary-row"><span class="summary-label">受取予定</span><span class="summary-val big" id="sumUsdt">--</span></div>
       </div>
 
-      <button class="btn-primary" onclick="confirmPaid()">振込完了 -- 確認を待つ</button>
-      <button class="btn-secondary" onclick="cancelOrder()" style="color:var(--red);border-color:var(--red)">注文をキャンセル</button>
+      <button class="btn-primary" id="btnConfirmPaid">振込完了 -- 確認を待つ</button>
+      <button class="btn-secondary" id="btnCancelOrder" style="color:var(--red);border-color:var(--red)">注文をキャンセル</button>
     </div>
 
     <!-- STEP 4: Done -->
     <div class="panel" id="p4">
       <div class="status-card success" id="successCard">
         <div class="status-icon">&#x2705;</div>
-        <div class="status-title">入金が確認されました</div>
-        <div class="status-desc">残高に反映されるまで1〜5分お待ちください</div>
+        <div class="status-title">振込完了を報告しました</div>
+        <div class="status-desc">スタッフが入金を確認後、USDTを送金します。<br>通常5〜15分で完了します。</div>
       </div>
       <div class="summary" id="finalSummary"></div>
-      <button class="btn-primary" onclick="go(1)">新しい入金をする</button>
+      <button class="btn-primary" id="btnNewDeposit">新しい入金をする</button>
     </div>
   </div>
 
 
     <!-- SELL FLOW -->
-    <div id="sellFlow" style="display:none">
+    <div id="sellFlow" style="display:none" role="tabpanel" aria-labelledby="tabSell">
       <div class="steps" id="sellSteps">
         <div class="step-ind active" id="ss1"><span class="step-num">1</span>通貨・金額</div>
         <div class="step-ind" id="ss2"><span class="step-num">2</span>入金先</div>
@@ -284,12 +189,12 @@
         <div class="section-title">売却する暗号通貨</div>
         <div class="section-desc">通貨と数量を入力し、振込先銀行情報を入力してください</div>
         <div style="display:flex;gap:6px;margin-bottom:14px;justify-content:center" id="sellCryptoSelector">
-          <button class="quick-btn active" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selSellCrypto('USDT',this)">USDT</button>
-          <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selSellCrypto('BTC',this)">BTC</button>
-          <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" onclick="selSellCrypto('ETH',this)">ETH</button>
+          <button class="quick-btn active" style="flex:1;padding:10px;font-size:13px;font-weight:700" data-sell-crypto="USDT">USDT</button>
+          <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" data-sell-crypto="BTC">BTC</button>
+          <button class="quick-btn" style="flex:1;padding:10px;font-size:13px;font-weight:700" data-sell-crypto="ETH">ETH</button>
         </div>
         <div class="amount-input-wrap">
-          <input type="text" class="amount-input" id="sellAmount" placeholder="100" inputmode="decimal" oninput="onSellAmountChange()" style="padding-left:14px">
+          <input type="text" class="amount-input" id="sellAmount" placeholder="100" inputmode="decimal" style="padding-left:14px" aria-label="売却数量">
         </div>
         <div class="convert-box" id="sellConvertBox" style="display:none;margin-bottom:14px">
           <div class="convert-row"><span class="convert-label">現在の売却レート</span><span class="convert-val" id="sellCvRate">--</span></div>
@@ -298,15 +203,15 @@
         <div class="section-desc" style="margin-top:8px">振込先銀行情報</div>
         <div class="bank-form">
           <label>銀行名</label>
-          <input type="text" id="sellBankName" placeholder="三菱UFJ銀行">
-          <label>支店名</label>
-          <input type="text" id="sellBranchName" placeholder="新宿支店">
-          <label>口座番号</label>
-          <input type="text" id="sellAccountNumber" placeholder="1234567" inputmode="numeric">
-          <label>口座名義（カタカナ）</label>
-          <input type="text" id="sellAccountHolder" placeholder="タナカ タロウ">
+          <input type="text" id="sellBankName" placeholder="三菱UFJ銀行" aria-label="銀行名" autocomplete="off">
+          <label for="sellBranchName">支店名</label>
+          <input type="text" id="sellBranchName" placeholder="新宿支店" aria-label="支店名" autocomplete="off">
+          <label for="sellAccountNumber">口座番号</label>
+          <input type="text" id="sellAccountNumber" placeholder="1234567" inputmode="numeric" aria-label="口座番号" autocomplete="off">
+          <label for="sellAccountHolder">口座名義（カタカナ）</label>
+          <input type="text" id="sellAccountHolder" placeholder="タナカ タロウ" aria-label="口座名義" autocomplete="off">
         </div>
-        <button class="btn-primary" id="btnSellGo" onclick="startSellOrder()" disabled>売却注文を作成</button>
+        <button class="btn-primary" id="btnSellGo" disabled>売却注文を作成</button>
       </div>
 
       <!-- SELL STEP 2 -->
@@ -316,7 +221,7 @@
         <div class="pi-card">
           <div class="pi-label">入金先アドレス (TRC-20)</div>
           <div class="deposit-addr" id="sellDepositAddr">--</div>
-          <button class="copy-btn" onclick="copyText(document.getElementById('sellDepositAddr').textContent)">アドレスをコピー</button>
+          <button class="copy-btn" id="btnCopySellAddr">アドレスをコピー</button>
         </div>
         <div class="summary" style="margin-top:14px">
           <div class="summary-row"><span class="summary-label">売却通貨</span><span class="summary-val" id="sellSumCrypto">--</span></div>
@@ -324,8 +229,8 @@
           <div class="summary-row"><span class="summary-label">売却レート</span><span class="summary-val" id="sellSumRate">--</span></div>
           <div class="summary-row"><span class="summary-label">受取予定額</span><span class="summary-val big" id="sellSumJpy">--</span></div>
         </div>
-        <button class="btn-primary" onclick="goSell(3)">送金しました</button>
-        <button class="btn-secondary" onclick="goSell(1)">キャンセル</button>
+        <button class="btn-primary" id="btnSellSent">送金しました</button>
+        <button class="btn-secondary" id="btnSellCancel">キャンセル</button>
       </div>
 
       <!-- SELL STEP 3 -->
@@ -354,7 +259,7 @@
           <div class="status-desc">指定の銀行口座へ日本円をお振込みしました</div>
         </div>
         <div class="summary" id="sellFinalSummary"></div>
-        <button class="btn-primary" onclick="setDirection('sell');goSell(1)">新しい売却をする</button>
+        <button class="btn-primary" id="btnNewSell">新しい売却をする</button>
       </div>
     </div>
 
@@ -362,344 +267,7 @@
 
   <div class="pay-footer">Pay Match v2.0 -- Powered by P2P Aggregation</div>
 
-  <script>
-    var amount=0,payMethod='bank',selectedCrypto='USDT',currentOrder=null,timerSec=900,timerInterval=null;
-
-    // Config
-    var WALLET='TXxx...設定してください';
-    var FALLBACK_ACCOUNTS={
-      bank:{name:'BK決済',bank:'三菱UFJ銀行',branch:'新宿支店',type:'普通',number:'1234567',holder:'カ）ビーケーストック'},
-      paypay:{id:'bkstock-pay',qr:'https://qr.paypay.ne.jp/example'},
-      linepay:{url:'https://line.me/pay/example'},
-      aupay:{id:'bk-aupay'}
-    };
-
-    // Theme
-    function toggleTheme(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);document.getElementById('themeBtn').textContent=n==='dark'?'D':'L';localStorage.setItem('theme',n);}
-    (function(){var s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
-    if(location.search.indexOf('embed')>-1)document.body.classList.add('embed');
-
-    // Navigation
-    function go(n){
-      for(var i=1;i<=4;i++){
-        document.getElementById('p'+i).classList.toggle('active',i===n);
-        var s=document.getElementById('s'+i);s.classList.remove('active','done');
-        if(i<n)s.classList.add('done');if(i===n)s.classList.add('active');
-      }
-      if(timerInterval&&n!==3){clearInterval(timerInterval);timerInterval=null;}
-      window.scrollTo(0,0);
-    }
-
-    // Step 1
-    function setAmt(v,el){amount=v;document.getElementById('inAmount').value=v;document.querySelectorAll('.quick-btn').forEach(function(b){b.classList.remove('active');});el.classList.add('active');onAmountChange();}
-    function selCrypto(c,el){selectedCrypto=c;document.querySelectorAll('#cryptoSelector .quick-btn').forEach(function(b){b.classList.remove('active');});el.classList.add('active');onAmountChange();}
-    function selPay(m,el){payMethod=m;document.querySelectorAll('.pay-method').forEach(function(b){b.classList.remove('selected');});el.classList.add('selected');}
-    function onAmountChange(){
-      amount=parseInt(document.getElementById('inAmount').value)||0;
-      var box=document.getElementById('convertBox'),btn=document.getElementById('btnGo');
-      if(amount>=500){box.style.display='block';btn.disabled=false;fetchPreview();}
-      else{box.style.display='none';btn.disabled=true;}
-    }
-    async function fetchPreview(){
-      try{
-        var r=await fetch('/api/rates/'+selectedCrypto);var j=await r.json();if(!j.success)return;
-        var best=null;
-        j.data.rates.forEach(function(ex){ex.buyOrders.forEach(function(o){
-          if(o.minLimit<=amount&&(o.maxLimit===0||o.maxLimit>=amount)&&o.merchant.completionRate>=90){
-            if(hasPayMethod(o,payMethod)&&(!best||o.price<best.price))best=o;
-          }
-        });});
-        if(!best)j.data.rates.forEach(function(ex){ex.buyOrders.forEach(function(o){if(o.minLimit<=amount&&(o.maxLimit===0||o.maxLimit>=amount)){if(!best||o.price<best.price)best=o;}});});
-        if(best){
-          document.getElementById('cvRate').textContent='¥'+fmt(best.price)+' / '+selectedCrypto;
-          document.getElementById('cvUsdt').textContent=(amount/best.price).toFixed(selectedCrypto==='USDT'?2:6)+' '+selectedCrypto;
-        }
-      }catch(e){}
-    }
-    function hasPayMethod(order,method){
-      var map={bank:['銀行振込','Bank Transfer','Bank'],paypay:['PayPay'],linepay:['LINE Pay'],aupay:['au PAY']};
-      var keys=map[method]||[];
-      return order.paymentMethods.some(function(p){return keys.some(function(k){return p.indexOf(k)>-1;});});
-    }
-    function fmt(n){return Number(n).toLocaleString('ja-JP',{minimumFractionDigits:1,maximumFractionDigits:1});}
-
-    // Step 2: Matching
-    async function startMatching(){
-      go(2);
-      document.getElementById('matchingScreen').style.display='block';
-      document.getElementById('fallbackScreen').style.display='none';
-      var log=document.getElementById('matchLog');
-      log.innerHTML='';
-
-      addLog(log,'マッチング開始... 金額: ¥'+amount.toLocaleString());
-      await wait(300);
-      addLog(log,'支払方法: '+payMethod);
-      await wait(300);
-      addLog(log,'4取引所を検索中...');
-      await wait(200);
-
-      try{
-        var res=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:amount,payMethod:payMethod,crypto:selectedCrypto})});
-        var data=await res.json();
-        
-        if(!data.success){
-          addLog(log,'エラー: '+data.error,'warn');
-          showFallback();
-          return;
-        }
-
-        currentOrder=data.order;
-
-        if(currentOrder.mode==='auto'){
-          addLog(log,'Bybit を検索...','ok');await wait(200);
-          addLog(log,'Binance を検索...','ok');await wait(200);
-          addLog(log,'OKX を検索...','ok');await wait(200);
-          addLog(log,'HTX を検索...','ok');await wait(200);
-          addLog(log,'最適マーチャント: '+currentOrder.exchange+' / '+currentOrder.merchantName,'ok');
-          addLog(log,'レート: ¥'+fmt(currentOrder.rate)+' / '+currentOrder.crypto,'ok');
-          addLog(log,'完了率: '+currentOrder.merchantCompletionRate+'%','ok');
-          await wait(500);
-          addLog(log,'注文作成完了','ok');
-          await wait(300);
-          showPaymentFromOrder();
-        }else{
-          addLog(log,'P2Pマッチング: 該当なし','warn');
-          addLog(log,'自社決済に切り替え...','warn');
-          await wait(500);
-          addLog(log,'Account Routerから最適口座を取得','ok');
-          await wait(300);
-          addLog(log,'口座割当完了','ok');
-          await wait(300);
-          showPaymentFromOrder();
-        }
-      }catch(e){
-        addLog(log,'接続エラー','warn');
-        showFallback();
-      }
-    }
-
-    var currentOrder=null;
-
-    function showPaymentFromOrder(){
-      go(3);
-      var o=currentOrder;
-      var badge=document.getElementById('modeBadge');
-      if(o.mode==='self'){badge.className='mode-badge manual';badge.textContent='SELF MERCHANT';}
-      else{badge.className='mode-badge auto';badge.textContent='AUTO MATCH';}
-
-      // Payment info
-      var info=document.getElementById('paymentInfo');
-      var pi=o.paymentInfo;
-      if(pi.type==='bank'){
-        info.innerHTML='<div class="pi-card"><div class="pi-label">振込先口座</div>'
-          +'<div class="pi-row"><span class="pi-row-label">銀行名</span><span class="pi-row-val">'+pi.bankName+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">支店名</span><span class="pi-row-val">'+pi.branchName+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">口座種別</span><span class="pi-row-val">'+pi.accountType+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">口座番号</span><span class="pi-row-val" style="font-size:18px;letter-spacing:2px;font-weight:800">'+pi.accountNumber+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">口座名義</span><span class="pi-row-val">'+pi.accountHolder+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">振込金額</span><span class="pi-row-val" style="color:var(--green);font-size:18px;font-weight:800">¥'+o.amount.toLocaleString()+'</span></div>'
-          +(o.mode==='auto'?'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+o.merchantName+' (完了率'+o.merchantCompletionRate+'%)</span></div>':'')
-          +'</div>'
-          +'<button class="copy-btn" onclick="copyText(\x27'+pi.accountNumber+'\x27)">口座番号をコピー</button>';
-      }else{
-        var payNames={paypay:'PayPay',linepay:'LINE Pay',aupay:'au PAY'};
-        var pName=payNames[pi.type]||pi.type;
-        info.innerHTML='<div class="pi-card"><div class="pi-label">'+pName+' で支払い</div>'
-          +(pi.qrUrl?'<div class="pi-qr"><img src="'+pi.qrUrl+'" style="max-width:160px;max-height:160px" onerror="this.parentNode.textContent=\x27QR\x27"></div>':'<div class="pi-qr">'+pName+' QRコード</div>')
-          +'<div class="pi-row"><span class="pi-row-label">'+pName+' ID</span><span class="pi-row-val" style="font-weight:800">'+(pi.payId||'--')+'</span></div>'
-          +'<div class="pi-row"><span class="pi-row-label">支払金額</span><span class="pi-row-val" style="color:var(--green);font-size:18px;font-weight:800">¥'+o.amount.toLocaleString()+'</span></div>'
-          +(o.merchantName?'<div class="pi-row"><span class="pi-row-label">マーチャント</span><span class="pi-row-val">'+o.merchantName+'</span></div>':'')
-          +'</div>';
-      }
-
-      // Summary
-      document.getElementById('sumAmt').textContent='¥'+o.amount.toLocaleString();
-      document.getElementById('sumRate').textContent='¥'+fmt(o.rate)+' / '+(o.crypto||'USDT');
-      document.getElementById('sumExch').textContent=o.exchange||'--';
-      document.getElementById('sumUsdt').textContent=o.cryptoAmount+' '+(o.crypto||'USDT');
-
-      startTimer();
-    }
-
-    function addLog(el,msg,cls){el.innerHTML+='<div class="'+(cls||'')+'">['+(new Date).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'] '+msg+'</div>';el.scrollTop=el.scrollHeight;}
-    function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
-    function showFallback(){
-      document.getElementById('matchingScreen').style.display='none';
-      document.getElementById('fallbackScreen').style.display='block';
-    }
-    function useFallback(){currentOrder={id:'SELF',mode:'self',status:'pending_payment',amount:amount,crypto:'USDT',cryptoAmount:0,rate:0,payMethod:payMethod,exchange:'Pay Match（自社決済）',merchantName:'BK Stock',merchantCompletionRate:100,paymentInfo:null,createdAt:Date.now(),expiresAt:Date.now()+900000};fetchPreview().then(function(){showPaymentFromOrder();});}
-
-    // Step 3: Payment
-    
-    
-    
-    function fillSummary(){
-      document.getElementById('sumAmt').textContent='¥'+amount.toLocaleString();
-      document.getElementById('sumRate').textContent=currentOrder.price?'¥'+fmt(currentOrder.price)+' / '+(currentOrder.crypto||'USDT'):'計算中...';
-      document.getElementById('sumExch').textContent=currentOrder.exchange;
-      document.getElementById('sumUsdt').textContent=currentOrder.price?(amount/currentOrder.price).toFixed(2)+' '+(currentOrder.crypto||'USDT'):'--';
-    }
-    function startTimer(){
-      timerSec=900;clearInterval(timerInterval);
-      timerInterval=setInterval(function(){
-        timerSec--;if(timerSec<=0){clearInterval(timerInterval);cancelOrder();return;}
-        var m=Math.floor(timerSec/60),s=timerSec%60;
-        document.getElementById('timerCount').textContent=m+':'+(s<10?'0':'')+s;
-        document.getElementById('timerBar').classList.toggle('urgent',timerSec<120);
-      },1000);
-    }
-    function copyText(t){navigator.clipboard.writeText(t).then(function(){var b=event.target;b.textContent='コピーしました';setTimeout(function(){b.textContent='口座番号をコピー';},2000);});}
-
-    // Step 4
-    async function confirmPaid(){
-      clearInterval(timerInterval);
-      if(currentOrder){await fetch('/api/orders/'+currentOrder.id+'/paid',{method:'POST'});}
-      go(4);
-      var o=currentOrder||{};
-      document.getElementById('finalSummary').innerHTML=
-        '<div class="summary-row"><span class="summary-label">注文ID</span><span class="summary-val">'+(o.id||'--')+'</span></div>'
-        +'<div class="summary-row"><span class="summary-label">入金額</span><span class="summary-val">¥'+amount.toLocaleString()+'</span></div>'
-        +'<div class="summary-row"><span class="summary-label">レート</span><span class="summary-val">¥'+fmt(o.rate||0)+' / '+(o.crypto||'USDT')+'</span></div>'
-        +'<div class="summary-row"><span class="summary-label">受取り額</span><span class="summary-val big">'+(o.cryptoAmount||'--')+' '+(o.crypto||'USDT')+'</span></div>'
-        +'<div class="summary-row"><span class="summary-label">モード</span><span class="summary-val">'+(o.mode==='self'?'自社決済':'自動マッチング')+'</span></div>'
-        +'<div class="summary-row"><span class="summary-label">ステータス</span><span class="summary-val" style="color:var(--green)">確認中</span></div>';
-    }
-    function cancelOrder(){clearInterval(timerInterval);if(currentOrder)fetch('/api/orders/'+currentOrder.id+'/cancel',{method:'POST'});go(1);}
-
-    // === SELL FLOW ===
-    var sellCrypto='USDT',sellOrder=null,sellTimerSec=1800,sellTimerInterval=null;
-    var buyFlow=true;
-
-    function setDirection(dir,el){
-      buyFlow=(dir==='buy');
-      document.querySelectorAll('.dir-tab').forEach(function(b){b.classList.remove('active');});
-      if(el)el.classList.add('active');
-      else document.querySelectorAll('.dir-tab')[dir==='buy'?0:1].classList.add('active');
-
-      // Show/hide flows
-      var buyPanels=['p1','p2','p3','p4'];
-      buyPanels.forEach(function(id){document.getElementById(id).style.display=buyFlow?'':'none';});
-      document.getElementById('buySteps').style.display=buyFlow?'':'none';
-      document.getElementById('sellFlow').style.display=buyFlow?'none':'block';
-      if(!buyFlow)goSell(1);
-      else go(1);
-    }
-
-    function selSellCrypto(c,el){
-      sellCrypto=c;
-      document.querySelectorAll('#sellCryptoSelector .quick-btn').forEach(function(b){b.classList.remove('active');});
-      el.classList.add('active');
-      onSellAmountChange();
-    }
-
-    async function onSellAmountChange(){
-      var val=parseFloat(document.getElementById('sellAmount').value)||0;
-      var box=document.getElementById('sellConvertBox');
-      var btn=document.getElementById('btnSellGo');
-      if(val>0){
-        box.style.display='block';
-        try{
-          var r=await fetch('/api/rates/'+sellCrypto);var j=await r.json();
-          if(j.success){
-            var allSell=[];
-            j.data.rates.forEach(function(ex){(ex.sellOrders||[]).forEach(function(o){allSell.push(o);});});
-            allSell.sort(function(a,b){return Number(b.price)-Number(a.price);});
-            if(allSell.length>0){
-              var price=Number(allSell[0].price);
-              document.getElementById('sellCvRate').textContent='¥'+fmt(price)+' / '+sellCrypto;
-              document.getElementById('sellCvJpy').textContent='¥'+Math.floor(val*price).toLocaleString();
-            }
-          }
-        }catch(e){}
-        // Check all bank fields
-        var b1=document.getElementById('sellBankName').value;
-        var b2=document.getElementById('sellAccountNumber').value;
-        var b3=document.getElementById('sellAccountHolder').value;
-        btn.disabled=!(val>0&&b1&&b2&&b3);
-      }else{
-        box.style.display='none';
-        btn.disabled=true;
-      }
-    }
-
-    // Add input listeners for bank fields
-    ['sellBankName','sellBranchName','sellAccountNumber','sellAccountHolder'].forEach(function(id){
-      document.getElementById(id).addEventListener('input',onSellAmountChange);
-    });
-
-    async function startSellOrder(){
-      var cryptoAmount=parseFloat(document.getElementById('sellAmount').value);
-      var bankInfo={
-        bankName:document.getElementById('sellBankName').value,
-        branchName:document.getElementById('sellBranchName').value,
-        accountNumber:document.getElementById('sellAccountNumber').value,
-        accountHolder:document.getElementById('sellAccountHolder').value
-      };
-      try{
-        var res=await fetch('/api/orders/sell',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cryptoAmount:cryptoAmount,crypto:sellCrypto,customerBankInfo:bankInfo})});
-        var data=await res.json();
-        if(!data.success){alert(data.error||'エラーが発生しました');return;}
-        sellOrder=data.order;
-        document.getElementById('sellDepositAddr').textContent=sellOrder.depositAddress||'--';
-        document.getElementById('sellSumCrypto').textContent=sellOrder.crypto;
-        document.getElementById('sellSumAmount').textContent=sellOrder.cryptoAmount+' '+sellOrder.crypto;
-        document.getElementById('sellSumRate').textContent='¥'+fmt(sellOrder.rate);
-        document.getElementById('sellSumJpy').textContent='¥'+(sellOrder.jpyAmount||0).toLocaleString();
-        document.getElementById('sellOrderId').textContent=sellOrder.id;
-        goSell(2);
-      }catch(e){alert('サーバーに接続できませんでした');}
-    }
-
-    function goSell(n){
-      for(var i=1;i<=4;i++){
-        var sp=document.getElementById('sp'+i);
-        if(sp)sp.classList.toggle('active',i===n);
-        var ss=document.getElementById('ss'+i);
-        if(ss){ss.classList.remove('active','done');if(i<n)ss.classList.add('done');if(i===n)ss.classList.add('active');}
-      }
-      if(n===3)startSellTimer();
-      window.scrollTo(0,0);
-    }
-
-    function startSellTimer(){
-      sellTimerSec=1800;
-      if(sellTimerInterval)clearInterval(sellTimerInterval);
-      sellTimerInterval=setInterval(function(){
-        sellTimerSec--;if(sellTimerSec<=0){clearInterval(sellTimerInterval);return;}
-        var m=Math.floor(sellTimerSec/60),s=sellTimerSec%60;
-        document.getElementById('sellTimerCount').textContent=m+':'+(s<10?'0':'')+s;
-      },1000);
-      // Poll order status
-      if(sellOrder)pollSellStatus();
-    }
-
-    async function pollSellStatus(){
-      if(!sellOrder)return;
-      try{
-        var res=await fetch('/api/orders/'+sellOrder.id);
-        var data=await res.json();
-        if(data.success&&data.order){
-          var st=data.order.status;
-          document.getElementById('sellStatus').textContent=
-            st==='awaiting_deposit'?'入金待ち':
-            st==='deposit_received'?'入金確認済み（出金処理中）':
-            st==='completed'?'完了':'処理中';
-          if(st==='completed'){
-            clearInterval(sellTimerInterval);
-            goSell(4);
-            document.getElementById('sellFinalSummary').innerHTML=
-              '<div class="summary-row"><span class="summary-label">注文ID</span><span class="summary-val">'+sellOrder.id+'</span></div>'
-              +'<div class="summary-row"><span class="summary-label">売却数量</span><span class="summary-val">'+sellOrder.cryptoAmount+' '+sellOrder.crypto+'</span></div>'
-              +'<div class="summary-row"><span class="summary-label">振込額</span><span class="summary-val big">¥'+(sellOrder.jpyAmount||0).toLocaleString()+'</span></div>';
-            return;
-          }
-        }
-      }catch(e){}
-      setTimeout(pollSellStatus,10000);
-    }
-
-  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
-</script>
+  <script src="pay-app.js"></script>
 
 <!-- PWA Install Banner -->
 <div id="installBanner" style="display:none; position:fixed; bottom:0; left:0; right:0; padding:12px 16px; background:var(--card); border-top:1px solid var(--border); align-items:center; justify-content:space-between; z-index:1000">
@@ -707,27 +275,34 @@
     <div style="font-weight:700;font-size:13px">Pay Matchをインストール</div>
     <div style="font-size:11px;color:var(--dim)">ホーム画面に追加して素早くアクセス</div>
   </div>
-  <button onclick="installPWA()" class="btn btn-green" style="padding:6px 16px;font-size:12px">追加</button>
-  <button onclick="dismissInstall()" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px">✕</button>
+  <button id="btnInstallPWA" class="btn btn-green" style="padding:6px 16px;font-size:12px">追加</button>
+  <button id="btnDismissInstall" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px">✕</button>
 </div>
-<script>
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  if (!localStorage.getItem('pwa_dismissed')) {
-    document.getElementById('installBanner').style.display = 'flex';
-  }
-});
-function installPWA() {
-  if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
-  document.getElementById('installBanner').style.display = 'none';
-}
-function dismissInstall() {
-  document.getElementById('installBanner').style.display = 'none';
-  localStorage.setItem('pwa_dismissed', '1');
-}
-</script>
 <script src="i18n.js"></script>
+<script>
+(function(){
+  var tabs = document.querySelectorAll('#directionTabs [role="tab"]');
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      tabs.forEach(function(t){ t.setAttribute('aria-selected','false'); });
+      this.setAttribute('aria-selected','true');
+      var panel = document.getElementById(this.getAttribute('aria-controls'));
+      if(panel){
+        var first = panel.querySelector('input,button,.section-title');
+        if(first && first.focus) first.focus();
+      }
+    });
+    tab.addEventListener('keydown', function(e){
+      var idx = Array.prototype.indexOf.call(tabs, this);
+      if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+        e.preventDefault();
+        var next = e.key==='ArrowRight' ? (idx+1)%tabs.length : (idx-1+tabs.length)%tabs.length;
+        tabs[next].focus();
+        tabs[next].click();
+      }
+    });
+  });
+})();
+</script>
 </body>
 </html>

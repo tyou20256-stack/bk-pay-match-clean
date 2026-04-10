@@ -4,9 +4,10 @@
  */
 import db from './database.js';
 import * as dbSvc from './database.js';
+import logger from './logger.js';
 
 // === Schema ===
-(db as any).exec(`
+db.exec(`
   CREATE TABLE IF NOT EXISTS account_health (
     account_id INTEGER,
     date TEXT,
@@ -32,13 +33,22 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getOrCreateHealthRow(accountId: number, date: string): any {
-  let row = (db as any).prepare('SELECT * FROM account_health WHERE account_id = ? AND date = ?').get(accountId, date);
+interface HealthRow {
+  account_id: number;
+  date: string;
+  success_count: number;
+  fail_count: number;
+  consecutive_fails: number;
+  health_score: number;
+}
+
+function getOrCreateHealthRow(accountId: number, date: string): HealthRow {
+  let row = db.prepare('SELECT * FROM account_health WHERE account_id = ? AND date = ?').get(accountId, date) as HealthRow | undefined;
   if (!row) {
-    const prev = (db as any).prepare('SELECT consecutive_fails FROM account_health WHERE account_id = ? ORDER BY date DESC LIMIT 1').get(accountId);
+    const prev = db.prepare('SELECT consecutive_fails FROM account_health WHERE account_id = ? ORDER BY date DESC LIMIT 1').get(accountId) as { consecutive_fails: number } | undefined;
     const prevFails = prev?.consecutive_fails || 0;
-    (db as any).prepare('INSERT INTO account_health (account_id, date, success_count, fail_count, consecutive_fails, health_score) VALUES (?, ?, 0, 0, ?, 100)').run(accountId, date, prevFails);
-    row = (db as any).prepare('SELECT * FROM account_health WHERE account_id = ? AND date = ?').get(accountId, date);
+    db.prepare('INSERT INTO account_health (account_id, date, success_count, fail_count, consecutive_fails, health_score) VALUES (?, ?, 0, 0, ?, 100)').run(accountId, date, prevFails);
+    row = db.prepare('SELECT * FROM account_health WHERE account_id = ? AND date = ?').get(accountId, date) as HealthRow;
   }
   return row;
 }
@@ -64,24 +74,24 @@ export function recordOrderResult(accountId: number, success: boolean): void {
   const d = today();
   getOrCreateHealthRow(accountId, d);
   if (success) {
-    (db as any).prepare('UPDATE account_health SET success_count = success_count + 1, consecutive_fails = 0 WHERE account_id = ? AND date = ?').run(accountId, d);
+    db.prepare('UPDATE account_health SET success_count = success_count + 1, consecutive_fails = 0 WHERE account_id = ? AND date = ?').run(accountId, d);
   } else {
-    (db as any).prepare('UPDATE account_health SET fail_count = fail_count + 1, consecutive_fails = consecutive_fails + 1 WHERE account_id = ? AND date = ?').run(accountId, d);
+    db.prepare('UPDATE account_health SET fail_count = fail_count + 1, consecutive_fails = consecutive_fails + 1 WHERE account_id = ? AND date = ?').run(accountId, d);
   }
   const updated = getOrCreateHealthRow(accountId, d);
   const score = computeHealthScore(updated.success_count, updated.fail_count, updated.consecutive_fails);
-  (db as any).prepare('UPDATE account_health SET health_score = ? WHERE account_id = ? AND date = ?').run(score, accountId, d);
+  db.prepare('UPDATE account_health SET health_score = ? WHERE account_id = ? AND date = ?').run(score, accountId, d);
 }
 
 export function markTransferFailed(accountId: number): void {
   recordOrderResult(accountId, false);
   dbSvc.updateBankAccount(accountId, { status: 'frozen' });
-  console.log(`[FreezeDetector] Account ${accountId} frozen due to transfer failure`);
+  logger.info('Account frozen due to transfer failure', { accountId });
 }
 
 export function checkAccountHealth(accountId: number): AccountHealth | null {
   const accounts = dbSvc.getBankAccounts();
-  const account = accounts.find((a: any) => a.id === accountId);
+  const account = accounts.find((a: { id: number; bank_name: string }) => a.id === accountId);
   if (!account) return null;
   const d = today();
   const row = getOrCreateHealthRow(accountId, d);
@@ -95,7 +105,7 @@ export function checkAccountHealth(accountId: number): AccountHealth | null {
 
 export function getHealthDashboard(): AccountHealth[] {
   const accounts = dbSvc.getBankAccounts();
-  return accounts.map((a: any) => {
+  return accounts.map((a: { id: number; bank_name: string }) => {
     const health = checkAccountHealth(a.id);
     return health || {
       accountId: a.id, bankName: a.bank_name, consecutiveFailures: 0,
@@ -111,22 +121,22 @@ export function autoRestUnhealthyAccounts(): { rested: number; frozen: number } 
     if (health.recommendation === 'frozen' && health.consecutiveFailures >= 5) {
       dbSvc.updateBankAccount(health.accountId, { status: 'frozen' });
       frozen++;
-      console.log(`[FreezeDetector] Auto-frozen account ${health.accountId} (${health.bankName})`);
+      logger.info('Auto-frozen account', { accountId: health.accountId, bankName: health.bankName });
     } else if (health.recommendation === 'rest' && health.consecutiveFailures >= 3) {
       dbSvc.updateBankAccount(health.accountId, { status: 'rest' });
       rested++;
-      console.log(`[FreezeDetector] Auto-rested account ${health.accountId} (${health.bankName})`);
+      logger.info('Auto-rested account', { accountId: health.accountId, bankName: health.bankName });
     }
   }
   return { rested, frozen };
 }
 
 export function initFreezeDetector(): void {
-  console.log('[FreezeDetector] Initialized');
+  logger.info('FreezeDetector initialized');
   setInterval(() => {
     const result = autoRestUnhealthyAccounts();
     if (result.rested > 0 || result.frozen > 0) {
-      console.log(`[FreezeDetector] Auto-check: ${result.rested} rested, ${result.frozen} frozen`);
+      logger.info('Auto-check completed', { rested: result.rested, frozen: result.frozen });
     }
   }, 10 * 60 * 1000);
 }

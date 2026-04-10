@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USDT売却者登録 - USDTをJPYに換金 | PayMatch P2Pセラー</title>
+  <meta name="description" content="USDTをJPYに換金。PayMatchにUSDTをデポジットして、P2P購入者にマッチング。取引所を使わずにUSDT→JPY換金が可能。セラー登録は無料。">
+  <link rel="canonical" href="https://bkpay.app/seller-register.html">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="USDT売却者登録 - USDTをJPYに換金 | PayMatch">
+  <meta property="og:description" content="USDTをJPYに換金。デポジットして自動P2Pマッチング。">
+  <meta property="og:url" content="https://bkpay.app/seller-register.html">
+  <meta property="og:site_name" content="PayMatch">
+  <meta property="og:image" content="https://bkpay.app/og-image.svg">
+  <meta property="og:image:type" content="image/svg+xml">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="USDT売却者登録 | PayMatch">
+  <meta name="twitter:description" content="USDTをJPYに換金。取引所不要のP2Pマッチング。">
+  <meta name="twitter:image" content="https://bkpay.app/og-image.svg">
+  <meta name="theme-color" content="#34d399">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <style>
+    :root[data-theme="dark"] {
+      --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --text: #e8eaf0;
+      --dim: #6b7280; --green: #22c55e; --green-soft: rgba(34,197,94,.1);
+      --yellow: #eab308; --red: #ef4444; --blue: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
+    .logo { font-size: 20px; font-weight: 700; color: var(--green); margin-bottom: 32px; }
+    .logo span { color: var(--text); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 100%; max-width: 440px; }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--dim); margin-bottom: 20px; text-transform: uppercase; letter-spacing: .05em; }
+    label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 4px; margin-top: 14px; }
+    label:first-of-type { margin-top: 0; }
+    input, select { width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; outline: none; }
+    input:focus, select:focus { border-color: var(--green); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btn { width: 100%; padding: 14px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 20px; transition: opacity .2s; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-green { background: var(--green); color: #000; }
+    .btn-green:hover:not(:disabled) { opacity: .85; }
+    .msg { margin-top: 16px; padding: 12px; border-radius: 8px; font-size: 13px; text-align: center; }
+    .msg-success { background: var(--green-soft); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+    .msg-error { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+    .note { font-size: 12px; color: var(--dim); line-height: 1.6; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .link { color: var(--green); text-decoration: none; font-size: 13px; display: block; text-align: center; margin-top: 16px; }
+    .link:hover { text-decoration: underline; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,.3); border-top-color: #000; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .required { color: var(--red); margin-left: 2px; }
+  </style>
+</head>
+<body>
+  <div class="logo">Pay <span>Match</span></div>
+
+  <div class="card" id="formCard">
+    <div class="card-title">セラー登録申請</div>
+
+    <label for="name">お名前 <span class="required">*</span></label>
+    <input type="text" id="name" placeholder="山田太郎" autocomplete="name" aria-required="true">
+
+    <label for="email">メールアドレス <span class="required">*</span></label>
+    <input type="email" id="email" placeholder="seller@example.com" autocomplete="email" aria-required="true">
+
+    <label for="password">パスワード（8文字以上） <span class="required">*</span></label>
+    <input type="password" id="password" placeholder="8文字以上" autocomplete="new-password" aria-required="true">
+
+    <label for="paypayId">PayPay ID</label>
+    <input type="text" id="paypayId" placeholder="yamada-t-1234">
+
+    <label for="linepayId">LINE Pay ID</label>
+    <input type="text" id="linepayId" placeholder="line_pay_id">
+
+    <label for="aupayId">au PAY ID</label>
+    <input type="text" id="aupayId" placeholder="aupay_id">
+
+    <div class="row2" style="margin-top:14px">
+      <div>
+        <label for="minAmount" style="margin-top:0">最低金額 (JPY)</label>
+        <input type="number" id="minAmount" placeholder="1000" value="1000" min="100">
+      </div>
+      <div>
+        <label for="maxAmount" style="margin-top:0">最高金額 (JPY)</label>
+        <input type="number" id="maxAmount" placeholder="500000" value="500000" min="100">
+      </div>
+    </div>
+
+    <button class="btn btn-green" id="submitBtn">登録申請する</button>
+    <div id="msg" style="display:none" class="msg"></div>
+
+    <div class="note">
+      登録後は管理者の審査・承認が必要です。承認後にUSDT残高を付与していただくことで取引が可能になります。
+    </div>
+  </div>
+
+  <a href="/seller-dashboard.html" class="link">ログイン / ダッシュボードへ →</a>
+
+  <script src="seller-register-app.js"></script>
+</body>
+</html>

@@ -3,137 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BK P2P Aggregator - 利用ガイド</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    [data-theme="dark"]{--bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;--border:#243049;--text:#edf0f7;--text2:#a0aec0;--dim:#5a6a85;--green:#34d399;--green-soft:rgba(52,211,153,.08);--green-border:rgba(52,211,153,.25);--red:#f87171;--red-soft:rgba(248,113,113,.08);--red-border:rgba(248,113,113,.25);--blue:#60a5fa;--blue-soft:rgba(96,165,250,.08);--yellow:#fbbf24;--yellow-soft:rgba(251,191,36,.08);--purple:#a78bfa;--purple-soft:rgba(167,139,250,.08);--shadow:0 2px 8px rgba(0,0,0,.3)}
-    [data-theme="light"]{--bg:#f5f7fa;--bg2:#fff;--card:#fff;--card2:#f8fafc;--border:#e2e8f0;--text:#1a202c;--text2:#4a5568;--dim:#a0aec0;--green:#059669;--green-soft:rgba(5,150,105,.06);--green-border:rgba(5,150,105,.2);--red:#dc2626;--red-soft:rgba(220,38,38,.06);--red-border:rgba(220,38,38,.2);--blue:#2563eb;--blue-soft:rgba(37,99,235,.06);--yellow:#d97706;--yellow-soft:rgba(217,119,6,.06);--purple:#7c3aed;--purple-soft:rgba(124,58,237,.06);--shadow:0 2px 8px rgba(0,0,0,.06)}
-    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;font-size:14px;line-height:1.7}
-
-    /* Top nav */
-    .topbar{position:sticky;top:0;z-index:100;background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;justify-content:space-between;align-items:center;backdrop-filter:blur(12px)}
-    .topbar-left{display:flex;align-items:center;gap:12px}
-    .topbar-left a{color:var(--text2);text-decoration:none;font-size:12px;padding:6px 14px;border:1px solid var(--border);border-radius:6px;transition:all .15s}
-    .topbar-left a:hover{border-color:var(--green);color:var(--green)}
-    .topbar-title{font-size:14px;font-weight:700}
-    .topbar-right{display:flex;gap:6px}
-    .topbar-btn{background:none;border:1px solid var(--border);color:var(--text2);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
-    .topbar-btn:hover{border-color:var(--text);color:var(--text)}
-
-    /* Layout */
-    .container{max-width:840px;margin:0 auto;padding:32px 24px 60px}
-
-    /* Hero */
-    .guide-hero{text-align:center;margin-bottom:40px;padding:32px 0}
-    .guide-hero h1{font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
-    .guide-hero p{color:var(--text2);font-size:14px;max-width:500px;margin:0 auto}
-
-    /* TOC */
-    .toc{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:40px}
-    .toc-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text2);font-size:12px;transition:all .15s}
-    .toc-item:hover{border-color:var(--green);color:var(--text);background:var(--card2)}
-    .toc-num{width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:6px;font-size:10px;font-weight:700;color:var(--dim);flex-shrink:0}
-    .toc-item:hover .toc-num{background:var(--green-soft);color:var(--green)}
-
-    /* Section */
-    .section{margin-bottom:48px}
-    .section-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid var(--border)}
-    .section-num{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--green-soft);border:1px solid var(--green-border);border-radius:8px;font-size:14px;font-weight:800;color:var(--green);flex-shrink:0}
-    .section-title{font-size:18px;font-weight:700}
-
-    h3{font-size:14px;font-weight:700;margin:20px 0 10px;color:var(--text);padding-left:12px;border-left:3px solid var(--green)}
-    p{color:var(--text2);margin-bottom:10px}
-    ul,ol{padding-left:20px;margin-bottom:14px;color:var(--text2)}
-    li{margin-bottom:6px}
-    strong{color:var(--text)}
-
-    /* Cards */
-    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:14px 0;box-shadow:var(--shadow)}
-    .card-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
-    .card-label .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-    .card.tip{border-left:3px solid var(--green)}.card.tip .card-label{color:var(--green)}.card.tip .dot{background:var(--green)}
-    .card.warn{border-left:3px solid var(--red)}.card.warn .card-label{color:var(--red)}.card.warn .dot{background:var(--red)}
-    .card.info{border-left:3px solid var(--blue)}.card.info .card-label{color:var(--blue)}.card.info .dot{background:var(--blue)}
-    .card.highlight{border-left:3px solid var(--purple)}.card.highlight .card-label{color:var(--purple)}.card.highlight .dot{background:var(--purple)}
-    .card.gold{border-left:3px solid var(--yellow)}.card.gold .card-label{color:var(--yellow)}.card.gold .dot{background:var(--yellow)}
-
-    /* Tables */
-    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12px;background:var(--card);border-radius:8px;overflow:hidden;border:1px solid var(--border)}
-    th{background:var(--bg);padding:10px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);font-weight:700}
-    td{padding:10px 12px;border-top:1px solid var(--border);color:var(--text2)}
-    tr:hover td{background:var(--card2)}
-
-    /* Flow diagram */
-    .flow{display:flex;align-items:stretch;gap:0;margin:16px 0;overflow-x:auto;padding-bottom:4px}
-    .flow-step{flex:1;min-width:120px;padding:14px 12px;text-align:center;font-size:11px;color:var(--text2);line-height:1.5;background:var(--card);border:1px solid var(--border);position:relative}
-    .flow-step:first-child{border-radius:8px 0 0 8px}
-    .flow-step:last-child{border-radius:0 8px 8px 0}
-    .flow-step:not(:last-child){border-right:none}
-    .flow-step:not(:last-child)::after{content:'';position:absolute;right:-8px;top:50%;transform:translateY(-50%);width:0;height:0;border-left:8px solid var(--border);border-top:8px solid transparent;border-bottom:8px solid transparent;z-index:1}
-    .flow-step .step-num{display:block;font-size:9px;font-weight:700;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
-    .flow-step strong{color:var(--text);font-size:12px}
-    .flow-step.buy-step{background:var(--green-soft);border-color:var(--green-border)}
-    .flow-step.sell-step{background:var(--red-soft);border-color:var(--red-border)}
-    .flow-step.result-step{background:var(--yellow-soft);border-color:var(--yellow)}
-    .flow-step.neutral-step{background:var(--blue-soft);border-color:rgba(96,165,250,.25)}
-
-    /* Tags */
-    .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:.3px}
-    .tag-user{background:var(--blue-soft);color:var(--blue);border:1px solid rgba(96,165,250,.3)}
-    .tag-merchant{background:var(--purple-soft);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
-    .tag-system{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
-
-    /* Comparison grid */
-    .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
-    .compare-col{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
-    .compare-col h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
-    .compare-col.pro h4{color:var(--green)}
-    .compare-col.con h4{color:var(--red)}
-    .compare-col li{font-size:12px;margin-bottom:4px}
-
-    /* Phase timeline */
-    .timeline{display:flex;gap:0;margin:14px 0}
-    .timeline-item{flex:1;padding:14px;text-align:center;background:var(--card);border:1px solid var(--border);font-size:11px}
-    .timeline-item:first-child{border-radius:8px 0 0 8px}
-    .timeline-item:last-child{border-radius:0 8px 8px 0}
-    .timeline-item:not(:last-child){border-right:none}
-    .timeline-label{font-size:9px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-    .timeline-val{font-size:18px;font-weight:800;color:var(--green)}
-    .timeline-desc{font-size:10px;color:var(--dim);margin-top:4px}
-
-    /* Dashboard preview */
-    .dash-table{margin:14px 0}
-    .dash-row{display:flex;gap:0;border:1px solid var(--border);border-top:none;font-size:12px}
-    .dash-row:first-child{border-top:1px solid var(--border);border-radius:8px 8px 0 0}
-    .dash-row:last-child{border-radius:0 0 8px 8px}
-    .dash-cell{flex:1;padding:10px 14px}
-    .dash-cell:first-child{flex:0 0 160px;font-weight:600;color:var(--text);background:var(--card)}
-    .dash-cell:nth-child(2){color:var(--text2);background:var(--card2)}
-    .dash-cell:nth-child(3){color:var(--dim);background:var(--card);font-size:11px}
-
-    footer{text-align:center;padding:20px;color:var(--dim);font-size:10px;border-top:1px solid var(--border)}
-
-    @media(max-width:640px){
-      .toc{grid-template-columns:1fr}
-      .flow{flex-direction:column}
-      .flow-step{border-radius:0!important;border-right:1px solid var(--border)!important;border-bottom:none}
-      .flow-step:first-child{border-radius:8px 8px 0 0!important}
-      .flow-step:last-child{border-radius:0 0 8px 8px!important;border-bottom:1px solid var(--border)}
-      .flow-step::after{display:none}
-      .compare-grid{grid-template-columns:1fr}
-      .timeline{flex-direction:column}
-      .timeline-item{border-radius:0!important;border-right:1px solid var(--border)!important;border-bottom:none}
-      .timeline-item:first-child{border-radius:8px 8px 0 0!important}
-      .timeline-item:last-child{border-radius:0 0 8px 8px!important;border-bottom:1px solid var(--border)}
-      .dash-row{flex-direction:column}
-      .dash-cell:first-child{flex:auto}
-    }
-  </style>
+  <title>使い方ガイド - PayMatch P2P暗号通貨購入の完全マニュアル</title>
+  <meta name="description" content="PayMatchの使い方を完全解説。銀行振込でUSDT/BTC/ETHを購入する手順、レート比較の見方、安全な取引方法まで。初心者向けガイド。">
+  <link rel="canonical" href="https://bkpay.app/guide.html">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="PayMatch 使い方ガイド - P2P暗号通貨購入マニュアル">
+  <meta property="og:description" content="銀行振込でUSDT/BTC/ETHを購入する手順を完全解説。初心者向け。">
+  <meta property="og:url" content="https://bkpay.app/guide.html">
+  <meta property="og:site_name" content="PayMatch">
+  <meta property="og:image" content="https://bkpay.app/og-image.svg">
+  <meta property="og:image:type" content="image/svg+xml">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PayMatch 使い方ガイド">
+  <meta name="twitter:description" content="銀行振込でUSDT/BTC/ETHを購入する手順を完全解説。">
+  <meta name="twitter:image" content="https://bkpay.app/og-image.svg">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"HowTo","name":"PayMatchでUSDTを購入する方法","description":"銀行振込でUSDTをP2P最安レートで購入する手順","step":[{"@type":"HowToStep","name":"金額入力","text":"購入したいJPY金額と暗号通貨を選択"},{"@type":"HowToStep","name":"マッチング","text":"3取引所から最安レートを自動マッチング"},{"@type":"HowToStep","name":"振込","text":"表示された銀行口座に振込"},{"@type":"HowToStep","name":"受取","text":"着金確認後、暗号通貨がウォレットに届く"}]}
+  </script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"PayMatch","item":"https://bkpay.app/"},{"@type":"ListItem","position":2,"name":"使い方ガイド","item":"https://bkpay.app/guide.html"}]}
+  </script>
+  <link rel="stylesheet" href="/guide.css">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#34d399">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Pay Match">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 </head>
@@ -141,312 +38,221 @@
   <div class="topbar">
     <div class="topbar-left">
       <a href="/" data-i18n="dashboard">Dashboard</a>
-      <span class="topbar-title" data-i18n="guide_title">利用ガイド</span>
+      <a href="/buy-usdt.html" style="background:#10b981;color:#fff;border-color:#10b981;font-weight:700" data-i18n="p2p_title">USDT購入</a>
+      <span class="topbar-title" data-i18n="guide_nav_title">利用ガイド</span>
     </div>
-    <div class="topbar-right">
-      <div class="lang-selector" style="display:inline-flex;gap:2px"><button class="lang-btn active" data-lang="ja" onclick="setLanguage('ja')" style="padding:2px 5px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">JP</button><button class="lang-btn" data-lang="en" onclick="setLanguage('en')" style="padding:2px 5px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">EN</button><button class="lang-btn" data-lang="zh" onclick="setLanguage('zh')" style="padding:2px 5px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">中</button><button class="lang-btn" data-lang="vi" onclick="setLanguage('vi')" style="padding:2px 5px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">VI</button></div><button class="topbar-btn" onclick="toggleTheme()" id="themeToggle">D</button>
+    <div style="display:flex;gap:2px;align-items:center">
+      <button class="lang-btn" data-lang="ja" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">JA</button>
+      <button class="lang-btn" data-lang="en" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">EN</button>
+      <button class="lang-btn" data-lang="zh" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">ZH</button>
+      <button class="lang-btn" data-lang="vi" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">VI</button>
+      <button id="themeToggleGuide" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--text2);font-size:12px;cursor:pointer;margin-left:4px">&#9774;</button>
     </div>
   </div>
 
-  <div class="container">
+  <main class="container" id="main-content">
     <div class="guide-hero">
-      <h1>BK P2P Aggregator<br>利用ガイド</h1>
-      <p>P2P取引所を活用した暗号資産の売買と、銀行口座に依存しない決済フローの構築方法</p>
+      <h1>Pay<span>Match</span> <span data-i18n="guide_hero_title">利用ガイド</span></h1>
+      <p data-i18n="guide_hero_desc">銀行振込で暗号通貨を最安レートで購入する方法</p>
     </div>
 
-    <!-- TOC -->
-    <div class="toc">
-      <a href="#s1" class="toc-item"><span class="toc-num">1</span>P2P取引とは</a>
-      <a href="#s2" class="toc-item"><span class="toc-num">2</span>準備（ユーザー側）</a>
-      <a href="#s3" class="toc-item"><span class="toc-num">3</span>準備（マーチャント側）</a>
-      <a href="#s4" class="toc-item"><span class="toc-num">4</span>取引の流れ</a>
-      <a href="#s5" class="toc-item"><span class="toc-num">5</span>ダッシュボードの使い方</a>
-      <a href="#s6" class="toc-item"><span class="toc-num">6</span>アービトラージ活用</a>
-      <a href="#s7" class="toc-item"><span class="toc-num">7</span>収納代行の代替モデル</a>
-      <a href="#s8" class="toc-item"><span class="toc-num">8</span>リスクと注意事項</a>
-      <a href="#s9" class="toc-item"><span class="toc-num">9</span>取引所別の特徴</a>
-      <a href="#s10" class="toc-item"><span class="toc-num">10</span>よくある質問</a>
+    <div class="toc" role="navigation" aria-label="目次">
+      <a href="#s1" class="toc-item"><span class="toc-num">1</span><span data-i18n="guide_s1_title">PayMatchとは</span></a>
+      <a href="#s2" class="toc-item"><span class="toc-num">2</span><span data-i18n="guide_s2_title">購入に必要なもの</span></a>
+      <a href="#s3" class="toc-item"><span class="toc-num">3</span><span data-i18n="guide_s3_title">USDT購入の流れ</span></a>
+      <a href="#s4" class="toc-item"><span class="toc-num">4</span><span data-i18n="guide_s4_title">レート比較の見方</span></a>
+      <a href="#s5" class="toc-item"><span class="toc-num">5</span><span data-i18n="guide_s5_title">安全な取引のために</span></a>
+      <a href="#s6" class="toc-item"><span class="toc-num">6</span><span data-i18n="guide_s6_title">よくある質問</span></a>
     </div>
 
     <!-- S1 -->
     <div class="section" id="s1">
-      <div class="section-header"><span class="section-num">1</span><span class="section-title">P2P取引とは</span></div>
-      <p>P2P（Peer-to-Peer）取引は、取引所を仲介者として、<strong>個人間で直接</strong>暗号資産と法定通貨を交換する仕組みです。取引所は直接売買せず、エスクロー（第三者預託）として安全を保証します。</p>
-      
-      <table>
-        <tr><th>項目</th><th>通常の取引所</th><th>P2P取引</th></tr>
-        <tr><td><strong>取引相手</strong></td><td>取引所</td><td>個人（マーチャント）</td></tr>
-        <tr><td><strong>価格</strong></td><td>市場価格（自動）</td><td>マーチャントが設定</td></tr>
-        <tr><td><strong>決済方法</strong></td><td>銀行振込のみ</td><td>銀行振込 / PayPay / LINE Pay 等</td></tr>
-        <tr><td><strong>手数料</strong></td><td>0.1%〜</td><td>基本無料</td></tr>
-        <tr><td><strong>入金先</strong></td><td>取引所の口座</td><td>マーチャント個人の口座</td></tr>
-      </table>
+      <div class="section-header"><span class="section-num">1</span><h2 class="section-title" style="margin:0" data-i18n="guide_s1_title">PayMatchとは</h2></div>
+      <p data-i18n="guide_s1_desc">PayMatchは、<strong>銀行振込でUSDT/BTC/ETHを最安レートで購入</strong>できるP2Pプラットフォームです。Bybit・Binance・OKXの3つの取引所からリアルタイムで最安値を比較し、最もお得なレートで取引できます。</p>
 
       <div class="card tip">
-        <div class="card-label"><span class="dot"></span>エスクロー保護</div>
-        <p>マーチャントの暗号資産は取引開始時にロックされ、買い手の支払い確認後に解放されます。<strong>支払ったのにコインが届かない</strong>というリスクを排除する仕組みです。</p>
+        <div class="card-label"><span class="dot"></span><span data-i18n="guide_features_label">PayMatchの特徴</span></div>
+        <ul style="margin-bottom:0">
+          <li data-i18n="guide_s1_feat1"><strong>アカウント登録不要</strong> — メールアドレスやパスワードなしで利用可能</li>
+          <li data-i18n="guide_s1_feat2"><strong>銀行振込で購入</strong> — 日本の銀行口座から振り込むだけ</li>
+          <li data-i18n="guide_s1_feat3"><strong>最安レート</strong> — 3つのP2P取引所から最安値を自動検索</li>
+          <li data-i18n="guide_s1_feat4"><strong>TRC-20対応</strong> — USDTはTRONネットワークで低手数料送金</li>
+          <li data-i18n="guide_s1_feat5"><strong>即時マッチング</strong> — 購入申請後すぐにマッチング</li>
+        </ul>
       </div>
     </div>
 
     <!-- S2 -->
     <div class="section" id="s2">
-      <div class="section-header"><span class="section-num">2</span><span class="section-title">準備（ユーザー側）</span></div>
-      
+      <div class="section-header"><span class="section-num">2</span><h2 class="section-title" style="margin:0" data-i18n="guide_s2_title">購入に必要なもの</h2></div>
       <table>
-        <tr><th>必要なもの</th><th>詳細</th><th>所要時間</th></tr>
-        <tr><td><strong>取引所アカウント</strong></td><td>Bybit / Binance / OKX / HTX</td><td>5〜10分</td></tr>
-        <tr><td><strong>本人確認（KYC）</strong></td><td>パスポート or 免許証 + 顔写真</td><td>数時間〜1日</td></tr>
-        <tr><td><strong>決済手段</strong></td><td>銀行口座 / PayPay / LINE Pay</td><td>既存のもの</td></tr>
+        <thead><tr><th scope="col"><span data-i18n="guide_s2_th_item">必要なもの</span></th><th scope="col"><span data-i18n="guide_s2_th_detail">詳細</span></th></tr></thead>
+        <tbody>
+          <tr><td><strong><span data-i18n="guide_s2_bank">銀行口座</span></strong></td><td><span data-i18n="guide_s2_bank_desc">日本国内の銀行口座（振込に使用）</span></td></tr>
+          <tr><td><strong><span data-i18n="guide_s2_wallet">ウォレットアドレス</span></strong></td><td><span data-i18n="guide_s2_wallet_desc">USDT受取用のTRONアドレス（Tで始まる34文字）</span></td></tr>
+        </tbody>
       </table>
-
-      <h3>アカウント開設手順</h3>
-      <div class="flow">
-        <div class="flow-step"><span class="step-num">Step 1</span><strong>取引所にアクセス</strong><br>Web or アプリ</div>
-        <div class="flow-step"><span class="step-num">Step 2</span><strong>メール登録</strong><br>パスワード設定</div>
-        <div class="flow-step"><span class="step-num">Step 3</span><strong>本人確認書類</strong><br>パスポート推奨</div>
-        <div class="flow-step"><span class="step-num">Step 4</span><strong>顔認証</strong><br>セルフィー撮影</div>
-        <div class="flow-step"><span class="step-num">Step 5</span><strong>承認待ち</strong><br>通常数時間以内</div>
-        <div class="flow-step buy-step"><span class="step-num">完了</span><strong>P2P取引開始</strong></div>
-      </div>
-
       <div class="card info">
-        <div class="card-label"><span class="dot"></span>推奨</div>
-        <p><strong>2つ以上の取引所</strong>にアカウントを持つと、常に最良レートで取引できます。このダッシュボードで比較して最安値を選びましょう。</p>
+        <div class="card-label"><span class="dot"></span><span data-i18n="guide_wallet_prep">ウォレットの準備</span></div>
+        <p data-i18n="guide_s2_wallet_info">TRONウォレットをお持ちでない方は、Trust WalletやTronLinkなどの無料ウォレットアプリをインストールし、TRONアドレスを作成してください。</p>
       </div>
     </div>
 
     <!-- S3 -->
     <div class="section" id="s3">
-      <div class="section-header"><span class="section-num">3</span><span class="section-title">準備（マーチャント側）</span></div>
-      <p>マーチャントはP2Pで広告を掲載する側です。より有利なレートで取引できますが、追加の要件があります。</p>
+      <div class="section-header"><span class="section-num">3</span><h2 class="section-title" style="margin:0" data-i18n="guide_s3_title">USDT購入の流れ</h2></div>
 
-      <table>
-        <tr><th>取引所</th><th>デポジット</th><th>完了率要件</th><th>その他</th></tr>
-        <tr><td><strong>Bybit</strong></td><td>なし（申請制）</td><td>80%以上</td><td>認証済みアカウント</td></tr>
-        <tr><td><strong>Binance</strong></td><td>1,000 USDT</td><td>80%以上</td><td>30日以上のアカウント</td></tr>
-        <tr><td><strong>OKX</strong></td><td>なし</td><td>90%以上</td><td>認証済み + 実績</td></tr>
-        <tr><td><strong>HTX</strong></td><td>1,000 USDT</td><td>80%以上</td><td>KYC Level 3</td></tr>
-      </table>
+      <div class="flow">
+        <div class="flow-step neutral-step"><span class="step-num">Step 1</span><span data-i18n="guide_s3_flow1">金額入力 — JPY金額 + ウォレット</span></div>
+        <div class="flow-step"><span class="step-num">Step 2</span><span data-i18n="guide_s3_flow2">マッチング — 自動で最適な相手を検索</span></div>
+        <div class="flow-step"><span class="step-num">Step 3</span><span data-i18n="guide_s3_flow3">振込 — 表示された口座に送金</span></div>
+        <div class="flow-step"><span class="step-num">Step 4</span><span data-i18n="guide_s3_flow4">着金確認 — 自動で確認</span></div>
+        <div class="flow-step buy-step"><span class="step-num">Step 5</span><span data-i18n="guide_s3_flow5">USDT受取 — ウォレットに着金</span></div>
+      </div>
+
+      <h3 data-i18n="guide_s3_step1_title">Step 1: 金額とウォレット入力</h3>
+      <p data-i18n="guide_s3_step1_intro">購入ページにアクセスし、以下を入力します。</p>
+      <ul>
+        <li data-i18n="guide_s3_step1_li1">購入金額（JPY）— クイック選択: 5万 / 10万 / 30万 / 50万 / 100万</li>
+        <li data-i18n="guide_s3_step1_li2">受取ウォレットアドレス（TRC-20、Tで始まる34文字）</li>
+        <li data-i18n="guide_s3_step1_li3">現在のレートと受取予定USDT量が自動表示されます</li>
+        <li data-i18n="guide_s3_step1_li4">「マッチング開始」ボタンを押す</li>
+      </ul>
+
+      <h3 data-i18n="guide_s3_step2_title">Step 2: マッチング待機</h3>
+      <ul>
+        <li data-i18n="guide_s3_step2_li1">自動でマッチング相手が検索されます</li>
+        <li data-i18n="guide_s3_step2_li2">マッチング相手が見つかると自動的にStep 3へ</li>
+        <li data-i18n="guide_s3_step2_li3">キャンセルボタンでいつでも取り消し可能</li>
+      </ul>
+
+      <h3 data-i18n="guide_s3_step3_title">Step 3: 振込</h3>
+      <p data-i18n="guide_s3_step3_intro">マッチング成立後、振込先の銀行口座が表示されます。</p>
+      <div class="bank-box">
+        <div class="bank-row"><span class="label" data-i18n="guide_s3_bank">銀行</span><span class="val" data-i18n="guide_s3_after_match">（マッチング後に表示）</span></div>
+        <div class="bank-row"><span class="label" data-i18n="guide_s3_branch">支店</span><span class="val" data-i18n="guide_s3_after_match2">（マッチング後に表示）</span></div>
+        <div class="bank-row"><span class="label" data-i18n="guide_s3_accnum">口座番号</span><span class="val" data-i18n="guide_s3_after_match3">（マッチング後に表示）</span></div>
+        <div class="bank-row"><span class="label" data-i18n="guide_s3_accname">名義</span><span class="val" data-i18n="guide_s3_after_match4">（マッチング後に表示）</span></div>
+        <div class="bank-row"><span class="label" data-i18n="guide_s3_amount">振込金額</span><span class="val hl">¥ ---,---</span></div>
+      </div>
+      <ul>
+        <li data-i18n="guide_s3_step3_li1">カウントダウンタイマーで残り時間を表示（制限時間: 30分）</li>
+        <li data-i18n="guide_s3_step3_li2">表示された口座に指定金額を正確に振り込んでください</li>
+        <li data-i18n="guide_s3_step3_li3">振込完了後、「振込完了を報告」ボタンを押す</li>
+      </ul>
+
+      <h3 data-i18n="guide_s3_step45_title">Step 4-5: 着金確認とUSDT受取</h3>
+      <ul>
+        <li data-i18n="guide_s3_step45_li1">着金は自動で確認されます（通常18-40分）</li>
+        <li data-i18n="guide_s3_step45_li2">確認後、USDTがウォレットに自動送金されます</li>
+        <li data-i18n="guide_s3_step45_li3">TX Hash（取引ID）が画面に表示されます</li>
+      </ul>
 
       <div class="card warn">
-        <div class="card-label"><span class="dot"></span>口座凍結リスク</div>
-        <p>不特定多数から振込を受けると、銀行が口座を凍結する可能性があります。対策：</p>
-        <ul>
-          <li>1口座あたりの月間取引量を分散</li>
-          <li>複数の銀行口座を用意</li>
-          <li>電子マネー（PayPay等）を活用して銀行振込を減らす</li>
-          <li>取引履歴を明確に記録</li>
-        </ul>
+        <div class="card-label"><span class="dot"></span><span data-i18n="guide_s3_warn_label">注意</span></div>
+        <p data-i18n="guide_s3_warn_text">30分以内に振込しない場合、マッチングはキャンセルされます。再度申請が必要です。</p>
       </div>
     </div>
 
     <!-- S4 -->
     <div class="section" id="s4">
-      <div class="section-header"><span class="section-num">4</span><span class="section-title">取引の流れ</span></div>
+      <div class="section-header"><span class="section-num">4</span><h2 class="section-title" style="margin:0" data-i18n="guide_s4_title">レート比較の見方</h2></div>
+      <p data-i18n="guide_s4_desc">ダッシュボードでは、3つの取引所のP2Pレートをリアルタイムで比較できます。</p>
 
-      <h3>購入する場合（円 → 暗号資産）</h3>
-      <div class="flow">
-        <div class="flow-step neutral-step"><span class="step-num">1</span><strong>最安値を確認</strong><br>ダッシュボードで比較</div>
-        <div class="flow-step"><span class="step-num">2</span><strong>注文を選択</strong><br>取引所のP2Pページ</div>
-        <div class="flow-step"><span class="step-num">3</span><strong>金額入力・確定</strong><br>購入数量を決定</div>
-        <div class="flow-step"><span class="step-num">4</span><strong>支払い実行</strong><br>振込 / PayPay等</div>
-        <div class="flow-step"><span class="step-num">5</span><strong>支払い完了マーク</strong><br>取引所で報告</div>
-        <div class="flow-step buy-step"><span class="step-num">6</span><strong>暗号資産を受取</strong><br>ウォレットに着金</div>
-      </div>
-
-      <h3>売却する場合（暗号資産 → 円）</h3>
-      <div class="flow">
-        <div class="flow-step neutral-step"><span class="step-num">1</span><strong>最高値を確認</strong><br>ダッシュボードで比較</div>
-        <div class="flow-step"><span class="step-num">2</span><strong>売り注文を選択</strong><br>取引所のP2Pページ</div>
-        <div class="flow-step"><span class="step-num">3</span><strong>数量入力・確定</strong><br>売却量を決定</div>
-        <div class="flow-step"><span class="step-num">4</span><strong>エスクローにロック</strong><br>暗号資産を預託</div>
-        <div class="flow-step"><span class="step-num">5</span><strong>相手が支払い</strong><br>着金を確認</div>
-        <div class="flow-step sell-step"><span class="step-num">6</span><strong>暗号資産を解放</strong><br>取引完了</div>
-      </div>
+      <table>
+        <thead><tr><th scope="col"><span data-i18n="guide_s4_th_item">表示項目</span></th><th scope="col"><span data-i18n="guide_s4_th_meaning">意味</span></th></tr></thead>
+        <tbody>
+          <tr><td><strong><span data-i18n="guide_s4_best_buy">最安購入レート</span></strong></td><td><span data-i18n="guide_s4_best_buy_desc">全取引所の中で最も安くUSDTを買えるレート</span></td></tr>
+          <tr><td><strong><span data-i18n="guide_s4_best_sell">最高売却レート</span></strong></td><td><span data-i18n="guide_s4_best_sell_desc">全取引所の中で最も高くUSDTを売れるレート</span></td></tr>
+          <tr><td><strong><span data-i18n="guide_s4_spread">スプレッド</span></strong></td><td><span data-i18n="guide_s4_spread_desc">最安購入と最高売却の価格差</span></td></tr>
+          <tr><td><strong><span data-i18n="guide_s4_completion">完了率</span></strong></td><td><span data-i18n="guide_s4_completion_desc">マーチャントの取引成功率。95%以上を推奨</span></td></tr>
+          <tr><td><strong><span data-i18n="guide_s4_range">取引範囲</span></strong></td><td><span data-i18n="guide_s4_range_desc">そのマーチャントが受け付ける最小〜最大金額</span></td></tr>
+          <tr><td><strong><span data-i18n="guide_s4_payment">決済方法</span></strong></td><td><span data-i18n="guide_s4_payment_desc">銀行振込 / PayPay / LINE Pay 等</span></td></tr>
+        </tbody>
+      </table>
 
       <div class="card tip">
-        <div class="card-label"><span class="dot"></span>所要時間</div>
-        <p>通常 <strong>5〜15分</strong>。PayPay/LINE Payなら即時決済。銀行振込は銀行の処理時間に依存します。</p>
+        <div class="card-label"><span class="dot"></span><span data-i18n="guide_rate_refresh">レートは30秒ごとに自動更新</span></div>
+        <p data-i18n="guide_s4_refresh_desc">ダッシュボードのレートは30秒ごとに自動更新されます。購入時は最新レートを確認してください。</p>
       </div>
     </div>
 
     <!-- S5 -->
     <div class="section" id="s5">
-      <div class="section-header"><span class="section-num">5</span><span class="section-title">ダッシュボードの使い方</span></div>
+      <div class="section-header"><span class="section-num">5</span><h2 class="section-title" style="margin:0" data-i18n="guide_s5_title">安全な取引のために</h2></div>
 
-      <div class="dash-table">
-        <div class="dash-row"><div class="dash-cell">一番安く買える</div><div class="dash-cell">全取引所の最安購入レート</div><div class="dash-cell">この取引所で買うと最もお得</div></div>
-        <div class="dash-row"><div class="dash-cell">一番高く売れる</div><div class="dash-cell">全取引所の最高売却レート</div><div class="dash-cell">この取引所で売ると最も利益</div></div>
-        <div class="dash-row"><div class="dash-cell">差額</div><div class="dash-cell">最安購入と最高売却の差</div><div class="dash-cell">大きいほどアービトラージ有利</div></div>
-        <div class="dash-row"><div class="dash-cell">取引所カード</div><div class="dash-cell">各取引所のベスト価格</div><div class="dash-cell">一目で価格差を比較</div></div>
-        <div class="dash-row"><div class="dash-cell">乖離率</div><div class="dash-cell">Spot価格との差（%）</div><div class="dash-cell">マイナス = Spotより安い</div></div>
-        <div class="dash-row"><div class="dash-cell">完了率</div><div class="dash-cell">マーチャントの成功率</div><div class="dash-cell">95%以上を推奨</div></div>
-        <div class="dash-row"><div class="dash-cell">フィルター</div><div class="dash-cell">決済方法・金額で絞り込み</div><div class="dash-cell">PayPayのみ表示 等</div></div>
+      <div class="card info">
+        <div class="card-label"><span class="dot"></span><span data-i18n="guide_escrow_label">エスクロー保護</span></div>
+        <p data-i18n="guide_s5_escrow_desc">PayMatchではエスクロー（第三者預託）の仕組みを使用しています。支払い完了が確認されるまでUSDTはロックされるため、「振り込んだのにUSDTが届かない」というリスクは排除されています。</p>
+      </div>
+
+      <h3 data-i18n="guide_s5_caution_title">取引時の注意事項</h3>
+      <ul>
+        <li data-i18n="guide_s5_caution1">振込金額は正確に — 1円単位まで正確に振り込んでください。金額が異なると着金確認が遅れます</li>
+        <li data-i18n="guide_s5_caution2">30分以内に振込 — タイムアウトするとマッチングがキャンセルされます</li>
+        <li data-i18n="guide_s5_caution3">ウォレットアドレスを再確認 — 送金先アドレスの間違いは取り消しができません</li>
+        <li data-i18n="guide_s5_caution4">TRC-20ネットワーク — USDTはTRON（TRC-20）で送金されます。受取ウォレットがTRC-20対応であることを確認してください</li>
+      </ul>
+
+      <div class="card warn">
+        <div class="card-label"><span class="dot"></span><span data-i18n="guide_s5_trouble_label">トラブル時</span></div>
+        <p data-i18n="guide_s5_trouble_desc">振込後に問題が発生した場合は、注文IDと振込の控え（スクリーンショット等）を保存してください。サポートへの問い合わせ時に必要です。</p>
       </div>
     </div>
 
     <!-- S6 -->
     <div class="section" id="s6">
-      <div class="section-header"><span class="section-num">6</span><span class="section-title">アービトラージの活用</span></div>
-      <p><strong>取引所間の価格差</strong>を利用して利益を得る手法です。安い取引所で買い、高い取引所で売ります。</p>
+      <div class="section-header"><span class="section-num">6</span><h2 class="section-title" style="margin:0" data-i18n="guide_s6_title">よくある質問</h2></div>
 
-      <div class="flow">
-        <div class="flow-step buy-step"><span class="step-num">購入</span><strong>HTXで購入</strong><br>148.0 円/USDT</div>
-        <div class="flow-step"><span class="step-num">送金</span><strong>USDTを送金</strong><br>HTX → Bybit<br>1〜5分</div>
-        <div class="flow-step sell-step"><span class="step-num">売却</span><strong>Bybitで売却</strong><br>168.0 円/USDT</div>
-        <div class="flow-step result-step"><span class="step-num">利益</span><strong>+20.0 円/USDT</strong><br>利益率 +13.5%</div>
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--blue)"></span><span data-i18n="guide_faq_q1">アカウント登録は必要ですか？</span></div>
+        <p data-i18n="guide_faq_a1">いいえ。USDT購入ページではアカウント登録不要で利用できます。金額とウォレットアドレスを入力するだけです。</p>
       </div>
-
-      <div class="card gold">
-        <div class="card-label"><span class="dot"></span>アービトラージモニターの見方</div>
-        <table>
-          <tr><td><strong>ルート</strong></td><td>購入取引所 → 売却取引所</td></tr>
-          <tr><td><strong>利益率</strong></td><td>購入→売却時の利益（%）</td></tr>
-          <tr><td><strong>取引可能量</strong></td><td>実際に取引できる最大数量</td></tr>
-          <tr><td><strong>最大利益</strong></td><td>全量取引した場合の円建て利益</td></tr>
-          <tr><td><strong>継続時間</strong></td><td>この機会がどれくらい続いているか</td></tr>
-        </table>
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--blue)"></span><span data-i18n="guide_faq_q2">最低いくらから購入できますか？</span></div>
+        <p data-i18n="guide_faq_a2">¥10,000から購入可能です。上限は¥10,000,000です。</p>
       </div>
-
-      <div class="card warn">
-        <div class="card-label"><span class="dot"></span>注意点</div>
-        <ul>
-          <li><strong>送金時間中のレート変動</strong> — USDT送金は1〜5分。その間にレートが変わるリスク</li>
-          <li><strong>送金手数料</strong> — TRC-20で約1 USDT（約150円）。利益がこれを上回ること</li>
-          <li><strong>現実的な目安</strong> — 利益率 3%以上の機会を狙う</li>
-        </ul>
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--blue)"></span><span data-i18n="guide_faq_q3">マッチングにどのくらい時間がかかりますか？</span></div>
+        <p data-i18n="guide_faq_a3">通常数秒〜数分です。マッチング相手がいない場合は、相手が見つかるまで待機します（キャンセルはいつでも可能）。</p>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--blue)"></span><span data-i18n="guide_faq_q4">着金確認はどのくらいかかりますか？</span></div>
+        <p data-i18n="guide_faq_a4">振込後、通常18分〜40分で自動確認されます。最大60分かかる場合があります。</p>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--blue)"></span><span data-i18n="guide_faq_q5">USDTはどのネットワークで送金されますか？</span></div>
+        <p data-i18n="guide_faq_a5">TRON（TRC-20）で送金されます。手数料が安く（約1 USDT）、到着も1〜5分です。受取ウォレットがTRC-20に対応していることを確認してください。</p>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--blue)"></span><span data-i18n="guide_faq_q6">Telegram Botでも購入できますか？</span></div>
+        <p data-i18n="guide_faq_a6">はい。Telegram Botから金額入力→ウォレット入力→マッチング→振込先通知→振込完了報告まで、すべてBot内で完結できます。</p>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--blue)"></span><span data-i18n="guide_faq_q7">振込先の銀行口座は毎回同じですか？</span></div>
+        <p data-i18n="guide_faq_a7">いいえ。マッチングごとに異なる口座が指定されます。必ずその取引で表示された口座に振り込んでください。</p>
       </div>
     </div>
+  </main>
 
-    <!-- S7 -->
-    <div class="section" id="s7">
-      <div class="section-header"><span class="section-num">7</span><span class="section-title">収納代行の代替モデル</span></div>
-
-      <div class="card highlight">
-        <div class="card-label"><span class="dot"></span>このセクションの目的</div>
-        <p>銀行口座に依存した収納代行から、P2P取引所を活用した暗号資産ベースの決済フローに移行し、<strong>自社口座の凍結リスクを排除</strong>する方法を解説します。</p>
-      </div>
-
-      <h3>モデル 1 — 顧客がUSDTで直接入金</h3>
-      <div class="flow">
-        <div class="flow-step"><span class="step-num"><span class="tag tag-user">顧客</span></span><strong>P2PでUSDT購入</strong><br>他マーチャントから</div>
-        <div class="flow-step"><span class="step-num"><span class="tag tag-user">顧客</span></span><strong>USDTを送金</strong><br>自社アドレスへ</div>
-        <div class="flow-step buy-step"><span class="step-num"><span class="tag tag-system">システム</span></span><strong>USDT着金検知</strong><br>自動で残高反映</div>
-      </div>
-      <div class="compare-grid">
-        <div class="compare-col pro"><h4>メリット</h4><ul><li>自社口座を一切使わない</li><li>凍結リスクゼロ</li><li>24時間365日受付</li><li>手数料ほぼゼロ</li></ul></div>
-        <div class="compare-col con"><h4>デメリット</h4><ul><li>顧客にUSDT購入の手間</li><li>暗号資産に不慣れな顧客が離脱</li><li>KYCが必要</li></ul></div>
-      </div>
-
-      <h3>モデル 2 — P2Pマーチャント活用（推奨）</h3>
-      <div class="flow">
-        <div class="flow-step neutral-step"><span class="step-num"><span class="tag tag-user">顧客</span></span><strong>最安値を確認</strong><br>このダッシュボード</div>
-        <div class="flow-step"><span class="step-num"><span class="tag tag-user">顧客</span></span><strong>P2PでUSDT購入</strong><br>銀行振込 / PayPay</div>
-        <div class="flow-step"><span class="step-num"><span class="tag tag-merchant">業者</span></span><strong>エスクロー経由</strong><br>USDT解放</div>
-        <div class="flow-step"><span class="step-num"><span class="tag tag-user">顧客</span></span><strong>自社アドレスへ</strong><br>USDT送金</div>
-        <div class="flow-step buy-step"><span class="step-num"><span class="tag tag-system">自社</span></span><strong>着金検知</strong><br>残高反映</div>
-      </div>
-      <div class="card tip">
-        <div class="card-label"><span class="dot"></span>このモデルが最強の理由</div>
-        <ul>
-          <li><strong>自社の銀行口座を一切使わない</strong> — 凍結リスク完全排除</li>
-          <li><strong>マーチャントの口座が凍結しても無関係</strong> — 別のマーチャントから買えばよい</li>
-          <li><strong>PayPay / LINE Pay対応</strong> — 顧客は銀行口座すら不要</li>
-          <li><strong>スタッフの手動作業が不要</strong> — USDT着金は自動検知</li>
-        </ul>
-      </div>
-
-      <h3>モデル 3 — 出金時にP2P売却</h3>
-      <div class="flow">
-        <div class="flow-step"><span class="step-num"><span class="tag tag-user">顧客</span></span><strong>出金申請</strong></div>
-        <div class="flow-step"><span class="step-num"><span class="tag tag-system">自社</span></span><strong>P2P売り注文</strong><br>USDTを売りに出す</div>
-        <div class="flow-step"><span class="step-num"><span class="tag tag-merchant">買い手</span></span><strong>円を支払い</strong><br>銀行振込</div>
-        <div class="flow-step sell-step"><span class="step-num"><span class="tag tag-system">自社</span></span><strong>顧客に送金</strong><br>受取った円を転送</div>
-      </div>
-
-      <h3>段階的な移行プラン</h3>
-      <div class="timeline">
-        <div class="timeline-item"><div class="timeline-label">現状</div><div class="timeline-val" style="color:var(--red)">90%</div><div class="timeline-desc">銀行口座依存</div></div>
-        <div class="timeline-item"><div class="timeline-label">Phase 1</div><div class="timeline-val" style="color:var(--yellow)">60%</div><div class="timeline-desc">USDT入金の案内開始</div></div>
-        <div class="timeline-item"><div class="timeline-label">Phase 2</div><div class="timeline-val" style="color:var(--blue)">30%</div><div class="timeline-desc">P2P購入ガイド配布</div></div>
-        <div class="timeline-item"><div class="timeline-label">Phase 3</div><div class="timeline-val">10%</div><div class="timeline-desc">大口VIPのみ銀行</div></div>
-      </div>
-    </div>
-
-    <!-- S8 -->
-    <div class="section" id="s8">
-      <div class="section-header"><span class="section-num">8</span><span class="section-title">リスクと注意事項</span></div>
-      
-      <div class="card warn">
-        <div class="card-label"><span class="dot"></span>法的リスク</div>
-        <ul>
-          <li><strong>資金決済法</strong> — 暗号資産の売買仲介は「暗号資産交換業」に該当する可能性。自社は仲介せず、顧客自身がP2Pで購入する形にすること</li>
-          <li><strong>犯罪収益移転防止法</strong> — 大量取引するマーチャントはAML/KYC義務あり</li>
-          <li><strong>税務</strong> — 暗号資産取引の利益は課税対象</li>
-        </ul>
-      </div>
-
-      <div class="card warn">
-        <div class="card-label"><span class="dot"></span>運用リスク</div>
-        <ul>
-          <li><strong>レート変動</strong> — USDTは安定だがJPYレートは変動する</li>
-          <li><strong>取引所リスク</strong> — ハッキング・倒産リスク（分散推奨）</li>
-          <li><strong>詐欺</strong> — 偽の支払い証明に注意。必ず着金確認後にUSDTを解放</li>
-          <li><strong>送金ミス</strong> — アドレス間違い = 資金喪失。必ずテスト送金から</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- S9 -->
-    <div class="section" id="s9">
-      <div class="section-header"><span class="section-num">9</span><span class="section-title">取引所別の特徴</span></div>
-      <table>
-        <tr><th>取引所</th><th>JPY流動性</th><th>手数料</th><th>決済方法</th><th>特徴</th></tr>
-        <tr><td><strong>Bybit</strong></td><td>高</td><td>無料</td><td>銀行振込 / PayPay / LINE Pay</td><td>マーチャント数多、レスポンス速い</td></tr>
-        <tr><td><strong>Binance</strong></td><td>中〜高</td><td>無料</td><td>銀行振込 / PayPay / LINE Pay / au PAY</td><td>決済方法が最も豊富</td></tr>
-        <tr><td><strong>OKX</strong></td><td>中</td><td>無料</td><td>銀行振込 / PayPay / LINE Pay</td><td>銀行別指定が可能</td></tr>
-        <tr><td><strong>HTX</strong></td><td>低〜中</td><td>無料</td><td>銀行振込 / Alipay / WeChat</td><td>レートが安い傾向</td></tr>
-      </table>
-    </div>
-
-    <!-- S10 -->
-    <div class="section" id="s10">
-      <div class="section-header"><span class="section-num">10</span><span class="section-title">よくある質問</span></div>
-
-      <div class="card">
-        <div class="card-label"><span class="dot" style="background:var(--blue)"></span>P2P取引は違法ですか？</div>
-        <p>いいえ。個人間の暗号資産売買は合法です。ただし業として反復継続的に行う場合は暗号資産交換業の登録が必要になる可能性があります。</p>
-      </div>
-      <div class="card">
-        <div class="card-label"><span class="dot" style="background:var(--blue)"></span>最低いくらから取引できますか？</div>
-        <p>取引所やマーチャントにより異なりますが、概ね<strong>500〜5,000円</strong>から取引可能です。ダッシュボードの「取引範囲」列で確認できます。</p>
-      </div>
-      <div class="card">
-        <div class="card-label"><span class="dot" style="background:var(--blue)"></span>送金にどのネットワークを使うべきですか？</div>
-        <p><strong>TRC-20（TRON）</strong>を推奨。手数料が約1 USDT（約150円）と最安で、到着も1〜5分。ERC-20は手数料が数千円かかるため非推奨です。</p>
-      </div>
-      <div class="card">
-        <div class="card-label"><span class="dot" style="background:var(--blue)"></span>ダッシュボードのデータはリアルタイムですか？</div>
-        <p><strong>30秒ごと</strong>に自動更新されます。実際の取引時には取引所で最新価格を確認してください。</p>
-      </div>
-      <div class="card">
-        <div class="card-label"><span class="dot" style="background:var(--blue)"></span>アービトラージで確実に利益が出ますか？</div>
-        <p>保証はありません。送金時間中のレート変動、手数料、取引制限があるため、<strong>利益率5%以上</strong>の機会を狙い、少額から試すことを推奨します。</p>
-      </div>
-      <div class="card">
-        <div class="card-label"><span class="dot" style="background:var(--blue)"></span>USDTは安全ですか？</div>
-        <p>USDT（Tether）は米ドルに1:1でペッグされたステーブルコインで価格変動は極めて小さいですが、発行体リスクはゼロではありません。複数のステーブルコインに分散保有を推奨します。</p>
-      </div>
-    </div>
-  </div>
-
-  <footer>BK P2P Aggregator &mdash; Usage Guide v2.0</footer>
-
+  <footer>PayMatch User Guide v3.0 | <a href="/terms.html" style="color:inherit" data-i18n="guide_footer_terms">利用規約</a> | <a href="/privacy.html" style="color:inherit" data-i18n="guide_footer_privacy">プライバシー</a> | <a href="/referral.html" style="color:inherit">紹介プログラム</a></footer>
+  <script src="/i18n.js"></script>
   <script>
-    function toggleTheme(){const n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);document.getElementById('themeToggle').textContent=n==='dark'?'D':'L';localStorage.setItem('theme',n);}
-    (function(){const s=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',s);})();
-  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
-</script>
-<script src="i18n.js"></script>
+(function(){
+  var t=localStorage.getItem('theme')||'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  // Lang switcher
+  document.querySelectorAll('.lang-btn[data-lang]').forEach(function(b){
+    b.addEventListener('click',function(){if(typeof setLanguage==='function')setLanguage(this.getAttribute('data-lang'));document.querySelectorAll('.lang-btn').forEach(function(x){x.classList.remove('active')});this.classList.add('active');});
+  });
+  var lang=localStorage.getItem('lang')||'ja';
+  var lb=document.querySelector('.lang-btn[data-lang="'+lang+'"]');
+  if(lb)lb.classList.add('active');
+  // Theme toggle
+  var tb=document.getElementById('themeToggleGuide');
+  if(tb)tb.addEventListener('click',function(){var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('theme',n);this.textContent=n==='dark'?'\u263E':'\u2600';});
+})();
+  </script>
+  <script src="/floating-cta.js"></script>
 </body>
 </html>

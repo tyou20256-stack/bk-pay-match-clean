@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayPay マネーライト→マネー変換 | PayMatch</title>
+  <meta name="description" content="PayPayマネーライトをマネーに変換。USDT⇄PayPayも対応。P2Pマッチングで即時変換。手数料2〜7%。KYC不要。">
+  <meta name="keywords" content="PayPay マネーライト, PayPay マネー 変換, PayPay USDT, PayPay 現金化, P2P 変換, PayMatch">
+  <link rel="canonical" href="https://bkpay.app/paypay-convert.html">
+  <!-- OGP -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="PayPay マネーライト⇄マネー⇄USDT 変換 | PayMatch">
+  <meta property="og:description" content="PayPayマネーライトをマネーに即時変換。USDT⇄PayPayも対応。P2Pマッチング・KYC不要。">
+  <meta property="og:url" content="https://bkpay.app/paypay-convert.html">
+  <meta property="og:site_name" content="PayMatch">
+  <meta property="og:image" content="https://bkpay.app/og-image.svg">
+  <meta property="og:image:type" content="image/svg+xml">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PayPay マネーライト⇄マネー⇄USDT 変換 | PayMatch">
+  <meta name="twitter:description" content="PayPayマネーライトをマネーに即時変換。USDT⇄PayPayも対応。KYC不要。">
+  <meta name="twitter:image" content="https://bkpay.app/og-image.svg">
+  <link rel="alternate" hreflang="ja" href="https://bkpay.app/paypay-convert.html">
+  <link rel="alternate" hreflang="en" href="https://bkpay.app/paypay-convert.html?lang=en">
+  <link rel="alternate" hreflang="zh" href="https://bkpay.app/paypay-convert.html?lang=zh">
+  <link rel="alternate" hreflang="vi" href="https://bkpay.app/paypay-convert.html?lang=vi">
+  <link rel="alternate" hreflang="x-default" href="https://bkpay.app/paypay-convert.html">
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"WebApplication","name":"PayMatch PayPay Convert","description":"Convert PayPay Money Lite to Money and between PayPay and USDT via P2P matching","url":"https://bkpay.app/paypay-convert.html","applicationCategory":"FinanceApplication","operatingSystem":"Web","offers":{"@type":"Offer","priceCurrency":"JPY","description":"P2P PayPay conversion"}}
+  </script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"PayMatch","item":"https://bkpay.app/"},{"@type":"ListItem","position":2,"name":"PayPay変換","item":"https://bkpay.app/paypay-convert.html"}]}
+  </script>
+  <meta name="theme-color" content="#34d399">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="/buy-usdt.css">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+</head>
+<body>
+  <nav style="background:var(--card);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;max-width:480px;margin:0 auto">
+    <a href="/" style="color:var(--accent);text-decoration:none;font-weight:700;font-size:14px">Pay<span style="color:var(--text)">Match</span></a>
+    <div style="display:flex;gap:8px;font-size:11px;align-items:center">
+      <a href="/buy-usdt.html" style="color:var(--text2);text-decoration:none" data-i18n="nav_buy_usdt">USDT購入</a>
+      <a href="/guide.html" style="color:var(--text2);text-decoration:none" data-i18n="nav_guide">ガイド</a>
+      <a href="/about.html" style="color:var(--text2);text-decoration:none" data-i18n="nav_about">サービス紹介</a>
+      <a href="https://t.me/paymatch_rates" style="color:var(--text2);text-decoration:none" target="_blank" rel="noopener">Telegram</a>
+      <div style="display:flex;gap:2px;margin-left:4px">
+        <button class="lang-btn" data-lang="ja" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">JA</button>
+        <button class="lang-btn" data-lang="en" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">EN</button>
+        <button class="lang-btn" data-lang="zh" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">ZH</button>
+        <button class="lang-btn" data-lang="vi" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">VI</button>
+      </div>
+      <button id="themeTogglePP" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--text2);font-size:12px;cursor:pointer" aria-label="テーマ切り替え">&#9774;</button>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:480px;margin:0 auto;padding:20px 16px">
+    <div style="text-align:center;margin-bottom:16px">
+      <h1 style="font-size:18px;margin:0">💴 <span data-i18n="pp_title">PayPay変換</span></h1>
+      <p style="font-size:12px;color:var(--text2);margin-top:4px" data-i18n="pp_subtitle">マネーライト ⇄ マネー ⇄ USDT P2Pマッチング</p>
+      <div id="escrowBadge" style="display:none;margin-top:6px;font-size:10px;text-align:center"></div>
+    </div>
+
+    <!-- Step 1: Input -->
+    <div id="panel-input" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px" data-i18n="pp_apply">変換申請</div>
+
+      <label style="font-size:12px;color:var(--text2)" data-i18n="pp_conv_type">変換タイプ</label>
+      <div style="font-size:10px;color:var(--dim);margin-bottom:6px;text-align:center" data-i18n="pp_group_pp">PayPay間</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <button id="btnLiteToMoney" style="padding:10px 6px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer" data-i18n="pp_lite_to_money">ライト → マネー</button>
+        <button id="btnMoneyToLite" style="padding:10px 6px;background:var(--card);color:var(--text2);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer" data-i18n="pp_money_to_lite">マネー → ライト</button>
+      </div>
+      <div style="font-size:10px;color:var(--dim);margin-bottom:6px;text-align:center" data-i18n="pp_group_to_usdt">PayPay → USDT</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <button id="btnMoneyToUsdt" style="padding:10px 6px;background:var(--card);color:var(--text2);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer" data-i18n="pp_money_to_usdt">マネー → USDT</button>
+        <button id="btnLiteToUsdt" style="padding:10px 6px;background:var(--card);color:var(--text2);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer" data-i18n="pp_lite_to_usdt">ライト → USDT</button>
+      </div>
+      <div style="font-size:10px;color:var(--dim);margin-bottom:6px;text-align:center" data-i18n="pp_group_from_usdt">USDT → PayPay</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+        <button id="btnUsdtToMoney" style="padding:10px 6px;background:var(--card);color:var(--text2);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer" data-i18n="pp_usdt_to_money">USDT → マネー</button>
+        <button id="btnUsdtToLite" style="padding:10px 6px;background:var(--card);color:var(--text2);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer" data-i18n="pp_usdt_to_lite">USDT → ライト</button>
+      </div>
+
+      <div id="jpyAmountSection">
+        <label style="font-size:12px;color:var(--text2)" data-i18n="pp_amount_jpy">金額（円）</label>
+        <input type="text" id="amountInput" placeholder="10000" inputmode="numeric" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;margin-bottom:4px;box-sizing:border-box">
+        <div style="font-size:10px;color:var(--dim);margin-bottom:12px" data-i18n="pp_amount_jpy_hint">¥1,000〜¥500,000</div>
+      </div>
+      <div id="usdtAmountSection" class="hidden">
+        <label style="font-size:12px;color:var(--text2)" data-i18n="pp_amount_usdt">金額（USDT）</label>
+        <input type="text" id="usdtAmountInput" placeholder="100" inputmode="numeric" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:16px;margin-bottom:4px;box-sizing:border-box">
+        <div style="font-size:10px;color:var(--dim);margin-bottom:12px" data-i18n="pp_amount_usdt_hint">10〜5,000 USDT</div>
+      </div>
+
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="quick-btn" data-amt="5000">5千</button>
+        <button class="quick-btn" data-amt="10000">1万</button>
+        <button class="quick-btn" data-amt="30000">3万</button>
+        <button class="quick-btn" data-amt="50000">5万</button>
+        <button class="quick-btn" data-amt="100000">10万</button>
+      </div>
+
+      <label style="font-size:12px;color:var(--text2)" data-i18n="pp_paypay_id">PayPay ID</label>
+      <input type="text" id="paypayId" placeholder="あなたのPayPay ID" data-i18n-placeholder="pp_paypay_id_ph" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box">
+
+      <div id="walletSection" class="hidden">
+        <label style="font-size:12px;color:var(--text2)" data-i18n="pp_wallet_label">受取ウォレット（TRC-20）</label>
+        <input type="text" id="walletInput" placeholder="Tで始まる34文字のTRONアドレス" data-i18n-placeholder="pp_wallet_ph" spellcheck="false" style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:monospace;margin-bottom:12px;box-sizing:border-box">
+      </div>
+
+      <div id="usdtRateSection" class="hidden" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)" data-i18n="pp_usdt_rate">現在のUSDTレート</span><span id="usdtRate">-</span></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--dim)" data-i18n="pp_usdt_recv">受取USDT予定</span><span id="usdtAmount" style="color:var(--accent);font-weight:700">-</span></div>
+      </div>
+
+      <div id="feeDisplay" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--dim)" data-i18n="pp_fee_rate">手数料率</span><span id="feeRate">5%</span></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--dim)" data-i18n="pp_fee_amount">手数料額</span><span id="feeAmount">¥0</span></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;font-weight:700"><span data-i18n="pp_payout">受取額</span><span id="payoutAmount" style="color:var(--accent)">¥0</span></div>
+      </div>
+
+      <button id="btnSubmit" disabled style="width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;opacity:0.5" data-i18n="pp_start_btn">マッチング開始</button>
+    </div>
+
+    <!-- Step 2: Waiting -->
+    <div id="panel-waiting" class="hidden" role="status" aria-live="polite" aria-label="マッチング中" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px" data-i18n="pp_matching">マッチング中...</div>
+      <div style="width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:16px auto"></div>
+      <p style="font-size:12px;color:var(--text2)" data-i18n="pp_waiting_desc">マネー提供者を検索中です。通常数分で完了します。</p>
+      <button class="reload-btn" style="margin-top:12px;padding:8px 20px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer" data-i18n="pp_cancel">キャンセル</button>
+    </div>
+
+    <!-- Step 3: Matched -->
+    <div id="panel-matched" class="hidden" role="region" aria-live="polite" aria-label="マッチング成立" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px" data-i18n="pp_matched">マッチング成立</div>
+      <div id="matchInfo" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;margin-bottom:12px"></div>
+      <p style="font-size:11px;color:var(--text2);margin-bottom:12px" data-i18n="pp_matched_desc">PayPayアプリで上記のIDに送金してください。送金後、スクリーンショットをアップロードしてください。</p>
+      <label style="font-size:12px;color:var(--text2)"><span data-i18n="pp_proof_label">送金証明</span> <span style="color:#ef4444;font-weight:700" data-i18n="pp_proof_required">*必須</span></label>
+      <input type="file" id="proofInput" accept="image/*" capture="environment" style="width:100%;margin-bottom:12px;font-size:12px;box-sizing:border-box">
+      <button id="btnConfirm" style="width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer" data-i18n="pp_report_sent">送金完了を報告</button>
+    </div>
+
+    <!-- Step 4: Complete -->
+    <div id="panel-complete" class="hidden" role="status" aria-live="polite" aria-label="変換完了" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center">
+      <div style="font-size:24px;margin-bottom:8px">✅</div>
+      <div style="font-size:16px;font-weight:700" data-i18n="pp_complete">変換完了</div>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px" data-i18n="pp_complete_desc">PayPayマネーが送金されました。</p>
+      <button class="reload-btn" style="margin-top:16px;padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer" data-i18n="pp_convert_again">もう一度変換する</button>
+    </div>
+  </div>
+
+  <footer style="max-width:480px;margin:16px auto;padding:0 16px;font-size:10px;color:var(--dim);text-align:center;line-height:1.8">
+    <a href="/buy-usdt.html" style="color:inherit" data-i18n="nav_buy_usdt">USDT購入</a> ·
+    <a href="/guide.html" style="color:inherit" data-i18n="nav_guide">ガイド</a> ·
+    <a href="/about.html" style="color:inherit" data-i18n="nav_about">サービス紹介</a> ·
+    <a href="/terms.html" style="color:inherit">利用規約</a> ·
+    <a href="/privacy.html" style="color:inherit">プライバシー</a><br>
+    <span data-i18n="pp_footer_desc">PayPayマネー変換はP2Pマッチング方式です。取引は自己責任でお願いします。</span>
+  </footer>
+
+  <script src="/i18n.js"></script>
+  <script src="/toast.js"></script>
+  <script src="/paypay-convert.js"></script>
+  <script src="/buyer-chat.js"></script>
+  <script src="/floating-cta.js"></script>
+</body>
+</html>

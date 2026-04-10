@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pay Match — 振り込むだけ。暗号通貨が届く。</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -145,7 +145,7 @@ body {
   </div>
   <div class="section">
     <div class="section-title"><span class="section-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>紹介プログラム</div>
-    <div class="referral-code-box"><span class="referral-code" id="referralCode">---</span><button class="copy-btn" onclick="copyReferral()">コピー</button></div>
+    <div class="referral-code-box"><span class="referral-code" id="referralCode">---</span><button class="copy-btn" id="copyReferralBtn">コピー</button></div>
     <div class="referral-stat">累計リワード: <strong id="referralReward">¥0</strong></div>
   </div>
   <div class="section">
@@ -153,147 +153,8 @@ body {
     <div id="tierList"></div>
   </div>
 </div>
-<div id="errorState" class="error-state" style="display:none"><div>データの取得に失敗しました</div><button class="retry-btn" onclick="loadData()">再試行</button></div>
+<div id="errorState" class="error-state" style="display:none"><div>データの取得に失敗しました</div><button class="retry-btn" id="retryBtn">再試行</button></div>
 
-<script>
-var tgApp = window.Telegram && window.Telegram.WebApp;
-if (tgApp) {
-  tgApp.ready();
-  tgApp.expand();
-  var tc = tgApp.themeParams;
-  if (tc) {
-    if (tc.bg_color) document.documentElement.style.setProperty('--bg', tc.bg_color);
-    if (tc.secondary_bg_color) document.documentElement.style.setProperty('--secondary-bg', tc.secondary_bg_color);
-    if (tc.text_color) document.documentElement.style.setProperty('--text', tc.text_color);
-    if (tc.hint_color) document.documentElement.style.setProperty('--hint', tc.hint_color);
-    if (tc.button_color) document.documentElement.style.setProperty('--btn', tc.button_color);
-    if (tc.button_text_color) document.documentElement.style.setProperty('--btn-text', tc.button_text_color);
-  }
-}
-
-var TIERS = [
-  { name: 'Bronze', nameJa: 'ブロンズ', min: 0, discount: '標準', cls: 'bronze' },
-  { name: 'Silver', nameJa: 'シルバー', min: 1000000, discount: '-0.3%', cls: 'silver' },
-  { name: 'Gold', nameJa: 'ゴールド', min: 5000000, discount: '-0.5%', cls: 'gold' },
-  { name: 'Platinum', nameJa: 'プラチナ', min: 20000000, discount: '-1.0%', cls: 'platinum' },
-];
-
-function formatJpy(n) {
-  if (n >= 10000) return '¥' + (n / 10000).toFixed(n % 10000 === 0 ? 0 : 1) + '万';
-  return '¥' + n.toLocaleString();
-}
-function getTelegramId() { try { return tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.user && tgApp.initDataUnsafe.user.id; } catch(e) { return null; } }
-function getCurrentTier(v) { var t = TIERS[0]; for (var i = 0; i < TIERS.length; i++) { if (v >= TIERS[i].min) t = TIERS[i]; } return t; }
-function getNextTier(v) { for (var i = 0; i < TIERS.length; i++) { if (v < TIERS[i].min) return TIERS[i]; } return null; }
-
-function renderTiers(cur) {
-  var el = document.getElementById('tierList');
-  el.innerHTML = TIERS.map(function(t) {
-    var ic = t.name === cur;
-    return '<div class="tier-row' + (ic ? ' current' : '') + '">' +
-      '<span class="tier-name ' + t.cls + '">' + t.nameJa + (ic ? '<span class="tier-current-badge">現在</span>' : '') + '</span>' +
-      '<span class="tier-req">' + (t.min === 0 ? '¥0~' : '¥' + (t.min/10000) + '万~') + '</span>' +
-      '<span class="tier-benefit">' + t.discount + '</span></div>';
-  }).join('');
-}
-
-function renderTransactions(txs) {
-  var el = document.getElementById('txList');
-  if (!txs || !txs.length) { el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--hint);font-size:12px">取引履歴がありません</div>'; return; }
-  el.innerHTML = txs.slice(0, 10).map(function(tx) {
-    var d = new Date(tx.date || tx.createdAt);
-    var ds = (d.getMonth()+1) + '/' + d.getDate();
-    var sc = tx.status === 'completed' ? 'completed' : tx.status === 'cancelled' ? 'cancelled' : 'pending';
-    var sl = tx.status === 'completed' ? '完了' : tx.status === 'cancelled' ? '取消' : '処理中';
-    return '<div class="tx-item"><span class="tx-date">' + ds + '</span><span class="tx-detail">¥' + Number(tx.amount).toLocaleString() + ' → ' + tx.cryptoAmount + ' ' + (tx.crypto||'USDT') + '</span><span class="tx-status ' + sc + '">' + sl + '</span></div>';
-  }).join('');
-}
-
-function renderData(data) {
-  var s = data.stats || data;
-  var user = tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.user;
-  if (user) document.getElementById('userName').textContent = (user.first_name || '') + ' ' + (user.last_name || '');
-
-  var totalVolume = s.totalVolume || 0;
-  var tier = getCurrentTier(totalVolume);
-  var next = getNextTier(totalVolume);
-  var rankEl = document.getElementById('vipRankName');
-  rankEl.textContent = tier.nameJa;
-  rankEl.className = 'vip-rank-name ' + tier.cls;
-
-  var pct = 100;
-  if (next) pct = Math.min(100, Math.round((totalVolume - tier.min) / (next.min - tier.min) * 100));
-  document.getElementById('vipPercent').textContent = pct + '%';
-  document.getElementById('totalVolume').textContent = formatJpy(totalVolume);
-  document.getElementById('nextRankAmount').textContent = next ? formatJpy(next.min) : '最高ランク';
-  requestAnimationFrame(function() { document.getElementById('progressBar').style.width = pct + '%'; });
-
-  document.getElementById('totalTrades').textContent = (s.totalTrades || 0) + '回';
-  document.getElementById('monthVolume').textContent = formatJpy(s.monthVolume || 0);
-  document.getElementById('discountRate').textContent = s.discountRate || tier.discount;
-  document.getElementById('referralCount').textContent = (s.referralCount || 0) + '人';
-  renderTransactions(s.recentTransactions || []);
-  document.getElementById('referralCode').textContent = s.referralCode || '---';
-  document.getElementById('referralReward').textContent = formatJpy(s.referralReward || 0);
-  renderTiers(tier.name);
-
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('content').style.display = 'block';
-}
-
-function showDemo() {
-  renderData({ stats: { totalVolume: 8500000, totalTrades: 42, monthVolume: 1200000, discountRate: '-0.5%', referralCount: 5, referralCode: 'BK-DEMO01', referralReward: 12500, recentTransactions: [
-    { date: '2026-03-01', amount: 50000, cryptoAmount: '322.58', crypto: 'USDT', status: 'completed' },
-    { date: '2026-03-01', amount: 10000, cryptoAmount: '64.52', crypto: 'USDT', status: 'completed' },
-    { date: '2026-02-28', amount: 30000, cryptoAmount: '193.55', crypto: 'USDT', status: 'completed' },
-  ]}});
-}
-
-async function loadData() {
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('content').style.display = 'none';
-  document.getElementById('errorState').style.display = 'none';
-  var tid = getTelegramId();
-  if (!tid) { showDemo(); return; }
-  try {
-    var res = await fetch('/api/customer/' + tid + '/stats');
-    if (!res.ok) throw new Error('API error');
-    var data = await res.json();
-    if (!data.success) throw new Error(data.error || 'Failed');
-    renderData(data);
-  } catch(e) {
-    console.error('Load error:', e);
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('errorState').style.display = 'block';
-  }
-}
-
-function copyReferral() {
-  var code = document.getElementById('referralCode').textContent;
-  if (!code || code === '---') return;
-  navigator.clipboard.writeText(code).then(function() {
-    if (tgApp && tgApp.HapticFeedback) tgApp.HapticFeedback.notificationOccurred('success');
-    var btn = document.querySelector('.copy-btn');
-    btn.textContent = 'コピー済';
-    setTimeout(function() { btn.textContent = 'コピー'; }, 2000);
-  });
-}
-
-// Pull-to-refresh
-var ptrStartY = 0, ptrActive = false;
-document.addEventListener('touchstart', function(e) { if (window.scrollY === 0) ptrStartY = e.touches[0].clientY; });
-document.addEventListener('touchmove', function(e) {
-  if (ptrStartY && e.touches[0].clientY - ptrStartY > 80 && window.scrollY === 0) {
-    document.getElementById('ptrIndicator').classList.add('active'); ptrActive = true;
-  }
-});
-document.addEventListener('touchend', function() {
-  if (ptrActive) { document.getElementById('ptrIndicator').classList.remove('active'); ptrActive = false; loadData(); }
-  ptrStartY = 0;
-});
-
-loadData();
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
-</script>
+<script src="mypage-app.js"></script>
 </body>
 </html>

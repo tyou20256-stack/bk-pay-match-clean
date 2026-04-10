@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay Match - 自動取引ルール</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    [data-theme="dark"]{--bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;--border:#243049;--text:#edf0f7;--text2:#a0aec0;--dim:#5a6a85;--green:#34d399;--green-soft:rgba(52,211,153,.1);--green-border:rgba(52,211,153,.25);--red:#f87171;--red-soft:rgba(248,113,113,.08);--blue:#60a5fa;--blue-soft:rgba(96,165,250,.08);--yellow:#fbbf24;--yellow-soft:rgba(251,191,36,.08);--purple:#a78bfa;--purple-soft:rgba(167,139,250,.1);--input-bg:#0f1520;--shadow:0 2px 12px rgba(0,0,0,.3)}
+    [data-theme="light"]{--bg:#f5f7fa;--bg2:#fff;--card:#fff;--card2:#f8fafc;--border:#e2e8f0;--text:#1a202c;--text2:#4a5568;--dim:#a0aec0;--green:#059669;--green-soft:rgba(5,150,105,.08);--green-border:rgba(5,150,105,.2);--red:#dc2626;--red-soft:rgba(220,38,38,.06);--blue:#2563eb;--blue-soft:rgba(37,99,235,.06);--yellow:#d97706;--yellow-soft:rgba(217,119,6,.06);--purple:#7c3aed;--purple-soft:rgba(124,58,237,.06);--input-bg:#f1f5f9;--shadow:0 2px 12px rgba(0,0,0,.06)}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Segoe UI',sans-serif;font-size:13px;line-height:1.5}
+
+    /* Header */
+    .header{padding:12px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:100}
+    .logo{font-size:15px;font-weight:800}.logo span{color:var(--green)}
+    .header-right{display:flex;gap:6px;align-items:center}
+    .icon-btn{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;text-decoration:none;transition:all .15s}
+    .icon-btn:hover{border-color:var(--text2);color:var(--text)}
+    .admin-nav{display:flex;flex-wrap:wrap;gap:4px;padding:8px 20px;background:var(--card);border-bottom:1px solid var(--border);overflow-x:auto}
+    .nav-sep{width:1px;background:var(--border);margin:2px 4px;align-self:stretch}
+    .nav-btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center}
+    .nav-btn:hover{border-color:var(--text);color:var(--text)}
+    .nav-btn.active{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+    .lang-btn{padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:none;color:var(--dim);cursor:pointer;font-size:10px;font-weight:600;font-family:inherit;transition:all .15s}
+    .lang-btn.active{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+    .lang-btn:hover{color:var(--text)}
+
+    /* Container */
+    .container{max-width:1000px;margin:0 auto;padding:20px}
+
+    /* Section header */
+    .sec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+    .sec-title{font-size:16px;font-weight:700}
+    .sec-desc{font-size:11px;color:var(--dim);margin-top:2px}
+
+    /* Cards */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+    .card-title{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+    /* Badges */
+    .badge{display:inline-flex;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;align-items:center;gap:4px}
+    .badge-green{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+    .badge-yellow{background:var(--yellow-soft);color:var(--yellow);border:1px solid rgba(251,191,36,.3)}
+    .badge-red{background:var(--red-soft);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+    .badge-blue{background:var(--blue-soft);color:var(--blue);border:1px solid rgba(96,165,250,.3)}
+    .badge-purple{background:var(--purple-soft);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+    .badge-dim{background:var(--bg2);color:var(--dim);border:1px solid var(--border)}
+
+    /* Forms */
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-group{display:flex;flex-direction:column;gap:3px}
+    .form-group.full{grid-column:1/-1}
+    .form-label{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+    .form-input{padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:12px;font-family:inherit;transition:border-color .15s}
+    .form-input:focus{outline:none;border-color:var(--green)}
+    .form-select{padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:12px;font-family:inherit;transition:border-color .15s}
+    .form-select:focus{outline:none;border-color:var(--green)}
+    textarea.form-input{min-height:60px;resize:vertical}
+
+    /* Buttons */
+    .btn{padding:8px 16px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+    .btn-green{background:var(--green);color:#fff}.btn-green:hover{opacity:.9}
+    .btn-red{background:none;border:1px solid var(--red);color:var(--red)}.btn-red:hover{background:var(--red-soft)}
+    .btn-blue{background:none;border:1px solid var(--blue);color:var(--blue)}.btn-blue:hover{background:var(--blue-soft)}
+    .btn-purple{background:none;border:1px solid var(--purple);color:var(--purple)}.btn-purple:hover{background:var(--purple-soft)}
+    .btn-outline{background:none;border:1px solid var(--border);color:var(--text2)}.btn-outline:hover{border-color:var(--text);color:var(--text)}
+    .btn-sm{padding:5px 10px;font-size:10px}
+    .btn-group{display:flex;gap:6px;margin-top:12px}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+
+    /* Table */
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th{padding:8px 10px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);font-weight:700;border-bottom:1px solid var(--border);background:var(--bg2)}
+    td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+    tr:hover td{background:var(--card2)}
+
+    /* Stats */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+    .stat-val{font-size:22px;font-weight:800;margin-bottom:2px}
+    .stat-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+    .stat-val.green{color:var(--green)}.stat-val.yellow{color:var(--yellow)}.stat-val.red{color:var(--red)}.stat-val.blue{color:var(--blue)}.stat-val.purple{color:var(--purple)}
+
+    /* Empty state */
+    .empty-state{text-align:center;padding:40px;color:var(--dim);font-size:12px}
+
+    /* Rule card in list */
+    .rule-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;box-shadow:var(--shadow);transition:all .15s;cursor:pointer}
+    .rule-item:hover{border-color:var(--border);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+    .rule-item.active-rule{border-left:3px solid var(--green)}
+    .rule-item.paused-rule{border-left:3px solid var(--yellow)}
+    .rule-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    .rule-name{font-size:14px;font-weight:700;margin-bottom:4px}
+    .rule-desc{font-size:11px;color:var(--dim);margin-bottom:8px}
+    .rule-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .rule-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
+    .rule-conditions{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+    .condition-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg2);border:1px solid var(--border);padding:3px 8px;border-radius:12px;font-size:10px;color:var(--text2)}
+    .rule-stats{display:flex;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--dim)}
+    .rule-stats span{display:flex;align-items:center;gap:4px}
+    .rule-stats strong{color:var(--text);font-weight:600}
+
+    /* Toggle switch */
+    .toggle{position:relative;width:36px;height:20px;cursor:pointer;display:inline-block;flex-shrink:0}
+    .toggle input{opacity:0;width:0;height:0;position:absolute}
+    .toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:10px;transition:all .2s}
+    .toggle-slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .2s}
+    .toggle input:checked+.toggle-slider{background:var(--green)}
+    .toggle input:checked+.toggle-slider::before{transform:translateX(16px)}
+
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--card);border:1px solid var(--border);border-radius:12px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:1}
+    .modal-title{font-size:15px;font-weight:700}
+    .modal-close{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+    .modal-close:hover{border-color:var(--red);color:var(--red)}
+    .modal-body{padding:20px}
+    .modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:16px 20px;border-top:1px solid var(--border)}
+
+    /* Section dividers in form */
+    .form-section{margin-bottom:20px}
+    .form-section-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+
+    /* Conditions builder */
+    .condition-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap}
+    .condition-row .form-group{flex:1;min-width:100px}
+    .remove-condition{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--dim);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;margin-bottom:1px}
+    .remove-condition:hover{border-color:var(--red);color:var(--red);background:var(--red-soft)}
+
+    /* Weekday picker */
+    .weekday-picker{display:flex;gap:4px}
+    .weekday-btn{width:32px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--dim);cursor:pointer;font-size:10px;font-weight:700;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center}
+    .weekday-btn.active{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+    .weekday-btn:hover{border-color:var(--text2);color:var(--text2)}
+
+    /* History table */
+    .history-section{margin-top:20px}
+    .history-item{display:grid;grid-template-columns:140px 1fr 80px 100px;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;align-items:center}
+    .history-item:hover{background:var(--card2)}
+    .history-time{color:var(--dim);font-variant-numeric:tabular-nums}
+    .history-detail{color:var(--text2)}
+    .history-status{font-weight:700;font-size:10px}
+    .history-status.success{color:var(--green)}
+    .history-status.failed{color:var(--red)}
+    .history-status.skipped{color:var(--yellow)}
+    .history-status.dry-run{color:var(--purple)}
+    .history-amount{font-variant-numeric:tabular-nums;font-weight:600}
+
+    /* Confirm dialog */
+    .confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+    .confirm-overlay.open{display:flex}
+    .confirm-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+    .confirm-icon{font-size:32px;margin-bottom:12px}
+    .confirm-title{font-size:14px;font-weight:700;margin-bottom:6px}
+    .confirm-desc{font-size:12px;color:var(--dim);margin-bottom:20px}
+    .confirm-actions{display:flex;gap:8px;justify-content:center}
+
+    /* Toast */
+    .toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:600;z-index:700;transform:translateY(80px);opacity:0;transition:all .3s ease;pointer-events:none}
+    .toast.show{transform:translateY(0);opacity:1}
+    .toast.success{background:var(--green);color:#fff}
+    .toast.error{background:var(--red);color:#fff}
+    .toast.info{background:var(--blue);color:#fff}
+
+    /* Responsive */
+    @media(max-width:768px){
+      .form-grid{grid-template-columns:1fr}
+      .stats-grid{grid-template-columns:repeat(2,1fr)}
+      .rule-header{flex-direction:column}
+      .rule-actions{width:100%;justify-content:flex-end}
+      .condition-row{flex-direction:column}
+      .condition-row .form-group{min-width:100%}
+      .history-item{grid-template-columns:1fr 1fr;gap:6px}
+      .modal{max-width:100%;margin:10px}
+      .header{flex-wrap:wrap;gap:8px;padding:10px 12px}
+      .container{padding:12px}
+    }
+    @media(max-width:480px){
+      .stats-grid{grid-template-columns:1fr 1fr}
+      .weekday-picker{flex-wrap:wrap}
+      .sec-header{flex-direction:column;align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="logo">Pay <span>Match</span> <span data-i18n="rules_page_title" style="color:var(--text);font-weight:700;font-size:14px">自動取引ルール</span></div>
+    </div>
+    <div class="header-right">
+      <div style="display:flex;gap:2px">
+        <button class="lang-btn" data-lang="ja">JA</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="zh">ZH</button>
+        <button class="lang-btn" data-lang="vi">VI</button>
+      </div>
+      <button class="icon-btn" id="themeBtn">D</button>
+    </div>
+  </div>
+  <nav class="admin-nav">
+    <a class="nav-btn" href="/admin.html" style="text-decoration:none">← 管理画面</a>
+    <span class="nav-sep"></span>
+    <a class="nav-btn active" href="/rules.html" style="text-decoration:none">ルール</a>
+    <a class="nav-btn" href="/simulator.html" style="text-decoration:none">シミュレーター</a>
+    <a class="nav-btn" href="/prediction.html" style="text-decoration:none">予測</a>
+    <a class="nav-btn" href="/profit.html" style="text-decoration:none">損益</a>
+  </nav>
+
+  <div class="container">
+
+    <!-- Stats Summary -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-val blue" id="statTotal">0</div>
+        <div class="stat-label" data-i18n="rules_stat_total">全ルール</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val green" id="statActive">0</div>
+        <div class="stat-label" data-i18n="rules_stat_active">稼働中</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val yellow" id="statPaused">0</div>
+        <div class="stat-label" data-i18n="rules_stat_paused">一時停止</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val purple" id="statExecutions">0</div>
+        <div class="stat-label" data-i18n="rules_stat_executions">本日実行</div>
+      </div>
+    </div>
+
+    <!-- Section header -->
+    <div class="sec-header">
+      <div>
+        <div class="sec-title" data-i18n="rules_list_title">ルール一覧</div>
+        <div class="sec-desc" data-i18n="rules_list_desc">レート条件に基づく自動取引ルールを管理</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" id="btnRefreshRules" data-i18n="refresh">更新</button>
+        <button class="btn btn-green" id="btnCreateRule" data-i18n="rules_create_btn">+ ルールを作成</button>
+      </div>
+    </div>
+
+    <!-- Rules List -->
+    <div id="rulesList">
+      <div class="empty-state" data-i18n="loading">読み込み中...</div>
+    </div>
+
+    <!-- Execution History Section -->
+    <div class="history-section" id="historySection" style="display:none">
+      <div class="sec-header" style="margin-top:24px">
+        <div>
+          <div class="sec-title" data-i18n="rules_history_title">実行履歴</div>
+          <div class="sec-desc" id="historyRuleName"></div>
+        </div>
+        <button class="btn btn-outline btn-sm" id="btnCloseHistory" data-i18n="close">閉じる</button>
+      </div>
+      <div class="card" style="padding:0;overflow-x:auto">
+        <div style="padding:10px 14px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--border);font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.5px">
+          <span style="width:140px" data-i18n="rules_hist_time">実行日時</span>
+          <span style="flex:1" data-i18n="rules_hist_detail">詳細</span>
+          <span style="width:80px" data-i18n="rules_hist_result">結果</span>
+          <span style="width:100px;text-align:right" data-i18n="rules_hist_amount">金額</span>
+        </div>
+        <div id="historyList">
+          <div class="empty-state" data-i18n="no_data">データがありません</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Create/Edit Rule Modal -->
+  <div class="modal-overlay" id="ruleModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle" data-i18n="rules_modal_create">ルールを作成</div>
+        <button class="modal-close" id="btnModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Basic info -->
+        <div class="form-section">
+          <div class="form-section-title" data-i18n="rules_section_basic">基本情報</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label class="form-label" data-i18n="rules_field_name">ルール名</label>
+              <input class="form-input" id="ruleName" data-i18n-placeholder="rules_field_name_placeholder" placeholder="例: USDT安値購入ルール">
+            </div>
+            <div class="form-group full">
+              <label class="form-label" data-i18n="rules_field_desc">説明</label>
+              <textarea class="form-input" id="ruleDescription" data-i18n-placeholder="rules_field_desc_placeholder" placeholder="ルールの目的や動作の説明"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rate Conditions -->
+        <div class="form-section">
+          <div class="form-section-title">
+            <span data-i18n="rules_section_rate">レート条件</span>
+            <button class="btn btn-outline btn-sm" id="btnAddCondition" data-i18n="rules_add_condition">+ 条件追加</button>
+          </div>
+          <div id="rateConditions">
+            <!-- Rate condition rows will be added here -->
+          </div>
+        </div>
+
+        <!-- Time Conditions -->
+        <div class="form-section">
+          <div class="form-section-title" data-i18n="rules_section_time">時間条件</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" data-i18n="rules_field_start_hour">開始時刻</label>
+              <select class="form-select" id="timeStart">
+                <option value="">--</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="rules_field_end_hour">終了時刻</label>
+              <select class="form-select" id="timeEnd">
+                <option value="">--</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label class="form-label" data-i18n="rules_field_weekdays">実行曜日</label>
+              <div class="weekday-picker" id="weekdayPicker">
+                <button type="button" class="weekday-btn active" data-day="0" data-i18n="rules_day_sun">日</button>
+                <button type="button" class="weekday-btn active" data-day="1" data-i18n="rules_day_mon">月</button>
+                <button type="button" class="weekday-btn active" data-day="2" data-i18n="rules_day_tue">火</button>
+                <button type="button" class="weekday-btn active" data-day="3" data-i18n="rules_day_wed">水</button>
+                <button type="button" class="weekday-btn active" data-day="4" data-i18n="rules_day_thu">木</button>
+                <button type="button" class="weekday-btn active" data-day="5" data-i18n="rules_day_fri">金</button>
+                <button type="button" class="weekday-btn active" data-day="6" data-i18n="rules_day_sat">土</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action config -->
+        <div class="form-section">
+          <div class="form-section-title" data-i18n="rules_section_action">アクション設定</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" data-i18n="rules_field_action_type">取引タイプ</label>
+              <select class="form-select" id="actionType">
+                <option value="buy" data-i18n="rules_action_buy">購入</option>
+                <option value="sell" data-i18n="rules_action_sell">売却</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="rules_field_crypto">暗号通貨</label>
+              <select class="form-select" id="actionCrypto">
+                <option value="USDT">USDT</option>
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="rules_field_amount">取引金額 (JPY)</label>
+              <input class="form-input" type="number" id="actionAmount" placeholder="100000" step="1000">
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="rules_field_mode">実行モード</label>
+              <select class="form-select" id="actionMode">
+                <option value="notify" data-i18n="rules_mode_notify">通知のみ</option>
+                <option value="execute" data-i18n="rules_mode_execute">自動実行</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="rules_field_max_per_exec">1回の上限 (JPY)</label>
+              <input class="form-input" type="number" id="maxPerExec" placeholder="500000" step="1000">
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="rules_field_max_daily">1日の上限 (JPY)</label>
+              <input class="form-input" type="number" id="maxDaily" placeholder="3000000" step="10000">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnModalCancel" data-i18n="cancel">キャンセル</button>
+        <button class="btn btn-purple" id="testRuleBtn" data-i18n="rules_test_btn" style="display:none">テスト実行</button>
+        <button class="btn btn-green" id="saveRuleBtn" data-i18n="save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Dialog -->
+  <div class="confirm-overlay" id="confirmDialog">
+    <div class="confirm-box">
+      <div class="confirm-icon">&#9888;</div>
+      <div class="confirm-title" data-i18n="rules_delete_confirm_title">ルールを削除しますか？</div>
+      <div class="confirm-desc" id="confirmDesc" data-i18n="rules_delete_confirm_desc">この操作は取り消せません。関連する実行履歴も削除されます。</div>
+      <div class="confirm-actions">
+        <button class="btn btn-outline" id="btnConfirmCancel" data-i18n="cancel">キャンセル</button>
+        <button class="btn btn-red" id="confirmDeleteBtn" data-i18n="delete">削除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <script src="i18n.js"></script>
+  <script src="rules-app.js"></script>
+  <script src="chat-widget.js"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import { recordSnapshot } from './priceHistory.js';
 import { broadcast } from './websocket.js';
+import logger from './logger.js';
 /**
  * @file aggregator.ts — レート集約エンジン
  * @description 全取引所のP2Pレートを30秒間隔で取得・集約する中核モジュール。
@@ -11,17 +12,44 @@ import { BybitFetcher } from '../fetchers/bybit';
 import { BinanceFetcher } from '../fetchers/binance';
 import { OKXFetcher } from '../fetchers/okx';
 // import { HTXFetcher } from '../fetchers/htx'; // Disabled: currency=11 is RUB not JPY
+import { KuCoinFetcher } from '../fetchers/kucoin';
+import { GateFetcher } from '../fetchers/gate';
+import { MEXCFetcher } from '../fetchers/mexc';
+import { PaxfulFetcher } from '../fetchers/paxful';
+import { NoonesFetcher } from '../fetchers/noones';
+import { HodlHodlFetcher } from '../fetchers/hodlhodl';
+import { BisqFetcher } from '../fetchers/bisq';
+import { AgoraDeskFetcher } from '../fetchers/agoradesk';
+import { PeachFetcher } from '../fetchers/peach';
+import { RoboSatsFetcher } from '../fetchers/robosats';
 import { getAllSpotPrices } from './spot';
 import { processArbitrage } from './arbitrage';
 import { CONFIG } from '../config';
 import { ExchangeRates, AggregatedRates, ArbitrageOpp, FetcherInterface } from '../types';
 
-const fetchers: FetcherInterface[] = [
-  new BybitFetcher(),
-  new BinanceFetcher(),
-  new OKXFetcher(),
-  // new HTXFetcher(), // Disabled: no JPY market on HTX
-];
+// All available fetchers — enable/disable via CONFIG.enabledExchanges
+const allFetchers: Record<string, FetcherInterface> = {
+  'Bybit': new BybitFetcher(),
+  'Binance': new BinanceFetcher(),
+  'OKX': new OKXFetcher(),
+  'KuCoin': new KuCoinFetcher(),
+  'Gate.io': new GateFetcher(),
+  'MEXC': new MEXCFetcher(),
+  'Paxful': new PaxfulFetcher(),
+  'Noones': new NoonesFetcher(),
+  'HodlHodl': new HodlHodlFetcher(),
+  'Bisq': new BisqFetcher(),
+  'AgoraDesk': new AgoraDeskFetcher(),
+  'Peach': new PeachFetcher(),
+  'RoboSats': new RoboSatsFetcher(),
+};
+
+const enabledExchanges = (CONFIG as Record<string, unknown>).enabledExchanges as string[] || ['Bybit', 'Binance', 'OKX'];
+const fetchers: FetcherInterface[] = enabledExchanges
+  .map((name: string) => allFetchers[name])
+  .filter(Boolean);
+
+logger.info('Enabled exchanges', { exchanges: fetchers.map(f => f.name) });
 
 let cachedRates: Map<string, AggregatedRates> = new Map();
 
@@ -42,16 +70,16 @@ export async function fetchAllRates(crypto: string): Promise<AggregatedRates> {
       const removedBuy = buyOrders.length - filteredBuyOrders.length;
       const removedSell = sellOrders.length - filteredSellOrders.length;
       if (removedBuy + removedSell > 0) {
-        console.log(`[${fetcher.name}] Filtered out ${removedBuy} buy + ${removedSell} sell orders (>${CONFIG.maxDeviationPct}% deviation)`);
+        logger.info('Filtered out deviant orders', { exchange: fetcher.name, removedBuy, removedSell, maxDeviationPct: CONFIG.maxDeviationPct });
       }
-      const bestBuy = filteredBuyOrders.length > 0 ? Math.min(...filteredBuyOrders.map(o => o.price)) : null;
-      const bestSell = filteredSellOrders.length > 0 ? Math.max(...filteredSellOrders.map(o => o.price)) : null;
+      const bestBuy = filteredBuyOrders.length > 0 ? filteredBuyOrders.reduce((min, o) => o.price < min ? o.price : min, filteredBuyOrders[0].price) : null;
+      const bestSell = filteredSellOrders.length > 0 ? filteredSellOrders.reduce((max, o) => o.price > max ? o.price : max, filteredSellOrders[0].price) : null;
       const spread = bestBuy && bestSell ? bestBuy - bestSell : null;
       const buyPremium = bestBuy && spotPrice ? ((bestBuy - spotPrice) / spotPrice) * 100 : null;
       const sellPremium = bestSell && spotPrice ? ((bestSell - spotPrice) / spotPrice) * 100 : null;
       return { exchange: fetcher.name, crypto, buyOrders: filteredBuyOrders, sellOrders: filteredSellOrders, bestBuy, bestSell, spread, spotPrice, buyPremium, sellPremium, lastUpdated: Date.now() };
-    } catch (err: any) {
-      return { exchange: fetcher.name, crypto, buyOrders: [], sellOrders: [], bestBuy: null, bestSell: null, spread: null, spotPrice, buyPremium: null, sellPremium: null, lastUpdated: Date.now(), error: err.message };
+    } catch (err: unknown) {
+      return { exchange: fetcher.name, crypto, buyOrders: [], sellOrders: [], bestBuy: null, bestSell: null, spread: null, spotPrice, buyPremium: null, sellPremium: null, lastUpdated: Date.now(), error: err instanceof Error ? err.message : String(err) };
     }
   });
 
@@ -88,6 +116,12 @@ export async function fetchAllRates(crypto: string): Promise<AggregatedRates> {
 
   cachedRates.set(crypto, result);
 
+  // Update merchant scores
+  try { const { updateMerchantsFromRates } = await import('./merchantScoring.js'); updateMerchantsFromRates(result); } catch(e) {}
+
+  // Check trading rules
+  try { const { checkAllRules } = await import('./ruleEngine.js'); await checkAllRules(result); } catch(e) {}
+
   // Broadcast rates via WebSocket
   broadcast("rates", { crypto, ...result });
   return result;
@@ -99,8 +133,8 @@ export function getCachedRates(crypto?: string): AggregatedRates | Map<string, A
 }
 
 export async function updateAllCryptos(): Promise<void> {
-  console.log(`[Aggregator] Updating rates for ${CONFIG.cryptos.join(', ')}...`);
+  logger.info('Updating rates', { cryptos: CONFIG.cryptos });
   const start = Date.now();
   for (const crypto of CONFIG.cryptos) { await fetchAllRates(crypto); }
-  console.log(`[Aggregator] Updated in ${Date.now() - start}ms`);
+  logger.info('Rates updated', { durationMs: Date.now() - start });
 }

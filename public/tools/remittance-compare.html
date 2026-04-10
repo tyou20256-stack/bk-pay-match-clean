@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>海外送金コスト比較 — 銀行振込 vs USDT | PayMatch</title>
+  <meta name="description" content="銀行の海外送金とUSDT送金のコストを比較。ベトナム・フィリピン・中国への送金手数料をリアルタイム計算。">
+  <link rel="canonical" href="https://bkpay.app/tools/remittance-compare.html">
+  <meta property="og:title" content="海外送金コスト比較 — 銀行 vs USDT">
+  <meta property="og:description" content="銀行送金¥7,000 vs USDT送金¥150。どちらが安い？">
+  <meta property="og:url" content="https://bkpay.app/tools/remittance-compare.html">
+  <meta property="og:site_name" content="PayMatch">
+  <meta name="theme-color" content="#34d399">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"PayMatch","item":"https://bkpay.app/"},{"@type":"ListItem","position":2,"name":"送金比較ツール","item":"https://bkpay.app/tools/remittance-compare.html"}]}</script>
+  <link rel="stylesheet" href="/buy-usdt.css">
+</head>
+<body>
+  <nav style="background:var(--card);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;max-width:480px;margin:0 auto">
+    <a href="/" style="color:var(--accent);text-decoration:none;font-weight:700">Pay<span style="color:var(--text)">Match</span></a>
+    <a href="/buy-usdt.html" style="background:#10b981;color:#fff;padding:4px 12px;border-radius:6px;text-decoration:none;font-weight:600;font-size:12px">USDT購入</a>
+  </nav>
+  <div style="max-width:480px;margin:0 auto;padding:20px 16px">
+    <h1 style="font-size:18px;text-align:center;margin-bottom:4px">海外送金コスト比較</h1>
+    <p style="text-align:center;font-size:12px;color:var(--dim);margin-bottom:16px">銀行振込 vs USDT送金</p>
+
+    <label style="font-size:12px;color:var(--text2)">送金先</label>
+    <select id="country" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px">
+      <option value="vn">ベトナム</option>
+      <option value="ph">フィリピン</option>
+      <option value="cn">中国</option>
+      <option value="th">タイ</option>
+    </select>
+
+    <label style="font-size:12px;color:var(--text2)">送金額（日本円）</label>
+    <input type="text" id="amount" value="100000" inputmode="numeric" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:16px;box-sizing:border-box">
+
+    <div id="result" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center">
+        <div style="font-size:10px;color:var(--dim);margin-bottom:4px">銀行送金</div>
+        <div id="bankFee" style="font-size:20px;font-weight:700;color:#ef4444">¥7,000</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:4px">手数料</div>
+        <div id="bankDays" style="font-size:11px;color:var(--text2);margin-top:4px">到着: 1-3営業日</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--accent);border-radius:8px;padding:16px;text-align:center">
+        <div style="font-size:10px;color:var(--dim);margin-bottom:4px">USDT送金</div>
+        <div id="usdtFee" style="font-size:20px;font-weight:700;color:var(--accent)">¥150</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:4px">手数料</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">到着: 1-5分</div>
+      </div>
+    </div>
+
+    <div id="savings" style="text-align:center;background:var(--accent);color:#fff;border-radius:8px;padding:12px;font-size:14px;font-weight:700;margin-bottom:16px"></div>
+
+    <a href="/buy-usdt.html?utm_source=remittance_tool" style="display:block;text-align:center;padding:12px;background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">USDTを購入して送金する</a>
+
+    <div style="margin-top:16px;font-size:10px;color:var(--dim);text-align:center">
+      <a href="https://twitter.com/intent/tweet?text=" id="shareLink" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">この比較をシェア</a>
+    </div>
+  </div>
+  <script>
+    var bankFees = { vn: 7000, ph: 6500, cn: 5000, th: 6000 };
+    var bankDays = { vn: '1-3営業日', ph: '2-4営業日', cn: '1-2営業日', th: '2-3営業日' };
+    var usdtFee = 150;
+
+    function calc() {
+      var country = document.getElementById('country').value;
+      var amount = parseInt(document.getElementById('amount').value.replace(/[,、\s]/g, '')) || 0;
+      var bf = bankFees[country];
+      var saving = bf - usdtFee;
+      var pct = ((saving / bf) * 100).toFixed(0);
+
+      document.getElementById('bankFee').textContent = '¥' + bf.toLocaleString();
+      document.getElementById('usdtFee').textContent = '¥' + usdtFee.toLocaleString();
+      document.getElementById('bankDays').textContent = '到着: ' + bankDays[country];
+      document.getElementById('savings').textContent = 'USDT送金で ¥' + saving.toLocaleString() + ' 節約（' + pct + '%安い）';
+
+      var shareText = '海外送金コスト比較：銀行¥' + bf.toLocaleString() + ' vs USDT¥' + usdtFee + '（' + pct + '%節約） PayMatchなら銀行振込でUSDT購入→即送金';
+      document.getElementById('shareLink').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent('https://bkpay.app/tools/remittance-compare.html');
+    }
+
+    document.getElementById('country').onchange = calc;
+    document.getElementById('amount').oninput = calc;
+    calc();
+  </script>
+</body>
+</html>

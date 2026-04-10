@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayMatch - P2P暗号通貨マッチングプラットフォーム 機能一覧</title>
+  <meta name="description" content="PayMatchの全機能を紹介。TruPay P2Pマッチング、AI振込解析、リアルタイムレート比較、Telegram Bot、自動マーケティングなど。">
+  <link rel="canonical" href="https://bkpay.app/features.html">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="PayMatch - 機能一覧 | P2P暗号通貨マッチング">
+  <meta property="og:description" content="PayMatchの全機能。TruPay連携、AI振込解析、マルチチャネル購入、自動マーケティング。">
+  <meta property="og:url" content="https://bkpay.app/features.html">
+  <meta property="og:site_name" content="PayMatch">
+  <meta property="og:image" content="https://bkpay.app/og-image.svg">
+  <meta property="og:image:type" content="image/svg+xml">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PayMatch 機能一覧">
+  <meta name="twitter:image" content="https://bkpay.app/og-image.svg">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    [data-theme="dark"]{--bg:#0a0d14;--bg2:#0f1117;--card:#141a25;--card2:#1a2233;--border:#1e2a3d;--text:#edf0f7;--text2:#b0b8c8;--dim:#8a9ab5;--green:#34d399;--green2:#10b981;--green-soft:rgba(52,211,153,.06);--green-border:rgba(52,211,153,.18);--blue:#60a5fa;--blue-soft:rgba(96,165,250,.06);--purple:#a78bfa;--purple-soft:rgba(167,139,250,.06);--yellow:#fbbf24;--yellow-soft:rgba(251,191,36,.06);--red:#f87171;--red-soft:rgba(248,113,113,.06);--orange:#fb923c;--shadow:0 1px 3px rgba(0,0,0,.4)}
+    [data-theme="light"]{--bg:#f5f7fa;--bg2:#fff;--card:#fff;--card2:#f8fafc;--border:#e2e8f0;--text:#1a202c;--text2:#4a5568;--dim:#a0aec0;--green:#059669;--green2:#047857;--green-soft:rgba(5,150,105,.04);--green-border:rgba(5,150,105,.15);--blue:#2563eb;--blue-soft:rgba(37,99,235,.04);--purple:#7c3aed;--purple-soft:rgba(124,58,237,.04);--yellow:#d97706;--yellow-soft:rgba(217,119,6,.04);--red:#dc2626;--red-soft:rgba(220,38,38,.04);--orange:#ea580c;--shadow:0 1px 3px rgba(0,0,0,.06)}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;font-size:14px;line-height:1.7}
+    .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+
+    /* Header */
+    .site-header{border-bottom:1px solid var(--border);padding:12px 0}
+    .site-header .wrap{display:flex;justify-content:space-between;align-items:center}
+    .logo{font-size:16px;font-weight:800}.logo span{color:var(--green)}
+    .header-links{display:flex;gap:12px;font-size:12px}
+    .header-links a{color:var(--dim);text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:6px}
+    .header-links a:hover{border-color:var(--green);color:var(--green)}
+
+    /* Hero */
+    .hero{text-align:center;padding:60px 0 40px}
+    .hero-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);background:var(--green-soft);border:1px solid var(--green-border);border-radius:20px;padding:4px 16px;margin-bottom:16px}
+    .hero h1{font-size:36px;font-weight:800;letter-spacing:-1px;line-height:1.2;margin-bottom:12px}
+    .hero h1 span{color:var(--green)}
+    .hero p{color:var(--text2);font-size:16px;max-width:600px;margin:0 auto 24px}
+    .hero-stats{display:flex;justify-content:center;gap:32px;margin-top:24px}
+    .hero-stat{text-align:center}
+    .hero-stat .num{font-size:28px;font-weight:800;color:var(--green)}
+    .hero-stat .label{font-size:11px;color:var(--dim);margin-top:2px}
+
+    /* Section */
+    .section{padding:48px 0}
+    .section-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:8px}
+    .section h2{font-size:24px;font-weight:800;margin-bottom:8px;letter-spacing:-.5px}
+    .section .desc{color:var(--text2);font-size:14px;margin-bottom:24px;max-width:600px}
+    .section-divider{border:none;border-top:1px solid var(--border);margin:0}
+
+    /* Feature grid */
+    .features{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:20px}
+    .feat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;transition:border-color .15s}
+    .feat:hover{border-color:var(--green-border)}
+    .feat-icon{font-size:24px;margin-bottom:10px}
+    .feat h3{font-size:14px;font-weight:700;margin-bottom:6px}
+    .feat p{font-size:12px;color:var(--text2);line-height:1.6}
+    .feat-tag{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;margin-top:8px;letter-spacing:.3px}
+    .tag-green{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+    .tag-blue{background:var(--blue-soft);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+    .tag-purple{background:var(--purple-soft);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+    .tag-yellow{background:var(--yellow-soft);color:var(--yellow);border:1px solid rgba(251,191,36,.2)}
+    .tag-orange{background:rgba(251,146,60,.06);color:var(--orange);border:1px solid rgba(251,146,60,.2)}
+
+    /* Flow diagram */
+    .flow-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin:24px 0}
+    .flow-title{font-size:14px;font-weight:700;margin-bottom:16px;text-align:center}
+    .flow{display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:8px}
+    .flow-node{flex-shrink:0;text-align:center;padding:12px 16px;min-width:110px}
+    .flow-node .icon{font-size:20px;margin-bottom:4px}
+    .flow-node .name{font-size:11px;font-weight:700;color:var(--text)}
+    .flow-node .sub{font-size:9px;color:var(--dim);margin-top:2px}
+    .flow-arrow{flex-shrink:0;color:var(--green);font-size:16px;padding:0 2px}
+
+    /* Architecture */
+    .arch-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .arch-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+    .arch-card h4{font-size:13px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .arch-card ul{list-style:none;padding:0}
+    .arch-card li{font-size:12px;color:var(--text2);padding:3px 0;display:flex;align-items:center;gap:6px}
+    .arch-card li::before{content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0}
+    .dot-green::before{background:var(--green)}.dot-blue::before{background:var(--blue)}.dot-purple::before{background:var(--purple)}.dot-yellow::before{background:var(--yellow)}
+
+    /* Comparison table */
+    table{width:100%;border-collapse:collapse;font-size:12px;margin:16px 0;background:var(--card);border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+    th{background:var(--bg2);padding:10px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);font-weight:700}
+    td{padding:10px 14px;border-top:1px solid var(--border);color:var(--text2)}
+    tr:hover td{background:var(--card2)}
+    .check{color:var(--green);font-weight:700}.cross{color:var(--dim)}
+
+    /* Score card */
+    .scores{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:20px 0}
+    .score-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+    .score-card .val{font-size:28px;font-weight:800}
+    .score-card .lbl{font-size:10px;color:var(--dim);margin-top:2px}
+    .score-green .val{color:var(--green)}.score-blue .val{color:var(--blue)}
+
+    /* CTA */
+    .cta{text-align:center;padding:48px 0}
+    .cta h2{font-size:24px;font-weight:800;margin-bottom:12px}
+    .cta p{color:var(--text2);margin-bottom:24px}
+    .cta-btns{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+    .cta-btn{display:inline-block;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;transition:all .15s}
+    .cta-primary{background:var(--green2);color:#fff}.cta-primary:hover{background:var(--green)}
+    .cta-secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}.cta-secondary:hover{border-color:var(--green)}
+
+    footer{text-align:center;padding:24px 0;color:var(--dim);font-size:10px;border-top:1px solid var(--border)}
+    footer a{color:var(--dim);text-decoration:none}
+
+    @media(max-width:768px){
+      .features{grid-template-columns:1fr 1fr}
+      .arch-grid{grid-template-columns:1fr}
+      .scores{grid-template-columns:repeat(3,1fr)}
+      .hero h1{font-size:28px}
+      .hero-stats{gap:20px}
+    }
+    @media(max-width:480px){
+      .features{grid-template-columns:1fr}
+      .scores{grid-template-columns:repeat(2,1fr)}
+      .hero-stats{flex-direction:column;gap:12px}
+      .flow{flex-direction:column;align-items:stretch}
+      .flow-arrow{transform:rotate(90deg);text-align:center}
+    }
+  </style>
+</head>
+<body>
+
+  <div class="site-header">
+    <div class="wrap">
+      <div class="logo">Pay<span>Match</span></div>
+      <div class="header-links" style="align-items:center">
+        <a href="/buy-usdt.html" data-i18n="nav_buy_usdt">USDT購入</a>
+        <a href="/paypay-convert.html" data-i18n="nav_paypay">PayPay変換</a>
+        <a href="/guide.html" data-i18n="nav_guide">ガイド</a>
+        <a href="/about.html" data-i18n="nav_about">サービス紹介</a>
+        <div style="display:flex;gap:2px;margin-left:4px">
+          <button class="lang-btn" data-lang="ja" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--dim);font-size:10px;cursor:pointer">JA</button>
+          <button class="lang-btn" data-lang="en" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--dim);font-size:10px;cursor:pointer">EN</button>
+          <button class="lang-btn" data-lang="zh" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--dim);font-size:10px;cursor:pointer">ZH</button>
+          <button class="lang-btn" data-lang="vi" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--dim);font-size:10px;cursor:pointer">VI</button>
+        </div>
+        <button id="themeToggleFeat" style="background:none;border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--dim);font-size:12px;cursor:pointer" aria-label="テーマ切り替え">&#9774;</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-badge" data-i18n="feat_hero_title">機能一覧</div>
+      <h1>Pay<span>Match</span></h1>
+      <p data-i18n="feat_hero_desc">TruPay出金をUSDT購入者にマッチング。自社銀行口座を使わずに出金処理を完結する、P2P暗号通貨マッチングプラットフォーム。</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="num">3</div><div class="label">取引所リアルタイム連携</div></div>
+        <div class="hero-stat"><div class="num">4</div><div class="label">言語対応</div></div>
+        <div class="hero-stat"><div class="num">30s</div><div class="label">レート更新間隔</div></div>
+        <div class="hero-stat"><div class="num">AI</div><div class="label">振込明細自動解析</div></div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- Core Concept -->
+    <div class="section">
+      <div class="section-label">Core Concept</div>
+      <h2>ビジネスモデル</h2>
+      <div class="desc">TruPayに届く銀行出金依頼を自社銀行から振り込まず、USDT購入希望者が出金者口座に直接送金。自社の銀行リスクをゼロにする。</div>
+
+      <div class="flow-section">
+        <div class="flow-title">TruPay P2P マッチングフロー</div>
+        <div class="flow">
+          <div class="flow-node"><div class="icon">🏢</div><div class="name">sloten.io</div><div class="sub">出金申請</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node"><div class="icon">💳</div><div class="name">TruPay</div><div class="sub">承認 (status=31)</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node"><div class="icon">⚡</div><div class="name">PayMatch</div><div class="sub">自動検知+マッチング</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node"><div class="icon">👤</div><div class="name">USDT購入者</div><div class="sub">出金者口座に直接振込</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node"><div class="icon">🤖</div><div class="name">AI解析</div><div class="sub">振込明細を自動検証</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node"><div class="icon">💎</div><div class="name">USDT送金</div><div class="sub">購入者ウォレットへ</div></div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- Features -->
+    <div class="section">
+      <div class="section-label">Features</div>
+      <h2>機能一覧</h2>
+      <div class="desc">40以上のサービスモジュールで構成されるフルスタックP2Pプラットフォーム</div>
+
+      <div class="features">
+
+        <div class="feat">
+          <div class="feat-icon">🔄</div>
+          <h3>TruPay自動ポーリング</h3>
+          <p>1分間隔でTruPay APIから承認済み出金を自動検知。Merchant(pay@sloten.io)フィルタ + 国内銀行振込のみ抽出。</p>
+          <span class="feat-tag tag-green">CORE</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">🤝</div>
+          <h3>P2P自動マッチング</h3>
+          <p>30秒間隔で出金キューとUSDT購入者を金額レンジでマッチング。CAS(Compare-and-Swap)で二重マッチ防止。Mutex付き。</p>
+          <span class="feat-tag tag-green">CORE</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">🤖</div>
+          <h3>AI振込明細解析</h3>
+          <p>Claude Vision APIで振込スクショをOCR。銀行名・口座番号・名義・金額を抽出しスコアリング(0-100)。手数料込み金額も許容。</p>
+          <span class="feat-tag tag-purple">AI</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">📊</div>
+          <h3>リアルタイムレート比較</h3>
+          <p>Bybit・Binance・OKXのP2Pレートを30秒更新。USDT/BTC/ETH対応。スプレッド・乖離率・アービトラージ機会を自動検出。</p>
+          <span class="feat-tag tag-blue">MARKET</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">🔐</div>
+          <h3>JWT自動リフレッシュ</h3>
+          <p>TruPay APIトークンを12時間ごとに自動更新。401検知時は即座にリログイン+リトライ。Mutex付きで並行ログイン防止。</p>
+          <span class="feat-tag tag-green">CORE</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">✅</div>
+          <h3>着金自動確認</h3>
+          <p>TruPay status=32(completed)を毎分ポーリングで検知。手動確認(scrapper/match API)も対応。購入者報告→AI解析→自動/手動承認。</p>
+          <span class="feat-tag tag-green">CORE</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">💎</div>
+          <h3>USDT自動送金</h3>
+          <p>TRC-20 USDT送金。3回リトライ+指数バックオフ。CASで二重送金防止。Circuit Breakerでブロックチェーン障害保護。</p>
+          <span class="feat-tag tag-green">CORE</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">🔔</div>
+          <h3>Telegram通知</h3>
+          <p>全イベントをリアルタイム通知。マッチング成立・AI解析結果(画像付き)・着金確認・USDT送金・タイムアウト。承認/却下ボタン付き。</p>
+          <span class="feat-tag tag-yellow">NOTIFY</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">🤖</div>
+          <h3>Telegram購入Bot</h3>
+          <p>Bot内で完結する購入フロー。金額選択→ウォレット入力→マッチング→振込先通知→完了報告。取引所レート購入モードも搭載。</p>
+          <span class="feat-tag tag-blue">CHANNEL</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">🌐</div>
+          <h3>Web UI購入ページ</h3>
+          <p>アカウント不要のUSDT購入ページ。信頼バッジ・ステップ表示・タイマー・振込先コピー・スクショ必須アップロード・状態保存(localStorage)。</p>
+          <span class="feat-tag tag-blue">CHANNEL</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">📢</div>
+          <h3>マーケティング自動配信</h3>
+          <p>Telegram公開チャンネル+X/Twitterに2時間ごと自動投稿。4言語ローテーション(日/英/中/越)。レート・マッチング件数・CTA付き。</p>
+          <span class="feat-tag tag-orange">GROWTH</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">📈</div>
+          <h3>マッチング候補ダッシュボード</h3>
+          <p>管理画面でTruPay出金キュー × P2P買い注文の金額レンジマッチング候補を自動分析。需要/供給比率・推奨レート表示。</p>
+          <span class="feat-tag tag-orange">GROWTH</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">💱</div>
+          <h3>USDT売却者(セラー)システム</h3>
+          <p>セラーがUSDTをデポジット→購入者に自動供給。自社ウォレット不要の完全P2Pモデル。取引数順の自動セラー選択。</p>
+          <span class="feat-tag tag-purple">P2P</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">🛡️</div>
+          <h3>CSP Nonce セキュリティ</h3>
+          <p>リクエストごとにランダムnonce生成。unsafe-inline完全除去。Cloudflare + Caddy + Express 3層セキュリティ。</p>
+          <span class="feat-tag tag-yellow">SECURITY</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">🗄️</div>
+          <h3>DB永続化 + 自動バックアップ</h3>
+          <p>SQLite WALモード + busy_timeout。購入者キューDB永続化(再起動復元)。Dockerサイドカーで日次自動バックアップ(7日保持)。</p>
+          <span class="feat-tag tag-yellow">INFRA</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">📊</div>
+          <h3>Prometheusメトリクス</h3>
+          <p>認証付き/metricsエンドポイント。注文数・マッチ数・出金数・USDT送金量のビジネスメトリクス。Grafana連携可能。</p>
+          <span class="feat-tag tag-yellow">MONITOR</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">♿</div>
+          <h3>WCAG 2.1 AA対応</h3>
+          <p>skip-link・aria-label・focus-visible・コントラスト4.5:1以上・prefers-reduced-motion・セマンティックHTML・ラベル紐付け。</p>
+          <span class="feat-tag tag-blue">A11Y</span>
+        </div>
+
+        <div class="feat">
+          <div class="feat-icon">🔍</div>
+          <h3>SEO最適化</h3>
+          <p>全ページOGP・Twitter Card・構造化データ(WebSite/Organization/HowTo/WebApplication)。robots.txt・sitemap.xml・GSC登録済み。</p>
+          <span class="feat-tag tag-orange">GROWTH</span>
+        </div>
+
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- Architecture -->
+    <div class="section">
+      <div class="section-label">Architecture</div>
+      <h2>技術アーキテクチャ</h2>
+      <div class="desc">Node.js + TypeScript モノリスで高速開発。Docker単一コンテナ + サイドカーバックアップ。</div>
+
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h4><span style="color:var(--green)">Backend</span></h4>
+          <ul>
+            <li class="dot-green">Node.js 20 + TypeScript + Express</li>
+            <li class="dot-green">SQLite (better-sqlite3) WAL mode</li>
+            <li class="dot-green">TronWeb (TRC-20 USDT送金)</li>
+            <li class="dot-green">Multer (ファイルアップロード)</li>
+            <li class="dot-green">WebSocket (リアルタイム更新)</li>
+          </ul>
+        </div>
+        <div class="arch-card">
+          <h4><span style="color:var(--blue)">外部API連携</span></h4>
+          <ul>
+            <li class="dot-blue">TruPay API (出金検知・着金確認)</li>
+            <li class="dot-blue">Bybit / Binance / OKX P2P API</li>
+            <li class="dot-blue">TronGrid API (ブロックチェーン)</li>
+            <li class="dot-blue">Claude Vision API (AI OCR)</li>
+            <li class="dot-blue">Telegram Bot API</li>
+            <li class="dot-blue">X/Twitter API v2</li>
+          </ul>
+        </div>
+        <div class="arch-card">
+          <h4><span style="color:var(--purple)">セキュリティ</span></h4>
+          <ul>
+            <li class="dot-purple">CSP Nonce (per-request)</li>
+            <li class="dot-purple">CSRF Double-Submit Cookie</li>
+            <li class="dot-purple">bcrypt パスワードハッシュ</li>
+            <li class="dot-purple">AES-256 データ暗号化</li>
+            <li class="dot-purple">SQL列名ホワイトリスト</li>
+            <li class="dot-purple">CAS二重送金防止(3層)</li>
+          </ul>
+        </div>
+        <div class="arch-card">
+          <h4><span style="color:var(--yellow)">インフラ</span></h4>
+          <ul>
+            <li class="dot-yellow">Docker + Caddy + Cloudflare</li>
+            <li class="dot-yellow">Hetzner VPS (シンガポール)</li>
+            <li class="dot-yellow">メモリ制限 2GB / CPU 2コア</li>
+            <li class="dot-yellow">日次SQLiteバックアップ(7日保持)</li>
+            <li class="dot-yellow">Prometheus メトリクス</li>
+            <li class="dot-yellow">構造化ログ (JSON Lines)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- Automated Services -->
+    <div class="section">
+      <div class="section-label">Automation</div>
+      <h2>自動実行プロセス</h2>
+      <div class="desc">人間の介入なしで24時間稼働する自動化サービス群</div>
+
+      <table>
+        <thead><tr><th>サービス</th><th>間隔</th><th>内容</th><th>ステータス</th></tr></thead>
+        <tbody>
+          <tr><td><strong>TruPay Poller</strong></td><td>60秒</td><td>承認済み出金検知 + キュー登録 + 48h超expired + ステータス再検証(10件/cycle)</td><td><span class="check">稼働中</span></td></tr>
+          <tr><td><strong>TruPay Matcher</strong></td><td>30秒</td><td>出金×購入者の金額マッチング (CAS + Mutex)</td><td><span class="check">稼働中</span></td></tr>
+          <tr><td><strong>TruPay Verifier</strong></td><td>60秒</td><td>着金確認(status=32) + USDT送金トリガー</td><td><span class="check">稼働中</span></td></tr>
+          <tr><td><strong>JWT Refresh</strong></td><td>12時間</td><td>TruPay APIトークン自動更新</td><td><span class="check">稼働中</span></td></tr>
+          <tr><td><strong>Rate Aggregator</strong></td><td>30秒</td><td>Bybit/Binance/OKX P2Pレート取得</td><td><span class="check">稼働中</span></td></tr>
+          <tr><td><strong>Marketing Bot</strong></td><td>2時間</td><td>Telegram + X 自動投稿(4言語)</td><td><span class="check">稼働中</span></td></tr>
+          <tr><td><strong>Telegram Bot</strong></td><td>常時</td><td>Long polling + 購入者対話</td><td><span class="check">稼働中</span></td></tr>
+          <tr><td><strong>Auto Sweep</strong></td><td>5分</td><td>ウォレット残高チェック</td><td><span class="check">稼働中</span></td></tr>
+          <tr><td><strong>DB Backup</strong></td><td>24時間</td><td>SQLite日次バックアップ(7日保持)</td><td><span class="check">稼働中</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- Quality Scores -->
+    <div class="section">
+      <div class="section-label">Quality</div>
+      <h2>品質スコア</h2>
+      <div class="desc">4人の専門家による監査を経て、74件の修正を実施</div>
+
+      <div class="scores">
+        <div class="score-card score-green"><div class="val">92</div><div class="lbl">セキュリティ</div></div>
+        <div class="score-card score-green"><div class="val">90</div><div class="lbl">コード品質</div></div>
+        <div class="score-card score-green"><div class="val">93</div><div class="lbl">フロントエンド</div></div>
+        <div class="score-card score-green"><div class="val">95</div><div class="lbl">アーキテクチャ</div></div>
+        <div class="score-card score-blue"><div class="val">95</div><div class="lbl">SEO</div></div>
+      </div>
+
+      <table>
+        <thead><tr><th>分野</th><th>初期</th><th>最終</th><th>改善幅</th><th>修正件数</th></tr></thead>
+        <tbody>
+          <tr><td>セキュリティ</td><td>35</td><td><strong>92</strong></td><td style="color:var(--green)">+57</td><td>17件</td></tr>
+          <tr><td>コード品質</td><td>60</td><td><strong>90</strong></td><td style="color:var(--green)">+30</td><td>11件</td></tr>
+          <tr><td>フロントエンド</td><td>55</td><td><strong>93</strong></td><td style="color:var(--green)">+38</td><td>23件</td></tr>
+          <tr><td>アーキテクチャ</td><td>70</td><td><strong>95</strong></td><td style="color:var(--green)">+25</td><td>11件</td></tr>
+          <tr><td>SEO</td><td>23</td><td><strong>95</strong></td><td style="color:var(--green)">+72</td><td>12件</td></tr>
+          <tr><td><strong>合計</strong></td><td><strong>55</strong></td><td><strong>~93</strong></td><td style="color:var(--green)"><strong>+38</strong></td><td><strong>74件</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- CTA -->
+    <div class="cta">
+      <h2>PayMatchを使ってみる</h2>
+      <p>銀行振込でUSDTを最安レートで購入。アカウント登録不要。</p>
+      <div class="cta-btns">
+        <a href="/buy-usdt.html" class="cta-btn cta-primary">USDT購入ページ</a>
+        <a href="/" class="cta-btn cta-secondary">レートダッシュボード</a>
+        <a href="/guide.html" class="cta-btn cta-secondary">使い方ガイド</a>
+        <a href="https://t.me/paymatch_rates" class="cta-btn cta-secondary">Telegram</a>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <div class="wrap">
+      PayMatch v1.0 | <a href="/about.html" data-i18n="nav_about">サービス紹介</a> | <a href="/manual.html">操作マニュアル</a> | <a href="/guide.html" data-i18n="nav_guide">ガイド</a> | <a href="https://t.me/paymatch_rates">Telegram</a>
+    </div>
+  </footer>
+
+  <script src="/i18n.js"></script>
+  <script src="/floating-cta.js"></script>
+  <script>
+    (function(){
+      var savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      var themeBtn = document.getElementById('themeToggleFeat');
+      if (themeBtn) {
+        themeBtn.innerHTML = savedTheme === 'dark' ? '&#9774;' : '&#9728;';
+        themeBtn.addEventListener('click', function() {
+          var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('theme', next);
+          themeBtn.innerHTML = next === 'dark' ? '&#9774;' : '&#9728;';
+        });
+      }
+      document.querySelectorAll('.lang-btn[data-lang]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (typeof setLanguage === 'function') setLanguage(this.dataset.lang);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay Match — 入金確認</title>
+  <style>
+    :root[data-theme="dark"] {
+      --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --text: #e8eaf0;
+      --dim: #6b7280; --green: #22c55e; --green-soft: rgba(34,197,94,.1);
+      --yellow: #eab308; --red: #ef4444; --blue: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
+    .logo { font-size: 20px; font-weight: 700; color: var(--green); margin-bottom: 32px; }
+    .logo span { color: var(--text); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 100%; max-width: 420px; }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--dim); margin-bottom: 16px; text-transform: uppercase; letter-spacing: .05em; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .row:last-child { border-bottom: none; }
+    .row-label { font-size: 13px; color: var(--dim); }
+    .row-val { font-size: 15px; font-weight: 600; }
+    .amount { font-size: 28px; font-weight: 700; color: var(--green); text-align: center; margin: 20px 0 4px; }
+    .amount-sub { font-size: 12px; color: var(--dim); text-align: center; margin-bottom: 20px; }
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-confirming { background: rgba(234,179,8,.15); color: var(--yellow); }
+    .status-completed { background: rgba(34,197,94,.15); color: var(--green); }
+    .status-other { background: rgba(107,114,128,.15); color: var(--dim); }
+    .btn { width: 100%; padding: 14px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 16px; transition: opacity .2s; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-green { background: var(--green); color: #000; }
+    .btn-green:hover:not(:disabled) { opacity: .85; }
+    .msg { margin-top: 16px; padding: 12px; border-radius: 8px; font-size: 13px; text-align: center; }
+    .msg-success { background: var(--green-soft); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+    .msg-error { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.3); border-top-color: #000; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .info-box { background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.3); border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; color: var(--blue); line-height: 1.6; }
+    .txid { font-family: monospace; font-size: 11px; word-break: break-all; color: var(--dim); margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="logo">Pay <span>Match</span></div>
+
+  <div class="card" id="loading">
+    <div style="text-align:center;color:var(--dim);padding:40px 0">読み込み中...</div>
+  </div>
+
+  <div class="card" id="orderCard" style="display:none">
+    <div class="card-title">入金確認依頼</div>
+
+    <div class="info-box">
+      バイヤーがあなたの PayPay / 電子決済に送金しました。<br>
+      入金を確認できたら「入金確認」ボタンを押してください。<br>
+      確認後、自動的にバイヤーへ USDT が送金されます。
+    </div>
+
+    <div class="amount" id="orderAmount">--</div>
+    <div class="amount-sub" id="orderCrypto">-- USDT</div>
+
+    <div class="row">
+      <span class="row-label">注文 ID</span>
+      <span class="row-val" id="orderId" style="font-family:monospace;font-size:12px">--</span>
+    </div>
+    <div class="row">
+      <span class="row-label">支払い方法</span>
+      <span class="row-val" id="orderPayMethod">--</span>
+    </div>
+    <div class="row">
+      <span class="row-label">あなたの ID</span>
+      <span class="row-val" id="orderPayId" style="color:var(--green)">--</span>
+    </div>
+    <div class="row">
+      <span class="row-label">ステータス</span>
+      <span class="row-val"><span class="status-badge status-confirming" id="orderStatus">確認中</span></span>
+    </div>
+    <div class="row">
+      <span class="row-label">有効期限</span>
+      <span class="row-val" id="orderExpiry" style="font-size:13px">--</span>
+    </div>
+
+    <button class="btn btn-green" id="confirmBtn">
+      入金確認（USDT を送金する）
+    </button>
+    <div id="msg" style="display:none" class="msg"></div>
+  </div>
+
+  <div class="card" id="errorCard" style="display:none;text-align:center;padding:40px 24px">
+    <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+    <div id="errorMsg" style="color:var(--red);font-size:14px">エラーが発生しました</div>
+  </div>
+
+  <script src="seller-confirm-app.js"></script>
+</body>
+</html>

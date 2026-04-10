@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay Match - レート予測</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    [data-theme="dark"]{--bg:#0c1017;--bg2:#141a25;--card:#1a2233;--card2:#1e2a3d;--border:#243049;--text:#edf0f7;--text2:#a0aec0;--dim:#5a6a85;--green:#34d399;--green-soft:rgba(52,211,153,.1);--green-border:rgba(52,211,153,.25);--red:#f87171;--red-soft:rgba(248,113,113,.08);--red-border:rgba(248,113,113,.25);--blue:#60a5fa;--blue-soft:rgba(96,165,250,.08);--yellow:#fbbf24;--yellow-soft:rgba(251,191,36,.08);--purple:#a78bfa;--purple-soft:rgba(167,139,250,.1);--input-bg:#0f1520;--shadow:0 2px 12px rgba(0,0,0,.3);--accent:#6c5ce7;--accent-soft:rgba(108,92,231,.12);--accent-border:rgba(108,92,231,.3)}
+    [data-theme="light"]{--bg:#f5f7fa;--bg2:#fff;--card:#fff;--card2:#f8fafc;--border:#e2e8f0;--text:#1a202c;--text2:#4a5568;--dim:#a0aec0;--green:#059669;--green-soft:rgba(5,150,105,.08);--green-border:rgba(5,150,105,.2);--red:#dc2626;--red-soft:rgba(220,38,38,.06);--red-border:rgba(220,38,38,.2);--blue:#2563eb;--blue-soft:rgba(37,99,235,.06);--yellow:#d97706;--yellow-soft:rgba(217,119,6,.06);--purple:#7c3aed;--purple-soft:rgba(124,58,237,.06);--input-bg:#f1f5f9;--shadow:0 2px 12px rgba(0,0,0,.06);--accent:#6c5ce7;--accent-soft:rgba(108,92,231,.08);--accent-border:rgba(108,92,231,.2)}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Segoe UI',sans-serif;font-size:13px;line-height:1.5;min-height:100vh}
+
+    /* Header */
+    .header{padding:12px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:100}
+    .header-left{display:flex;align-items:center;gap:16px}
+    .logo{font-size:15px;font-weight:800}.logo span{color:var(--green)}
+    .header-right{display:flex;gap:6px;align-items:center}
+    .icon-btn{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;text-decoration:none;transition:all .15s}
+    .icon-btn:hover{border-color:var(--text2);color:var(--text);background:var(--card2)}
+    .admin-nav{display:flex;flex-wrap:wrap;gap:4px;padding:8px 20px;background:var(--card);border-bottom:1px solid var(--border);overflow-x:auto}
+    .nav-sep{width:1px;background:var(--border);margin:2px 4px;align-self:stretch}
+    .nav-btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center}
+    .nav-btn:hover{border-color:var(--text);color:var(--text)}
+    .nav-btn.active{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+
+    /* Crypto Tabs */
+    .crypto-tabs{display:flex;justify-content:center;padding:16px 20px 0}
+    .tab-group{display:flex;background:var(--card);border-radius:8px;padding:3px;gap:2px;border:1px solid var(--border)}
+    .tab-btn{background:none;border:none;color:var(--dim);padding:8px 24px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:all .15s;white-space:nowrap}
+    .tab-btn.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(108,92,231,.3)}
+    .tab-btn:hover:not(.active){color:var(--text2)}
+
+    /* Container */
+    .container{max-width:960px;margin:0 auto;padding:20px}
+
+    /* Cards */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+    .card-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;color:var(--text)}
+    .card-title-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:14px}
+
+    /* Grid */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+    /* Gauge */
+    .gauge-container{display:flex;flex-direction:column;align-items:center;gap:12px}
+    .gauge{position:relative;width:200px;height:200px}
+    .gauge svg{transform:rotate(-90deg)}
+    .gauge-bg{fill:none;stroke:var(--border);stroke-width:14}
+    .gauge-fill{fill:none;stroke-width:14;stroke-linecap:round;transition:stroke-dashoffset .8s ease,stroke .4s ease}
+    .gauge-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+    .gauge-score{font-size:42px;font-weight:800;line-height:1}
+    .gauge-label{font-size:11px;color:var(--dim);margin-top:4px;font-weight:600}
+
+    .score-good{color:var(--green)}
+    .score-mid{color:var(--yellow)}
+    .score-bad{color:var(--red)}
+    .stroke-good{stroke:var(--green)}
+    .stroke-mid{stroke:var(--yellow)}
+    .stroke-bad{stroke:var(--red)}
+
+    /* Direction Indicator */
+    .direction-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px}
+    .direction-arrow{font-size:48px;font-weight:800;line-height:1;transition:color .3s}
+    .direction-arrow.up{color:var(--green)}
+    .direction-arrow.down{color:var(--red)}
+    .direction-arrow.flat{color:var(--yellow)}
+    .direction-text{font-size:20px;font-weight:800;letter-spacing:1px}
+    .direction-text.up{color:var(--green)}
+    .direction-text.down{color:var(--red)}
+    .direction-text.flat{color:var(--yellow)}
+    .confidence-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--accent)}
+    .confidence-bar{width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+    .confidence-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .6s ease}
+
+    /* Current Rate Display */
+    .rate-display{display:flex;align-items:center;justify-content:center;gap:20px;padding:12px 0;border-top:1px solid var(--border);margin-top:12px}
+    .rate-item{text-align:center}
+    .rate-value{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+    .rate-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-top:2px}
+    .rate-arrow-between{font-size:20px;color:var(--dim)}
+
+    /* Indicator cards */
+    .indicator-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .indicator-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;transition:all .15s}
+    .indicator-card:hover{border-color:var(--accent-border);box-shadow:0 0 0 1px var(--accent-border)}
+    .indicator-value{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-bottom:2px}
+    .indicator-name{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+    .indicator-sub{font-size:10px;color:var(--text2);margin-top:4px}
+
+    /* Optimal Time */
+    .optimal-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .time-highlight{background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:10px;padding:20px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+    .time-big{font-size:36px;font-weight:800;color:var(--accent);line-height:1}
+    .time-label{font-size:11px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+    .time-sub{font-size:12px;color:var(--text2)}
+
+    /* Pattern bars */
+    .pattern-section{margin-top:16px}
+    .pattern-title{font-size:11px;color:var(--text2);font-weight:600;margin-bottom:10px}
+    .pattern-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+    .pattern-label{font-size:11px;color:var(--text2);width:32px;text-align:right;font-weight:600;flex-shrink:0}
+    .pattern-bar-wrap{flex:1;height:8px;background:var(--bg2);border-radius:4px;overflow:hidden}
+    .pattern-bar{height:100%;border-radius:4px;transition:width .6s ease;min-width:2px}
+    .pattern-bar.best{background:var(--green)}
+    .pattern-bar.good{background:var(--blue)}
+    .pattern-bar.normal{background:var(--dim)}
+    .pattern-value{font-size:10px;color:var(--dim);width:36px;font-variant-numeric:tabular-nums;font-weight:600}
+
+    /* Auto-refresh toggle */
+    .refresh-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--card);border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)}
+    .refresh-left{display:flex;align-items:center;gap:8px}
+    .status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+    .status-dot.paused{background:var(--dim)}
+    .toggle-switch{position:relative;width:36px;height:20px;cursor:pointer}
+    .toggle-switch input{display:none}
+    .toggle-track{position:absolute;inset:0;background:var(--border);border-radius:10px;transition:background .2s}
+    .toggle-switch input:checked+.toggle-track{background:var(--accent)}
+    .toggle-knob{position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+    .toggle-switch input:checked~.toggle-knob{transform:translateX(16px)}
+    .countdown-text{font-variant-numeric:tabular-nums;min-width:40px}
+
+    /* Loading */
+    .loading-overlay{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--dim);gap:8px}
+    .spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Error state */
+    .error-state{text-align:center;padding:30px;color:var(--dim)}
+    .error-state .error-icon{font-size:24px;margin-bottom:8px}
+    .error-state .retry-btn{margin-top:12px;padding:6px 16px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:all .15s}
+    .error-state .retry-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* Last updated */
+    .last-updated{font-size:10px;color:var(--dim);text-align:center;padding:8px 0}
+
+    /* Responsive */
+    @media(max-width:768px){
+      .grid-2{grid-template-columns:1fr}
+      .indicator-grid{grid-template-columns:repeat(2,1fr)}
+      .optimal-grid{grid-template-columns:1fr 1fr}
+      .header{padding:10px 12px}
+      .container{padding:14px}
+      .logo{font-size:13px}
+      .gauge{width:160px;height:160px}
+      .gauge svg{width:160px;height:160px}
+      .gauge-score{font-size:34px}
+      .direction-arrow{font-size:36px}
+      .direction-text{font-size:16px}
+      .time-big{font-size:28px}
+      .rate-display{flex-wrap:wrap;gap:12px}
+      .tab-btn{padding:6px 16px;font-size:12px}
+    }
+    @media(max-width:480px){
+      .indicator-grid{grid-template-columns:1fr 1fr}
+      .optimal-grid{grid-template-columns:1fr}
+      .rate-display{flex-direction:column;gap:8px}
+      .rate-arrow-between{transform:rotate(90deg)}
+      .gauge{width:140px;height:140px}
+      .gauge svg{width:140px;height:140px}
+      .gauge-score{font-size:28px}
+      .tab-btn{padding:6px 12px;font-size:11px}
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">Pay <span>Match</span> <span data-i18n="pred_title" style="color:var(--text);font-weight:600;font-size:13px">レート予測</span></div>
+    </div>
+    <div class="header-right">
+      <button class="icon-btn" id="themeBtn" title="テーマ切替">D</button>
+    </div>
+  </div>
+  <nav class="admin-nav">
+    <a class="nav-btn" href="/admin.html" style="text-decoration:none">← 管理画面</a>
+    <span class="nav-sep"></span>
+    <a class="nav-btn" href="/rules.html" style="text-decoration:none">ルール</a>
+    <a class="nav-btn" href="/simulator.html" style="text-decoration:none">シミュレーター</a>
+    <a class="nav-btn active" href="/prediction.html" style="text-decoration:none">予測</a>
+    <a class="nav-btn" href="/profit.html" style="text-decoration:none">損益</a>
+  </nav>
+
+  <!-- Auto-refresh bar -->
+  <div class="refresh-bar">
+    <div class="refresh-left">
+      <div class="status-dot" id="statusDot"></div>
+      <span data-i18n="pred_auto_refresh">自動更新</span>
+      <span class="countdown-text" id="countdownText">60s</span>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="autoRefreshToggle" checked>
+      <div class="toggle-track"></div>
+      <div class="toggle-knob"></div>
+    </label>
+  </div>
+
+  <!-- Crypto Tabs -->
+  <div class="crypto-tabs">
+    <div class="tab-group" id="cryptoTabs">
+      <button class="tab-btn active" data-crypto="USDT">USDT</button>
+      <button class="tab-btn" data-crypto="BTC">BTC</button>
+      <button class="tab-btn" data-crypto="ETH">ETH</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Main Prediction Display -->
+    <div class="grid-2" id="mainSection">
+      <!-- Left: Buy Timing Score Gauge -->
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-icon">&#9201;</div>
+          <span data-i18n="pred_buy_timing">購入タイミングスコア</span>
+        </div>
+        <div class="gauge-container">
+          <div class="gauge">
+            <svg viewBox="0 0 200 200" width="200" height="200">
+              <circle class="gauge-bg" cx="100" cy="100" r="85"/>
+              <circle class="gauge-fill" id="gaugeFill" cx="100" cy="100" r="85"
+                stroke-dasharray="534" stroke-dashoffset="534"/>
+            </svg>
+            <div class="gauge-center">
+              <div class="gauge-score" id="gaugeScore">--</div>
+              <div class="gauge-label" id="gaugeLabel" data-i18n="pred_score">スコア</div>
+            </div>
+          </div>
+          <div id="gaugeAdvice" style="font-size:12px;color:var(--text2);text-align:center;max-width:240px"></div>
+        </div>
+      </div>
+
+      <!-- Right: Direction Indicator -->
+      <div class="card">
+        <div class="card-title">
+          <div class="card-title-icon">&#9994;</div>
+          <span data-i18n="pred_direction">予測方向</span>
+        </div>
+        <div class="direction-panel">
+          <div class="direction-arrow" id="directionArrow">--</div>
+          <div class="direction-text" id="directionText">---</div>
+          <div class="confidence-badge">
+            <span data-i18n="pred_confidence">信頼度</span>
+            <span id="confidenceValue">--%</span>
+            <div class="confidence-bar">
+              <div class="confidence-fill" id="confidenceFill" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Current Rate vs Predicted -->
+        <div class="rate-display">
+          <div class="rate-item">
+            <div class="rate-value" id="currentRate">--</div>
+            <div class="rate-label" data-i18n="pred_current_rate">現在のレート</div>
+          </div>
+          <div class="rate-arrow-between" id="rateArrow">&#8594;</div>
+          <div class="rate-item">
+            <div class="rate-value" id="predictedDirection" style="color:var(--dim)">--</div>
+            <div class="rate-label" data-i18n="pred_predicted">予測方向</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Technical Indicators -->
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-icon">&#128200;</div>
+        <span data-i18n="pred_indicators">テクニカル指標</span>
+      </div>
+      <div class="indicator-grid" id="indicatorGrid">
+        <div class="indicator-card">
+          <div class="indicator-value" id="sma12">--</div>
+          <div class="indicator-name">SMA-12</div>
+          <div class="indicator-sub" id="sma12Sub" data-i18n="pred_sma12_desc">12期間移動平均</div>
+        </div>
+        <div class="indicator-card">
+          <div class="indicator-value" id="sma24">--</div>
+          <div class="indicator-name">SMA-24</div>
+          <div class="indicator-sub" id="sma24Sub" data-i18n="pred_sma24_desc">24期間移動平均</div>
+        </div>
+        <div class="indicator-card">
+          <div class="indicator-value" id="volatility">--</div>
+          <div class="indicator-name" data-i18n="pred_volatility">ボラティリティ</div>
+          <div class="indicator-sub" id="volatilitySub"></div>
+        </div>
+        <div class="indicator-card">
+          <div class="indicator-value" id="trendIndicator">--</div>
+          <div class="indicator-name" data-i18n="pred_trend">トレンド方向</div>
+          <div class="indicator-sub" id="trendSub"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optimal Buy Time -->
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-icon">&#128338;</div>
+        <span data-i18n="pred_optimal_time">最適購入タイミング</span>
+      </div>
+      <div class="optimal-grid">
+        <div class="time-highlight">
+          <div class="time-label" data-i18n="pred_best_hour">最適な時間帯</div>
+          <div class="time-big" id="bestHour">--:00</div>
+          <div class="time-sub" id="bestHourSub"></div>
+        </div>
+        <div class="time-highlight">
+          <div class="time-label" data-i18n="pred_best_day">最適な曜日</div>
+          <div class="time-big" id="bestDay">--</div>
+          <div class="time-sub" id="bestDaySub"></div>
+        </div>
+      </div>
+
+      <!-- Hourly Pattern -->
+      <div class="pattern-section">
+        <div class="pattern-title" data-i18n="pred_hourly_pattern">時間別パターン（過去データに基づく平均スコア）</div>
+        <div id="hourlyPatterns"></div>
+      </div>
+
+      <!-- Daily Pattern -->
+      <div class="pattern-section" style="margin-top:20px">
+        <div class="pattern-title" data-i18n="pred_daily_pattern">曜日別パターン</div>
+        <div id="dailyPatterns"></div>
+      </div>
+    </div>
+
+    <!-- Last Updated -->
+    <div class="last-updated">
+      <span data-i18n="pred_last_updated">最終更新</span>: <span id="lastUpdated">--</span>
+    </div>
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="prediction-app.js"></script>
+  <script src="chat-widget.js"></script>
+</body>
+</html>

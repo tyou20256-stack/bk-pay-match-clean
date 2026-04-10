@@ -9,6 +9,7 @@ import { getExchangeCredsDecrypted } from './database.js';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import logger from './logger.js';
 
 const COOKIE_DIR = path.resolve(process.cwd(), 'data/cookies');
 const SCREENSHOT_PATH = '/tmp/puppeteer-error.png';
@@ -20,6 +21,7 @@ function sleep(ms: number): Promise<void> {
 interface TradeResult {
   success: boolean;
   orderId?: string;
+  paymentInfo?: Record<string, string>;
   error?: string;
 }
 
@@ -38,9 +40,9 @@ class P2PTrader {
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
       });
       this.running = true;
-      console.log('[Puppeteer] Browser launched');
-    } catch (e: any) {
-      console.error('[Puppeteer] Failed to launch browser:', e.message);
+      logger.info('Browser launched');
+    } catch (e: unknown) {
+      logger.error('Failed to launch browser', { error: (e instanceof Error ? e.message : String(e)) });
     }
   }
 
@@ -61,24 +63,59 @@ class P2PTrader {
   private async saveCookies(page: Page, exchange: string): Promise<void> {
     try {
       const cookies = await page.cookies();
-      fs.writeFileSync(path.join(COOKIE_DIR, `${exchange}.json`), JSON.stringify(cookies, null, 2));
-      console.log(`[Puppeteer] ${exchange}: cookies saved`);
-    } catch (e: any) {
-      console.warn(`[Puppeteer] ${exchange}: failed to save cookies:`, e.message);
+      const data = JSON.stringify(cookies);
+      // Encrypt cookie data before saving to disk
+      const crypto = require('crypto');
+      const key = process.env.BK_ENC_KEY || 'bkpay-default-key-change-me-32ch';
+      const derivedKey = crypto.pbkdf2Sync(key, 'bkpay-cookie-salt', 100000, 32, 'sha256');
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv('aes-256-gcm', derivedKey, iv);
+      let enc = cipher.update(data, 'utf8', 'hex');
+      enc += cipher.final('hex');
+      const authTag = cipher.getAuthTag().toString('hex');
+      const encrypted = iv.toString('hex') + ':' + authTag + ':' + enc;
+      fs.writeFileSync(path.join(COOKIE_DIR, `${exchange}.enc`), encrypted);
+      // Remove old unencrypted file if exists
+      const oldPath = path.join(COOKIE_DIR, `${exchange}.json`);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      logger.info('cookies saved (encrypted)', { exchange });
+    } catch (e: unknown) {
+      logger.warn('failed to save cookies', { exchange, error: (e instanceof Error ? e.message : String(e)) });
     }
   }
 
   private async loadCookies(page: Page, exchange: string): Promise<boolean> {
-    const cookiePath = path.join(COOKIE_DIR, `${exchange}.json`);
+    const encPath = path.join(COOKIE_DIR, `${exchange}.enc`);
+    const legacyPath = path.join(COOKIE_DIR, `${exchange}.json`);
     try {
-      if (fs.existsSync(cookiePath)) {
-        const cookies = JSON.parse(fs.readFileSync(cookiePath, 'utf-8'));
+      let cookieData: string | null = null;
+      if (fs.existsSync(encPath)) {
+        const encrypted = fs.readFileSync(encPath, 'utf-8');
+        const crypto = require('crypto');
+        const key = process.env.BK_ENC_KEY || 'bkpay-default-key-change-me-32ch';
+        const derivedKey = crypto.pbkdf2Sync(key, 'bkpay-cookie-salt', 100000, 32, 'sha256');
+        const parts = encrypted.split(':');
+        const iv = Buffer.from(parts[0], 'hex');
+        const authTag = Buffer.from(parts[1], 'hex');
+        const encHex = parts[2];
+        const decipher = crypto.createDecipheriv('aes-256-gcm', derivedKey, iv);
+        decipher.setAuthTag(authTag);
+        let dec = decipher.update(encHex, 'hex', 'utf8');
+        dec += decipher.final('utf8');
+        cookieData = dec;
+      } else if (fs.existsSync(legacyPath)) {
+        // Migrate: read unencrypted, will be re-encrypted on next save
+        cookieData = fs.readFileSync(legacyPath, 'utf-8');
+        logger.info('migrating unencrypted cookies', { exchange });
+      }
+      if (cookieData) {
+        const cookies = JSON.parse(cookieData);
         await page.setCookie(...cookies);
-        console.log(`[Puppeteer] ${exchange}: cookies restored`);
+        logger.info('cookies restored', { exchange });
         return true;
       }
-    } catch (e: any) {
-      console.warn(`[Puppeteer] ${exchange}: failed to load cookies:`, e.message);
+    } catch (e: unknown) {
+      logger.warn('failed to load cookies', { exchange, error: (e instanceof Error ? e.message : String(e)) });
     }
     return false;
   }
@@ -86,19 +123,19 @@ class P2PTrader {
   private async takeErrorScreenshot(page: Page, label: string): Promise<void> {
     try {
       await page.screenshot({ path: SCREENSHOT_PATH, fullPage: false });
-      console.log(`[Puppeteer] ${label}: error screenshot saved to ${SCREENSHOT_PATH}`);
+      logger.info('error screenshot saved', { label, path: SCREENSHOT_PATH });
     } catch {}
   }
 
   // ====== LOGIN ======
 
   async login(exchange: 'Bybit' | 'Binance', email?: string, password?: string, totpSecret?: string): Promise<boolean> {
-    console.log(`[Puppeteer] ${exchange}: logging in...`);
+    logger.info('logging in', { exchange });
     try {
       if (!email || !password) {
         const creds = getExchangeCredsDecrypted(exchange);
         if (!creds || !creds.email || !creds.password) {
-          console.error(`[Puppeteer] ${exchange}: no credentials available`);
+          logger.error('no credentials available', { exchange });
           return false;
         }
         email = creds.email;
@@ -114,8 +151,8 @@ class P2PTrader {
         return await this.loginBinance(page, email!, password!, totpSecret);
       }
       return false;
-    } catch (e: any) {
-      console.error(`[Puppeteer] ${exchange}: login error:`, e.message);
+    } catch (e: unknown) {
+      logger.error('login error', { exchange, error: (e instanceof Error ? e.message : String(e)) });
       const page = this.pages.get(exchange);
       if (page) await this.takeErrorScreenshot(page, `${exchange}-login`);
       return false;
@@ -123,50 +160,50 @@ class P2PTrader {
   }
 
   private async loginBybit(page: Page, email: string, password: string, totpSecret?: string): Promise<boolean> {
-    console.log('[Puppeteer] Bybit: navigating to login page...');
+    logger.info('Bybit: navigating to login page');
     await page.goto('https://www.bybit.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
     await sleep(2000);
 
     // Check if already logged in
     if (!page.url().includes('/login')) {
-      console.log('[Puppeteer] Bybit: already logged in via cookies');
+      logger.info('Bybit: already logged in via cookies');
       this.loggedIn.set('Bybit', true);
       this.lastActivity.set('Bybit', Date.now());
       return true;
     }
 
     // Enter email
-    console.log('[Puppeteer] Bybit: entering email...');
+    logger.info('Bybit: entering email');
     try {
       await page.waitForSelector('input[name="email"], input[type="email"], input[placeholder*="email" i]', { timeout: 10000 });
       const emailInput = await page.$('input[name="email"]') || await page.$('input[type="email"]') || await page.$('input[placeholder*="email" i]');
       if (emailInput) { await emailInput.click({ clickCount: 3 }); await emailInput.type(email, { delay: 50 }); }
-    } catch (e: any) {
-      console.error('[Puppeteer] Bybit: email input not found:', e.message);
+    } catch (e: unknown) {
+      logger.error('Bybit: email input not found', { error: (e instanceof Error ? e.message : String(e)) });
       await this.takeErrorScreenshot(page, 'bybit-email');
       return false;
     }
     await sleep(1000);
 
     // Enter password
-    console.log('[Puppeteer] Bybit: entering password...');
+    logger.info('Bybit: entering password');
     try {
       const passInput = await page.$('input[type="password"]');
       if (passInput) { await passInput.click({ clickCount: 3 }); await passInput.type(password, { delay: 50 }); }
-    } catch (e: any) {
-      console.error('[Puppeteer] Bybit: password input not found:', e.message);
+    } catch (e: unknown) {
+      logger.error('Bybit: password input not found', { error: (e instanceof Error ? e.message : String(e)) });
       await this.takeErrorScreenshot(page, 'bybit-password');
       return false;
     }
     await sleep(1000);
 
     // Click login button
-    console.log('[Puppeteer] Bybit: clicking login button...');
+    logger.info('Bybit: clicking login button');
     try {
       const loginBtn = await page.$('button[type="submit"]');
       if (loginBtn) await loginBtn.click();
-    } catch (e: any) {
-      console.error('[Puppeteer] Bybit: login button not found:', e.message);
+    } catch (e: unknown) {
+      logger.error('Bybit: login button not found', { error: (e instanceof Error ? e.message : String(e)) });
       await this.takeErrorScreenshot(page, 'bybit-loginbtn');
       return false;
     }
@@ -175,15 +212,15 @@ class P2PTrader {
     // Check for 2FA
     const pageContent = await page.content();
     if (pageContent.includes('2fa') || pageContent.includes('two-factor') || pageContent.includes('authenticator') || pageContent.includes('Google')) {
-      console.log('[Puppeteer] Bybit: 2FA page detected');
+      logger.info('Bybit: 2FA page detected');
       if (!totpSecret) {
-        console.warn('[Puppeteer] Bybit: 2FA required but no TOTP secret provided');
+        logger.warn('Bybit: 2FA required but no TOTP secret provided');
         await this.takeErrorScreenshot(page, 'bybit-2fa');
         return false;
       }
       try {
         const totp = this.generateTOTP(totpSecret);
-        console.log('[Puppeteer] Bybit: entering 2FA code...');
+        logger.info('Bybit: entering 2FA code');
         const otpInputs = await page.$$('input[type="tel"], input[type="number"], input.otp-input');
         if (otpInputs.length >= 6) {
           for (let i = 0; i < 6; i++) await otpInputs[i].type(totp[i], { delay: 100 });
@@ -191,8 +228,8 @@ class P2PTrader {
           await otpInputs[0].type(totp, { delay: 50 });
         }
         await sleep(3000);
-      } catch (e: any) {
-        console.error('[Puppeteer] Bybit: 2FA entry failed:', e.message);
+      } catch (e: unknown) {
+        logger.error('Bybit: 2FA entry failed', { error: (e instanceof Error ? e.message : String(e)) });
         await this.takeErrorScreenshot(page, 'bybit-2fa-entry');
         return false;
       }
@@ -200,12 +237,12 @@ class P2PTrader {
 
     await sleep(2000);
     if (page.url().includes('/login')) {
-      console.error('[Puppeteer] Bybit: login failed - still on login page');
+      logger.error('Bybit: login failed - still on login page');
       await this.takeErrorScreenshot(page, 'bybit-loginfail');
       return false;
     }
 
-    console.log('[Puppeteer] Bybit: login successful');
+    logger.info('Bybit: login successful');
     this.loggedIn.set('Bybit', true);
     this.lastActivity.set('Bybit', Date.now());
     await this.saveCookies(page, 'Bybit');
@@ -213,46 +250,46 @@ class P2PTrader {
   }
 
   private async loginBinance(page: Page, email: string, password: string, totpSecret?: string): Promise<boolean> {
-    console.log('[Puppeteer] Binance: navigating to login page...');
+    logger.info('Binance: navigating to login page');
     await page.goto('https://accounts.binance.com/en/login', { waitUntil: 'networkidle2', timeout: 30000 });
     await sleep(2000);
 
     if (!page.url().includes('/login')) {
-      console.log('[Puppeteer] Binance: already logged in via cookies');
+      logger.info('Binance: already logged in via cookies');
       this.loggedIn.set('Binance', true);
       this.lastActivity.set('Binance', Date.now());
       return true;
     }
 
-    console.log('[Puppeteer] Binance: entering email...');
+    logger.info('Binance: entering email');
     try {
       await page.waitForSelector('input[name="email"], input[id="click_login_email"], input[type="email"]', { timeout: 10000 });
       const emailInput = await page.$('input[name="email"]') || await page.$('input[id="click_login_email"]') || await page.$('input[type="email"]');
       if (emailInput) { await emailInput.click({ clickCount: 3 }); await emailInput.type(email, { delay: 50 }); }
-    } catch (e: any) {
-      console.error('[Puppeteer] Binance: email input not found:', e.message);
+    } catch (e: unknown) {
+      logger.error('Binance: email input not found', { error: (e instanceof Error ? e.message : String(e)) });
       await this.takeErrorScreenshot(page, 'binance-email');
       return false;
     }
     await sleep(1000);
 
-    console.log('[Puppeteer] Binance: entering password...');
+    logger.info('Binance: entering password');
     try {
       const passInput = await page.$('input[type="password"]');
       if (passInput) { await passInput.click({ clickCount: 3 }); await passInput.type(password, { delay: 50 }); }
-    } catch (e: any) {
-      console.error('[Puppeteer] Binance: password input not found:', e.message);
+    } catch (e: unknown) {
+      logger.error('Binance: password input not found', { error: (e instanceof Error ? e.message : String(e)) });
       await this.takeErrorScreenshot(page, 'binance-password');
       return false;
     }
     await sleep(1000);
 
-    console.log('[Puppeteer] Binance: clicking login button...');
+    logger.info('Binance: clicking login button');
     try {
       const loginBtn = await page.$('button[type="submit"]') || await page.$('#click_login_submit');
       if (loginBtn) await loginBtn.click();
-    } catch (e: any) {
-      console.error('[Puppeteer] Binance: login button not found:', e.message);
+    } catch (e: unknown) {
+      logger.error('Binance: login button not found', { error: (e instanceof Error ? e.message : String(e)) });
       await this.takeErrorScreenshot(page, 'binance-loginbtn');
       return false;
     }
@@ -260,22 +297,22 @@ class P2PTrader {
 
     const pageContent = await page.content();
     if (pageContent.includes('2fa') || pageContent.includes('authenticator') || pageContent.includes('security-verification')) {
-      console.log('[Puppeteer] Binance: 2FA page detected');
+      logger.info('Binance: 2FA page detected');
       if (!totpSecret) {
-        console.warn('[Puppeteer] Binance: 2FA required but no TOTP secret');
+        logger.warn('Binance: 2FA required but no TOTP secret');
         await this.takeErrorScreenshot(page, 'binance-2fa');
         return false;
       }
       try {
         const totp = this.generateTOTP(totpSecret);
-        console.log('[Puppeteer] Binance: entering 2FA code...');
+        logger.info('Binance: entering 2FA code');
         const otpInput = await page.$('input[placeholder*="code" i]') || await page.$('input.otp-input');
         if (otpInput) await otpInput.type(totp, { delay: 50 });
         const submitBtn = await page.$('button[type="submit"]');
         if (submitBtn) await submitBtn.click();
         await sleep(3000);
-      } catch (e: any) {
-        console.error('[Puppeteer] Binance: 2FA entry failed:', e.message);
+      } catch (e: unknown) {
+        logger.error('Binance: 2FA entry failed', { error: (e instanceof Error ? e.message : String(e)) });
         await this.takeErrorScreenshot(page, 'binance-2fa-entry');
         return false;
       }
@@ -283,12 +320,12 @@ class P2PTrader {
 
     await sleep(2000);
     if (page.url().includes('/login')) {
-      console.error('[Puppeteer] Binance: login failed');
+      logger.error('Binance: login failed');
       await this.takeErrorScreenshot(page, 'binance-loginfail');
       return false;
     }
 
-    console.log('[Puppeteer] Binance: login successful');
+    logger.info('Binance: login successful');
     this.loggedIn.set('Binance', true);
     this.lastActivity.set('Binance', Date.now());
     await this.saveCookies(page, 'Binance');
@@ -298,10 +335,10 @@ class P2PTrader {
   // ====== CREATE BUY ORDER ======
 
   async createBuyOrder(exchange: string, cryptoSymbol: string, amount: number, payMethod: string): Promise<TradeResult> {
-    console.log(`[Puppeteer] ${exchange}: creating buy order - ${amount} JPY for ${cryptoSymbol} via ${payMethod}`);
+    logger.info('creating buy order', { exchange, amount, cryptoSymbol, payMethod });
     if (!this.running || !this.browser) return { success: false, error: 'Browser not initialized' };
     if (!this.loggedIn.get(exchange)) {
-      console.log(`[Puppeteer] ${exchange}: not logged in, attempting login...`);
+      logger.info('not logged in, attempting login', { exchange });
       const ok = await this.login(exchange as 'Bybit' | 'Binance');
       if (!ok) return { success: false, error: `Login to ${exchange} failed` };
     }
@@ -311,16 +348,16 @@ class P2PTrader {
       if (exchange === 'Bybit') return await this.createBybitBuyOrder(page, cryptoSymbol, amount, payMethod);
       if (exchange === 'Binance') return await this.createBinanceBuyOrder(page, cryptoSymbol, amount, payMethod);
       return { success: false, error: `Unsupported exchange: ${exchange}` };
-    } catch (e: any) {
-      console.error(`[Puppeteer] ${exchange}: createBuyOrder error:`, e.message);
+    } catch (e: unknown) {
+      logger.error('createBuyOrder error', { exchange, error: (e instanceof Error ? e.message : String(e)) });
       const page = this.pages.get(exchange);
       if (page) await this.takeErrorScreenshot(page, `${exchange}-buy-error`);
-      return { success: false, error: e.message };
+      return { success: false, error: (e instanceof Error ? e.message : String(e)) };
     }
   }
 
   private async createBybitBuyOrder(page: Page, cryptoSymbol: string, amount: number, payMethod: string): Promise<TradeResult> {
-    console.log('[Puppeteer] Bybit: navigating to P2P page...');
+    logger.info('Bybit: navigating to P2P page');
     await page.goto(`https://www.bybit.com/fiat/trade/otc/?actionType=1&token=${cryptoSymbol}&fiat=JPY`, { waitUntil: 'networkidle2', timeout: 30000 });
     await sleep(3000);
 
@@ -329,30 +366,30 @@ class P2PTrader {
 
     // Payment filter
     try {
-      console.log(`[Puppeteer] Bybit: selecting payment filter: ${payLabel}`);
+      logger.info('Bybit: selecting payment filter', { payLabel });
       const filterBtns = await page.$$('[class*="payment"] button, [class*="filter"] span');
       for (const btn of filterBtns) {
         const text = await page.evaluate(el => el.textContent, btn);
         if (text && text.includes(payLabel)) { await btn.click(); await sleep(2000); break; }
       }
-    } catch (e: any) { console.warn('[Puppeteer] Bybit: payment filter failed:', e.message); }
+    } catch (e: unknown) { logger.warn('Bybit: payment filter failed', { error: (e instanceof Error ? e.message : String(e)) }); }
 
     // Enter amount
     try {
-      console.log(`[Puppeteer] Bybit: entering amount: ${amount}`);
+      logger.info('Bybit: entering amount', { amount });
       const amountInput = await page.$('input[placeholder*="金額" i]') || await page.$('input[placeholder*="amount" i]') || await page.$('input[type="number"]');
       if (amountInput) { await amountInput.click({ clickCount: 3 }); await amountInput.type(String(amount), { delay: 50 }); await sleep(2000); }
-    } catch (e: any) { console.warn('[Puppeteer] Bybit: amount input failed:', e.message); }
+    } catch (e: unknown) { logger.warn('Bybit: amount input failed', { error: (e instanceof Error ? e.message : String(e)) }); }
 
     // Click buy button
-    console.log('[Puppeteer] Bybit: looking for buy button...');
+    logger.info('Bybit: looking for buy button');
     try {
       const buyButtons = await page.$$('button');
       let clicked = false;
       for (const btn of buyButtons) {
         const text = await page.evaluate(el => el.textContent?.trim(), btn);
         if (text && (text === '購入' || text.toLowerCase() === 'buy' || text.includes('Buy USDT'))) {
-          console.log(`[Puppeteer] Bybit: clicking: "${text}"`);
+          logger.info('Bybit: clicking button', { text });
           await btn.click(); clicked = true; break;
         }
       }
@@ -360,9 +397,9 @@ class P2PTrader {
         await this.takeErrorScreenshot(page, 'bybit-no-buy-btn');
         return { success: false, error: 'No suitable P2P ad found' };
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       await this.takeErrorScreenshot(page, 'bybit-buy-click');
-      return { success: false, error: e.message };
+      return { success: false, error: (e instanceof Error ? e.message : String(e)) };
     }
     await sleep(3000);
 
@@ -370,39 +407,40 @@ class P2PTrader {
     try {
       const orderInput = await page.$('input[placeholder*="入力" i]') || await page.$('input[placeholder*="amount" i]');
       if (orderInput) { await orderInput.click({ clickCount: 3 }); await orderInput.type(String(amount), { delay: 50 }); await sleep(1000); }
-    } catch (e: any) { console.warn('[Puppeteer] Bybit: order amount input failed:', e.message); }
+    } catch (e: unknown) { logger.warn('Bybit: order amount input failed', { error: (e instanceof Error ? e.message : String(e)) }); }
 
     // Confirm
-    console.log('[Puppeteer] Bybit: confirming order...');
+    logger.info('Bybit: confirming order');
     try {
       const confirmBtns = await page.$$('button');
       for (const btn of confirmBtns) {
         const text = await page.evaluate(el => el.textContent?.trim(), btn);
         if (text && (text.includes('確認') || text.includes('Confirm') || text.includes('Place Order'))) { await btn.click(); break; }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       await this.takeErrorScreenshot(page, 'bybit-confirm');
       return { success: false, error: 'Failed to confirm order' };
     }
     await sleep(3000);
 
     const orderId = await this.extractOrderId(page, 'Bybit');
+    const paymentInfo = await this.extractPaymentInfo(page, 'Bybit');
     this.lastActivity.set('Bybit', Date.now());
-    console.log(`[Puppeteer] Bybit: order created${orderId ? ` (ID: ${orderId})` : ''}`);
-    return { success: true, orderId: orderId || `bybit-${Date.now()}` };
+    logger.info('Bybit: order created', { orderId: orderId || undefined });
+    return { success: true, orderId: orderId || `bybit-${Date.now()}`, paymentInfo: paymentInfo || undefined };
   }
 
   private async createBinanceBuyOrder(page: Page, cryptoSymbol: string, amount: number, payMethod: string): Promise<TradeResult> {
-    console.log('[Puppeteer] Binance: navigating to P2P page...');
+    logger.info('Binance: navigating to P2P page');
     await page.goto(`https://p2p.binance.com/trade/buy/${cryptoSymbol}?fiat=JPY&payment=all-payments`, { waitUntil: 'networkidle2', timeout: 30000 });
     await sleep(3000);
 
     try {
       const amountInput = await page.$('input[placeholder*="Amount" i]') || await page.$('input[placeholder*="金額" i]');
       if (amountInput) { await amountInput.click({ clickCount: 3 }); await amountInput.type(String(amount), { delay: 50 }); await sleep(2000); }
-    } catch (e: any) { console.warn('[Puppeteer] Binance: amount input failed:', e.message); }
+    } catch (e: unknown) { logger.warn('Binance: amount input failed', { error: (e instanceof Error ? e.message : String(e)) }); }
 
-    console.log('[Puppeteer] Binance: looking for buy button...');
+    logger.info('Binance: looking for buy button');
     try {
       const buyButtons = await page.$$('button');
       let clicked = false;
@@ -414,9 +452,9 @@ class P2PTrader {
         await this.takeErrorScreenshot(page, 'binance-no-buy-btn');
         return { success: false, error: 'No suitable P2P ad found on Binance' };
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       await this.takeErrorScreenshot(page, 'binance-buy-click');
-      return { success: false, error: e.message };
+      return { success: false, error: (e instanceof Error ? e.message : String(e)) };
     }
     await sleep(3000);
 
@@ -428,22 +466,23 @@ class P2PTrader {
         const text = await page.evaluate(el => el.textContent?.trim(), btn);
         if (text && (text.includes('Confirm') || text.includes('Buy') || text.includes('確認'))) { await btn.click(); break; }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       await this.takeErrorScreenshot(page, 'binance-confirm');
       return { success: false, error: 'Failed to confirm order on Binance' };
     }
     await sleep(3000);
 
     const orderId = await this.extractOrderId(page, 'Binance');
+    const paymentInfo = await this.extractPaymentInfo(page, 'Binance');
     this.lastActivity.set('Binance', Date.now());
-    console.log(`[Puppeteer] Binance: order created${orderId ? ` (ID: ${orderId})` : ''}`);
-    return { success: true, orderId: orderId || `binance-${Date.now()}` };
+    logger.info('Binance: order created', { orderId: orderId || undefined });
+    return { success: true, orderId: orderId || `binance-${Date.now()}`, paymentInfo: paymentInfo || undefined };
   }
 
   // ====== CONFIRM PAYMENT ======
 
   async confirmPayment(exchange: string, orderId: string): Promise<boolean> {
-    console.log(`[Puppeteer] ${exchange}: confirming payment for order ${orderId}...`);
+    logger.info('confirming payment', { exchange, orderId });
     try {
       const page = await this.getPage(exchange);
       if (exchange === 'Bybit') {
@@ -457,7 +496,7 @@ class P2PTrader {
       for (const btn of buttons) {
         const text = await page.evaluate(el => el.textContent?.trim(), btn);
         if (text && (text.includes('支払い済み') || text.includes('Paid') || text.includes('I have paid') || text.includes('Transfer'))) {
-          console.log(`[Puppeteer] ${exchange}: clicking: "${text}"`);
+          logger.info('clicking button', { exchange, text });
           await btn.click(); await sleep(2000); break;
         }
       }
@@ -470,10 +509,10 @@ class P2PTrader {
       }
 
       this.lastActivity.set(exchange, Date.now());
-      console.log(`[Puppeteer] ${exchange}: payment confirmed for ${orderId}`);
+      logger.info('payment confirmed', { exchange, orderId });
       return true;
-    } catch (e: any) {
-      console.error(`[Puppeteer] ${exchange}: confirmPayment error:`, e.message);
+    } catch (e: unknown) {
+      logger.error('confirmPayment error', { exchange, error: (e instanceof Error ? e.message : String(e)) });
       const page = this.pages.get(exchange);
       if (page) await this.takeErrorScreenshot(page, `${exchange}-confirm-pay`);
       return false;
@@ -483,7 +522,7 @@ class P2PTrader {
   // ====== CHECK ORDER STATUS ======
 
   async checkOrderStatus(exchange: string, orderId: string): Promise<string> {
-    console.log(`[Puppeteer] ${exchange}: checking status for ${orderId}...`);
+    logger.info('checking order status', { exchange, orderId });
     try {
       const page = await this.getPage(exchange);
       if (exchange === 'Bybit') {
@@ -501,8 +540,8 @@ class P2PTrader {
 
       this.lastActivity.set(exchange, Date.now());
       return 'unknown';
-    } catch (e: any) {
-      console.error(`[Puppeteer] ${exchange}: checkOrderStatus error:`, e.message);
+    } catch (e: unknown) {
+      logger.error('checkOrderStatus error', { exchange, error: (e instanceof Error ? e.message : String(e)) });
       return 'error';
     }
   }
@@ -510,7 +549,7 @@ class P2PTrader {
   // ====== RELEASE CRYPTO ======
 
   async releaseCrypto(exchange: string, orderId: string): Promise<boolean> {
-    console.log(`[Puppeteer] ${exchange}: releasing crypto for ${orderId}...`);
+    logger.info('releasing crypto', { exchange, orderId });
     try {
       const page = await this.getPage(exchange);
       if (exchange === 'Bybit') {
@@ -524,7 +563,7 @@ class P2PTrader {
       for (const btn of buttons) {
         const text = await page.evaluate(el => el.textContent?.trim(), btn);
         if (text && (text.includes('リリース') || text.includes('Release') || text.includes('Confirm Release'))) {
-          console.log(`[Puppeteer] ${exchange}: clicking: "${text}"`);
+          logger.info('clicking release button', { exchange, text });
           await btn.click(); await sleep(2000); break;
         }
       }
@@ -536,13 +575,77 @@ class P2PTrader {
       }
 
       this.lastActivity.set(exchange, Date.now());
-      console.log(`[Puppeteer] ${exchange}: crypto released for ${orderId}`);
+      logger.info('crypto released', { exchange, orderId });
       return true;
-    } catch (e: any) {
-      console.error(`[Puppeteer] ${exchange}: releaseCrypto error:`, e.message);
+    } catch (e: unknown) {
+      logger.error('releaseCrypto error', { exchange, error: (e instanceof Error ? e.message : String(e)) });
       const page = this.pages.get(exchange);
       if (page) await this.takeErrorScreenshot(page, `${exchange}-release`);
       return false;
+    }
+  }
+
+  // ====== PAYMENT INFO EXTRACTION ======
+
+  private async extractPaymentInfo(page: Page, exchange: string): Promise<Record<string, string> | null> {
+    try {
+      await sleep(3000);
+      const content = await page.content();
+
+      // Try to extract bank transfer info from the order detail page
+      const info: Record<string, string> = { type: 'bank' };
+
+      // Common patterns across exchanges: look for bank name, account number, holder name
+      const bankPatterns = [
+        /銀行[名：:\s]*([^\n<]+)/,
+        /Bank[：:\s]*([^\n<]+)/i,
+        /bank[_\s]?name['"：:\s]*['"]?([^\n<'"]+)/i,
+      ];
+      const accountPatterns = [
+        /口座番号[：:\s]*([0-9\-]+)/,
+        /Account\s*(?:No|Number)[.：:\s]*([0-9\-]+)/i,
+        /account[_\s]?number['"：:\s]*['"]?([0-9\-]+)/i,
+      ];
+      const holderPatterns = [
+        /口座名義[：:\s]*([^\n<]+)/,
+        /名義[：:\s]*([^\n<]+)/,
+        /Account\s*(?:Holder|Name)[：:\s]*([^\n<]+)/i,
+        /account[_\s]?holder['"：:\s]*['"]?([^\n<'"]+)/i,
+      ];
+      const branchPatterns = [
+        /支店[名：:\s]*([^\n<]+)/,
+        /Branch[：:\s]*([^\n<]+)/i,
+      ];
+
+      for (const p of bankPatterns) { const m = content.match(p); if (m) { info.bankName = m[1].trim(); break; } }
+      for (const p of accountPatterns) { const m = content.match(p); if (m) { info.accountNumber = m[1].trim(); break; } }
+      for (const p of holderPatterns) { const m = content.match(p); if (m) { info.accountHolder = m[1].trim(); break; } }
+      for (const p of branchPatterns) { const m = content.match(p); if (m) { info.branchName = m[1].trim(); break; } }
+
+      // Also try to extract from structured elements
+      const textContent = await page.evaluate(`
+        (() => {
+          const els = document.querySelectorAll('[class*="payment"], [class*="bank"], [class*="account"], [class*="order-detail"]');
+          return Array.from(els).map(el => el.textContent || '').join('\\n');
+        })()
+      `) as string;
+
+      if (textContent && !info.bankName) {
+        for (const p of bankPatterns) { const m = textContent.match(p); if (m) { info.bankName = m[1].trim(); break; } }
+        for (const p of accountPatterns) { const m = textContent.match(p); if (m) { info.accountNumber = m[1].trim(); break; } }
+        for (const p of holderPatterns) { const m = textContent.match(p); if (m) { info.accountHolder = m[1].trim(); break; } }
+      }
+
+      if (info.bankName || info.accountNumber || info.accountHolder) {
+        logger.info('extracted payment info', { exchange, info });
+        return info;
+      }
+
+      logger.info('could not extract payment info from page', { exchange });
+      return null;
+    } catch (e: unknown) {
+      logger.warn('extractPaymentInfo error', { exchange, error: (e instanceof Error ? e.message : String(e)) });
+      return null;
     }
   }
 
@@ -583,8 +686,8 @@ class P2PTrader {
       const offset = hash[hash.length - 1] & 0x0f;
       const code = ((hash[offset] & 0x7f) << 24 | hash[offset + 1] << 16 | hash[offset + 2] << 8 | hash[offset + 3]) % 1000000;
       return code.toString().padStart(6, '0');
-    } catch (e: any) {
-      console.error('[Puppeteer] TOTP generation failed:', e.message);
+    } catch (e: unknown) {
+      logger.error('TOTP generation failed', { error: (e instanceof Error ? e.message : String(e)) });
       return '000000';
     }
   }
@@ -593,7 +696,7 @@ class P2PTrader {
 
   getStatus() {
     const exchanges = ['Bybit', 'Binance'];
-    const loginStatus: Record<string, any> = {};
+    const loginStatus: Record<string, { loggedIn: boolean; lastActivity: number | null }> = {};
     for (const ex of exchanges) {
       loginStatus[ex] = { loggedIn: this.loggedIn.get(ex) || false, lastActivity: this.lastActivity.get(ex) || null };
     }
@@ -610,14 +713,20 @@ class P2PTrader {
     return null;
   }
 
+  setCredentials(creds: { exchange: string; email?: string; password?: string; apiKey?: string; apiSecret?: string; totpSecret?: string }) {
+    const { saveExchangeCreds } = require('./database.js');
+    saveExchangeCreds(creds.exchange, creds);
+    logger.info('Credentials saved', { exchange: creds.exchange });
+  }
+
   async close() {
-    console.log('[Puppeteer] Shutting down...');
+    logger.info('Shutting down');
     for (const [, page] of this.pages) { try { await page.close(); } catch {} }
     this.pages.clear();
     if (this.browser) { await this.browser.close(); this.browser = null; }
     this.running = false;
     this.loggedIn.clear();
-    console.log('[Puppeteer] Browser closed');
+    logger.info('Browser closed');
   }
 }
 

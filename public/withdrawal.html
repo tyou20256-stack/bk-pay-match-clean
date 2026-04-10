@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay Match - 出金ステータス</title>
+  <style>
+    :root[data-theme="dark"] {
+      --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --text: #e8eaf0;
+      --dim: #6b7280; --green: #22c55e; --green-soft: rgba(34,197,94,.1);
+      --yellow: #eab308; --red: #ef4444; --blue: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
+    .logo { font-size: 20px; font-weight: 700; color: var(--green); margin-bottom: 32px; }
+    .logo span { color: var(--text); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 100%; max-width: 420px; margin-bottom: 16px; }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--dim); margin-bottom: 16px; text-transform: uppercase; letter-spacing: .05em; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .row:last-child { border-bottom: none; }
+    .row-label { font-size: 13px; color: var(--dim); }
+    .row-val { font-size: 15px; font-weight: 600; }
+    .amount { font-size: 28px; font-weight: 700; color: var(--green); text-align: center; margin: 20px 0 4px; }
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-pending { background: rgba(59,130,246,.15); color: var(--blue); }
+    .status-matched { background: rgba(234,179,8,.15); color: var(--yellow); }
+    .status-completed { background: rgba(34,197,94,.15); color: var(--green); }
+    .status-cancelled { background: rgba(239,68,68,.15); color: var(--red); }
+    .status-expired { background: rgba(107,114,128,.15); color: var(--dim); }
+    .msg { text-align: center; color: var(--dim); padding: 48px 0; }
+    .steps { margin-top: 16px; }
+    .step { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+    .step-dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+    .step-dot.done { background: var(--green); border-color: var(--green); color: #fff; }
+    .step-dot.active { border-color: var(--yellow); color: var(--yellow); animation: pulse 1.5s infinite; }
+    .step-label { font-size: 13px; color: var(--dim); }
+    .step-label.active { color: var(--text); font-weight: 600; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+    .footer { font-size: 11px; color: var(--dim); text-align: center; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <div class="logo">Pay <span>Match</span></div>
+
+  <div id="loading" class="msg">読み込み中...</div>
+  <div id="error" class="msg" style="display:none"></div>
+
+  <div id="content" style="display:none;width:100%;max-width:420px">
+    <div class="card">
+      <div class="card-title">出金ステータス</div>
+      <div class="amount" id="wdAmount"></div>
+      <div class="row">
+        <span class="row-label">ステータス</span>
+        <span id="wdStatus"></span>
+      </div>
+      <div class="row">
+        <span class="row-label">支払方法</span>
+        <span class="row-val" id="wdMethod"></span>
+      </div>
+      <div class="row">
+        <span class="row-label">受付日時</span>
+        <span class="row-val" id="wdCreated"></span>
+      </div>
+      <div class="row">
+        <span class="row-label">有効期限</span>
+        <span class="row-val" id="wdExpires"></span>
+      </div>
+      <div class="row" id="rowCompleted" style="display:none">
+        <span class="row-label">完了日時</span>
+        <span class="row-val" id="wdCompleted"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">進捗</div>
+      <div class="steps" id="steps"></div>
+    </div>
+  </div>
+
+  <div class="footer">Pay Match - P2P Payment Gateway</div>
+
+  <script src="withdrawal-app.js"></script>
+</body>
+</html>

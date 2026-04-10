@@ -11,37 +11,64 @@
  *   - completionRate >= 90%
  *   - isOnline === true
  */
+import nodeCrypto from 'crypto';
 import notifier from './notifier.js';
 import * as dbSvc from './database.js';
-import { getFeeRateForRank } from './database.js';
+import logger from './logger.js';
+import { getFeeRateForRank, getMerchantApiKeyById } from './database.js';
 import { broadcast } from './websocket.js';
 import { getOptimalSpread, recordOrder as recordSpreadOrder } from './spreadOptimizer.js';
 import { recordProfit } from './profitTracker.js';
 import { getCachedRates } from './aggregator.js';
+import { notifyOrderCompleted, notifyWithdrawalEvent } from './merchantApiService.js';
+import { findMatchingSeller, findSellerForUsdtSupply, lockBalance, releaseBalance } from './p2pSellerService.js';
+import { executeAutoTrade, forwardPaymentConfirmation } from './autoTradeService.js';
 
 // Order Manager - Handles both Auto-Match (Puppeteer) and Self-Merchant (Account Router) modes
 
 interface Order {
+  [key: string]: unknown;
   id: string;
-  mode: 'auto' | 'self';
-  status: 'matching' | 'pending_payment' | 'paid' | 'confirming' | 'completed' | 'cancelled' | 'expired';
+  mode: string;
+  status: string;
   amount: number;          // JPY amount
   crypto: string;          // USDT, BTC, ETH
   cryptoAmount: number;    // calculated crypto amount
   rate: number;            // matched rate
   payMethod: string;       // bank, paypay, linepay, aupay
-  exchange?: string;       // matched exchange name
-  merchantName?: string;
-  merchantCompletionRate?: number;
-  paymentInfo: PaymentInfo | null;
+  exchange?: string | null;       // matched exchange name
+  merchantName?: string | null;
+  merchantCompletionRate?: number | null;
+  paymentInfo: PaymentInfo | Record<string, unknown> | null;
   createdAt: number;
   expiresAt: number;       // 15min timer
-  paidAt?: number;
-  completedAt?: number;
+  paidAt?: number | null;
+  completedAt?: number | null;
+  // Extended fields set during order lifecycle
+  feeRate?: number;
+  feeJpy?: number;
+  feeCrypto?: number;
+  customerWalletAddress?: string | null;
+  sellerId?: number | null;
+  withdrawalId?: number | null;
+  exchangeOrderId?: string | number;
+  verifiedAt?: number | null;
+  txId?: string | null;
+  // Sell order fields
+  direction?: string;
+  customerWallet?: string;
+  customerBankInfo?: Record<string, unknown>;
+  jpyAmount?: number;
+  jpyGross?: number;
+  depositAddress?: string;
+  depositNetwork?: string;
+  webhookUrl?: string | null;
+  merchantApiKeyId?: number | null;
+  orderToken?: string | null;
 }
 
 interface PaymentInfo {
-  type: 'bank' | 'paypay' | 'linepay' | 'aupay';
+  type: string;
   // Bank
   bankName?: string;
   branchName?: string;
@@ -51,8 +78,36 @@ interface PaymentInfo {
   // Electronic
   payId?: string;
   qrUrl?: string;
+  // Seller info
+  sellerName?: string;
+  // Account tracking
+  accountId?: number;
   // Common
   amount: number;
+  [key: string]: unknown;
+}
+
+interface P2PMatchCandidate {
+  exchange: string;
+  price: number;
+  merchant: {
+    name: string;
+    completionRate: number;
+    isOnline: boolean;
+  };
+  paymentMethods: string[];
+  minLimit: number;
+  maxLimit: number;
+}
+
+interface RatesApiResponse {
+  success: boolean;
+  data?: {
+    rates: Array<{
+      buyOrders: P2PMatchCandidate[];
+      sellOrders?: P2PMatchCandidate[];
+    }>;
+  };
 }
 
 interface AccountRouterResponse {
@@ -75,9 +130,20 @@ function generateId(): string {
 }
 
 // Get optimal account from Account Router
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 async function getAccountFromRouter(amount: number, payMethod: string): Promise<AccountRouterResponse> {
   try {
-    const res = await fetch('http://localhost:3002/api/route', {
+    const res = await fetchWithTimeout('http://localhost:3002/api/route', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ amount, method: payMethod })
@@ -105,11 +171,11 @@ async function getAccountFromRouter(amount: number, payMethod: string): Promise<
 }
 
 // Try auto-match via P2P exchanges
-async function tryAutoMatch(amount: number, payMethod: string, crypto: string): Promise<{ matched: boolean; order?: any }> {
+async function tryAutoMatch(amount: number, payMethod: string, crypto: string): Promise<{ matched: boolean; order?: P2PMatchCandidate }> {
   try {
-    const res = await fetch(`http://localhost:3003/api/rates/${crypto}`);
-    const data = await res.json() as any;
-    if (!data.success) return { matched: false };
+    const res = await fetchWithTimeout(`http://localhost:3003/api/rates/${crypto}`);
+    const data = await res.json() as { success: boolean; data?: { rates: Array<{ buyOrders: P2PMatchCandidate[] }> } };
+    if (!data.success || !data.data) return { matched: false };
 
     const payMap: Record<string, string[]> = {
       bank: ['銀行振込', 'Bank Transfer', 'Bank'],
@@ -119,7 +185,7 @@ async function tryAutoMatch(amount: number, payMethod: string, crypto: string): 
     };
     const keys = payMap[payMethod] || [];
 
-    let candidates: any[] = [];
+    let candidates: P2PMatchCandidate[] = [];
     for (const ex of data.data.rates) {
       for (const o of ex.buyOrders) {
         if (o.minLimit <= amount && (o.maxLimit === 0 || o.maxLimit >= amount)
@@ -141,9 +207,10 @@ async function tryAutoMatch(amount: number, payMethod: string, crypto: string): 
 }
 
 // Create a new order
-export async function createOrder(amount: number, payMethod: string, crypto: string = 'USDT'): Promise<Order> {
+export async function createOrder(amount: number, payMethod: string, crypto: string = 'USDT', customerWalletAddress?: string): Promise<Order> {
   const id = generateId();
   const now = Date.now();
+  const orderToken = nodeCrypto.randomBytes(16).toString('hex');
 
   const order: Order = {
     id,
@@ -157,6 +224,7 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
     paymentInfo: null,
     createdAt: now,
     expiresAt: now + 15 * 60 * 1000, // 15 minutes
+    orderToken,
   };
 
   orders.set(id, order);
@@ -175,20 +243,62 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
     order.rate = match.order.price;
     order.cryptoAmount = parseFloat((amount / match.order.price).toFixed(4));
 
-    // For auto mode, payment info comes from exchange (simulated for now)
-    // In production: Puppeteer creates order on exchange and retrieves merchant's payment info
-    if (payMethod === 'bank') {
-      // Auto mode: payment info comes from exchange via Puppeteer (not yet active)
-      // For now, use DB account as placeholder
-      const autoAcc = dbSvc.getRoutableAccount(amount);
-      if (autoAcc) {
-        order.paymentInfo = { type: 'bank', bankName: autoAcc.bank_name, branchName: autoAcc.branch_name, accountType: autoAcc.account_type, accountNumber: autoAcc.account_number, accountHolder: autoAcc.account_holder, amount };
-      } else {
-        order.paymentInfo = { type: 'bank', bankName: '（口座未登録）', branchName: '-', accountType: '-', accountNumber: '-', accountHolder: '-', amount };
+    // ── 自動取引: 取引所に実注文を作成 ──────────────────────
+    const autoTradeConfig = dbSvc.getAutoTradeConfig();
+    let autoTradeSuccess = false;
+    if (autoTradeConfig.enabled === 'true' && amount >= Number(autoTradeConfig.min_amount || 5000) && amount <= Number(autoTradeConfig.max_amount || 1000000)) {
+      try {
+        const tradeResult = await executeAutoTrade({
+          orderId: order.id,
+          exchange: match.order.exchange,
+          crypto,
+          amount,
+          payMethod,
+        });
+        if (tradeResult.success && tradeResult.paymentInfo) {
+          // 取引所セラーの実際の振込先を設定
+          if (tradeResult.paymentInfo.bankName || tradeResult.paymentInfo.accountNumber) {
+            order.paymentInfo = { type: 'bank', ...tradeResult.paymentInfo, amount };
+          } else {
+            order.paymentInfo = { type: payMethod, ...tradeResult.paymentInfo, amount };
+          }
+          order.exchangeOrderId = tradeResult.exchangeOrderId;
+          autoTradeSuccess = true;
+        }
+      } catch (e: unknown) {
+        logger.error('Auto-trade error', { error: e instanceof Error ? e.message : String(e) });
       }
-    } else {
-      const payIds: Record<string, string> = { paypay: 'tanaka-t-2891', linepay: 'sato_yuki_88', aupay: 'yamamoto-k' };
-      order.paymentInfo = { type: payMethod as any, payId: payIds[payMethod] || 'merchant-id', amount };
+    }
+
+    // Fallback: 自動取引失敗時は既存のDB口座/P2Pセラーを使用
+    if (!autoTradeSuccess) {
+      if (payMethod === 'bank') {
+        const autoAcc = dbSvc.getRoutableAccount(amount);
+        if (autoAcc) {
+          order.paymentInfo = { type: 'bank', bankName: autoAcc.bank_name, branchName: autoAcc.branch_name, accountType: autoAcc.account_type, accountNumber: autoAcc.account_number, accountHolder: autoAcc.account_holder, amount };
+        } else {
+          order.paymentInfo = { type: 'bank', bankName: '（口座未登録）', branchName: '-', accountType: '-', accountNumber: '-', accountHolder: '-', amount };
+        }
+      } else {
+        // Try P2P seller matching first
+        const p2pSeller = findMatchingSeller(amount, payMethod, order.cryptoAmount);
+        if (p2pSeller) {
+          const payIdMap: Record<string, string | null> = {
+            paypay: p2pSeller.paypayId,
+            linepay: p2pSeller.linepayId,
+            aupay: p2pSeller.aupayId,
+          };
+          const payId = payIdMap[payMethod] || '';
+          order.paymentInfo = { type: payMethod, payId, amount, sellerName: p2pSeller.name };
+          order.sellerId = p2pSeller.id;
+          lockBalance(p2pSeller.id, order.cryptoAmount);
+        } else {
+          // Fallback: use admin-configured epay account
+          const epay = dbSvc.getEpayConfig(payMethod);
+          const payId = epay?.pay_id || 'bkstock-pay';
+          order.paymentInfo = { type: payMethod, payId, amount };
+        }
+      }
     }
   } else {
     // Fallback to self-merchant mode
@@ -197,10 +307,10 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
 
     // Get rate from aggregator
     try {
-      const res = await fetch(`http://localhost:3003/api/rates/${crypto}`);
-      const data = await res.json() as any;
-      if (data.success) {
-        let best: any = null;
+      const res = await fetchWithTimeout(`http://localhost:3003/api/rates/${crypto}`);
+      const data = await res.json() as RatesApiResponse;
+      if (data.success && data.data) {
+        let best: P2PMatchCandidate | null = null;
         for (const ex of data.data.rates) {
           for (const o of ex.buyOrders) {
             if (!best || o.price < best.price) best = o;
@@ -229,14 +339,30 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
         };
       }
     } else {
-      // Self-merchant electronic payment
-      const selfPay: Record<string, { payId: string; qrUrl?: string }> = {
-        paypay: { payId: 'bkstock-pay', qrUrl: '/img/paypay-qr.png' },
-        linepay: { payId: 'bkstock-line', qrUrl: '/img/linepay-qr.png' },
-        aupay: { payId: 'bkstock-aupay', qrUrl: '/img/aupay-qr.png' },
-      };
-      const sp = selfPay[payMethod] || { payId: 'bkstock' };
-      order.paymentInfo = { type: payMethod as any, payId: sp.payId, qrUrl: sp.qrUrl, amount };
+      // Try P2P seller first (self-mode fallback for paypay/linepay/aupay)
+      const p2pSellerSelf = findMatchingSeller(amount, payMethod, order.cryptoAmount);
+      if (p2pSellerSelf) {
+        const payIdMapSelf: Record<string, string | null> = {
+          paypay: p2pSellerSelf.paypayId,
+          linepay: p2pSellerSelf.linepayId,
+          aupay: p2pSellerSelf.aupayId,
+        };
+        const payId = payIdMapSelf[payMethod] || '';
+        order.paymentInfo = { type: payMethod, payId, amount, sellerName: p2pSellerSelf.name };
+        order.sellerId = p2pSellerSelf.id;
+        lockBalance(p2pSellerSelf.id, order.cryptoAmount);
+      } else {
+        // Final fallback: admin-configured epay account
+        const epay = dbSvc.getEpayConfig(payMethod);
+        const selfPay: Record<string, { payId: string; qrUrl?: string }> = {
+          paypay: { payId: 'bkstock-pay', qrUrl: '/img/paypay-qr.png' },
+          linepay: { payId: 'bkstock-line', qrUrl: '/img/linepay-qr.png' },
+          aupay: { payId: 'bkstock-aupay', qrUrl: '/img/aupay-qr.png' },
+        };
+        const payId = epay?.pay_id || selfPay[payMethod]?.payId || 'bkstock';
+        const qrUrl = selfPay[payMethod]?.qrUrl;
+        order.paymentInfo = { type: payMethod, payId, qrUrl, amount };
+      }
     }
 
     order.exchange = 'BK Pay（自社決済）';
@@ -244,14 +370,29 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
     order.merchantCompletionRate = 100;
   }
 
-  // Fee calculation
-  const feeRate = getFeeRateForRank('bronze'); // default rank; no telegram context here
-  (order as any).feeRate = feeRate;
-  (order as any).feeJpy = Math.round(order.amount * feeRate);
-  (order as any).feeCrypto = 0;
+  // Fee calculation with margin safety
+  let feeRate = getFeeRateForRank('bronze'); // default rank; no telegram context here
+  const costEstimate = dbSvc.estimateOrderCost(amount, 'buy');
+  const costConfig = dbSvc.getCostConfig();
+  // マージン安全: 手数料がコストを下回る場合は自動引き上げ
+  if (costConfig.auto_adjust_fee && feeRate < costEstimate.minFeeRate) {
+    feeRate = costEstimate.minFeeRate;
+    logger.info('Fee auto-adjusted to cover costs', {
+      orderId: order.id,
+      originalRate: getFeeRateForRank('bronze'),
+      adjustedRate: feeRate,
+      estimatedCost: costEstimate.estimatedCost,
+      minFeeJpy: costEstimate.minFeeJpy,
+    });
+  }
+  order.feeRate = feeRate;
+  order.feeJpy = Math.round(order.amount * feeRate);
+  order.feeCrypto = 0;
+  order.estimatedCost = costEstimate.estimatedCost;
+  order.estimatedMargin = order.feeJpy - costEstimate.estimatedCost;
   // Adjust crypto amount: customer pays full amount but receives crypto for (amount - fee)
   if (order.rate > 0) {
-    order.cryptoAmount = parseFloat(((order.amount - (order as any).feeJpy) / order.rate).toFixed(4));
+    order.cryptoAmount = parseFloat(((order.amount - order.feeJpy) / order.rate).toFixed(4));
   }
 
   // Apply spread optimization
@@ -264,40 +405,161 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
     recordSpreadOrder(crypto, amount);
   } catch (e) { /* spread optimizer not critical */ }
 
+  // ── 出金三角マッチング（最優先）───────────────────────────────
+  // 同額 pending の出金リクエストがあればAの口座情報をバイヤーBに表示し、
+  // セラーCのUSDTをロックして三角マッチングを成立させる
+  if (order.cryptoAmount > 0) {
+    const pendingWd = dbSvc.findPendingWithdrawalByAmount(amount, payMethod);
+    if (pendingWd) {
+      // A の口座情報を paymentInfo にセット
+      if (payMethod === 'bank') {
+        order.paymentInfo = {
+          type: 'bank',
+          bankName: pendingWd.bankName || '',
+          branchName: pendingWd.branchName || '',
+          accountType: pendingWd.accountType || '普通',
+          accountNumber: pendingWd.accountNumber || '',
+          accountHolder: pendingWd.accountHolder || '',
+          amount,
+        };
+      } else {
+        order.paymentInfo = { type: payMethod, payId: pendingWd.paypayId || '', amount };
+      }
+
+      // C (セラー) を payMethod無関係で選択
+      const supplier = findSellerForUsdtSupply(order.cryptoAmount);
+      if (supplier) {
+        lockBalance(supplier.id, order.cryptoAmount);
+        order.sellerId = supplier.id;
+        order.withdrawalId = pendingWd.id;
+        dbSvc.updateWithdrawalStatus(pendingWd.id, 'matched', {
+          matchedOrderId: order.id,
+          matchedSellerId: supplier.id,
+        });
+        order.mode = 'auto';
+        order.status = 'pending_payment';
+      }
+    }
+  }
+
+  // Store customer wallet address for crypto delivery
+  if (customerWalletAddress) {
+    order.customerWalletAddress = customerWalletAddress;
+  }
+
   dbSvc.saveOrder(order);
+  // Persist P2P seller association if matched
+  if (order.sellerId) {
+    dbSvc.saveOrderSellerId(order.id, order.sellerId);
+  }
+  // Persist withdrawal link if matched
+  if (order.withdrawalId) {
+    dbSvc.saveOrderWithdrawalId(order.id, order.withdrawalId);
+  }
   notifier.notifyNewOrder(order);
   broadcast('order', { id: order.id, status: order.status, amount: order.amount, crypto: order.crypto });
   return order;
 }
 
-// Mark order as paid
+// Valid state transitions
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  matching: ['pending_payment', 'cancelled', 'expired'],
+  pending_payment: ['confirming', 'cancelled', 'expired'],
+  confirming: ['payment_verified', 'completed', 'cancelled'],
+  payment_verified: ['sending_crypto', 'completed', 'cancelled'],
+  sending_crypto: ['completed', 'payment_verified', 'cancelled'],
+  paid: ['confirming', 'completed', 'cancelled'],
+  completed: [],
+  cancelled: [],
+  expired: [],
+  // Sell order states
+  awaiting_deposit: ['deposit_received', 'cancelled', 'expired'],
+  deposit_received: ['completed', 'cancelled'],
+};
+
+function canTransition(from: string, to: string): boolean {
+  return VALID_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+// Mark order as paid (customer reports payment sent)
 export function markPaid(orderId: string): Order | null {
   const order = orders.get(orderId) || dbSvc.getOrder(orderId);
   if (!order) return null;
+  if (!canTransition(order.status, 'confirming')) return null;
   order.status = 'confirming';
   order.paidAt = Date.now();
   dbSvc.updateOrderStatus(orderId, 'confirming', { paidAt: order.paidAt });
   notifier.notifyPaid(order);
   broadcast('order', { id: order.id, status: order.status, amount: order.amount });
-  
-  // Simulate confirmation (in prod: check bank API / TronGrid)
-  setTimeout(() => {
-    const o = orders.get(orderId);
-    if (o && o.status === 'confirming') {
-      o.status = 'completed';
-      o.completedAt = Date.now();
-      dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: o.completedAt });
-      // Record profit
-      try {
-        const rates = getCachedRates(o.crypto) as any;
-        const marketRate = rates?.spotPrices?.[o.crypto] || o.rate;
-        recordProfit(o, marketRate);
-      } catch {}
-      notifier.notifyCompleted(o);
-      broadcast('order', { id: o.id, status: o.status, amount: o.amount });
+  // P2P セラーへ Telegram 通知（telegram_chat_id 設定済みの場合）
+  if (order.sellerId) {
+    const sellerRow = dbSvc.getP2PSeller(order.sellerId);
+    if (sellerRow?.telegram_chat_id) {
+      const base = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3003}`;
+      const confirmUrl = `${base}/seller-confirm.html?orderId=${orderId}&token=${sellerRow.confirm_token}`;
+      notifier.notifySellerPaid(sellerRow.telegram_chat_id, { ...order, confirmUrl });
     }
-  }, 5000); // Auto-confirm after 5s for demo
+  }
+  // 出金三角マッチング: バイヤーBが振込完了 → 外部システムに webhook 通知
+  if (order.withdrawalId) {
+    const w = dbSvc.getWithdrawal(order.withdrawalId);
+    if (w?.webhookUrl) {
+      const keyRow = w.merchantApiKeyId ? getMerchantApiKeyById(w.merchantApiKeyId) : null;
+      notifyWithdrawalEvent(w, keyRow?.webhook_secret || null, 'withdrawal.payment_sent', { orderId }).catch(() => {});
+    }
+  }
+  // 自動取引: 取引所に支払い完了を報告
+  if (order.exchangeOrderId) {
+    const config = dbSvc.getAutoTradeConfig();
+    if (config.auto_confirm_payment === 'true') {
+      forwardPaymentConfirmation(orderId).catch(e =>
+        logger.error('Payment confirmation forward failed', { error: e.message })
+      );
+    }
+  }
+  // No auto-confirm — admin must manually verify payment via adminVerifyPayment()
+  return order;
+}
 
+// Admin verifies bank deposit was received
+export function adminVerifyPayment(orderId: string): Order | null {
+  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
+  if (!order) return null;
+  if (!canTransition(order.status, 'payment_verified')) return null;
+  order.status = 'payment_verified';
+  order.verifiedAt = Date.now();
+  dbSvc.updateOrderStatus(orderId, 'payment_verified', { verifiedAt: order.verifiedAt });
+  notifier.notifyPaymentVerified(order);
+  broadcast('order', { id: order.id, status: order.status, amount: order.amount });
+  return order;
+}
+
+// Admin manually completes order (when crypto was sent outside system)
+export function adminManualComplete(orderId: string, txId?: string): Order | null {
+  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
+  if (!order) return null;
+  // Allow from confirming, payment_verified, or sending_crypto
+  if (!canTransition(order.status, 'completed')) return null;
+  order.status = 'completed';
+  order.completedAt = Date.now();
+  if (txId) order.txId = txId;
+  dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: order.completedAt, txId });
+  // Record profit
+  try {
+    const rates = getCachedRates(order.crypto) as { spotPrices?: Record<string, number> } | undefined;
+    const marketRate = rates?.spotPrices?.[order.crypto] || order.rate;
+    recordProfit(order, marketRate);
+  } catch {}
+  notifier.notifyCompleted(order);
+  broadcast('order', { id: order.id, status: order.status, amount: order.amount });
+  // Webhook通知（外部APIで作成された注文の場合）
+  const freshOrder = dbSvc.getOrder(orderId);
+  if (freshOrder?.webhookUrl) {
+    const keyRow = freshOrder.merchantApiKeyId
+      ? getMerchantApiKeyById(freshOrder.merchantApiKeyId)
+      : null;
+    notifyOrderCompleted(freshOrder, keyRow?.webhook_secret || null).catch(() => {});
+  }
   return order;
 }
 
@@ -305,8 +567,20 @@ export function markPaid(orderId: string): Order | null {
 export function cancelOrder(orderId: string): Order | null {
   const order = orders.get(orderId) || dbSvc.getOrder(orderId);
   if (!order) return null;
+  if (!canTransition(order.status, 'cancelled')) return null;
   order.status = 'cancelled';
   dbSvc.updateOrderStatus(orderId, 'cancelled');
+  // Release P2P seller locked balance if applicable
+  if (order.sellerId && order.cryptoAmount > 0) {
+    releaseBalance(order.sellerId, order.cryptoAmount);
+  }
+  // 出金三角マッチング: 注文キャンセル時に出金リクエストを pending に戻す
+  if (order.withdrawalId) {
+    const w = dbSvc.getWithdrawal(order.withdrawalId);
+    if (w && w.status === 'matched') {
+      dbSvc.updateWithdrawalStatus(w.id, 'pending');
+    }
+  }
   notifier.notifyCancelled(order);
   broadcast('order', { id: order.id, status: order.status, amount: order.amount });
   return order;
@@ -329,6 +603,10 @@ setInterval(() => {
     if (order.status === 'pending_payment' && now > order.expiresAt) {
       order.status = 'expired';
       dbSvc.updateOrderStatus(id, 'expired');
+      // Release P2P seller locked balance if applicable
+      if (order.sellerId && order.cryptoAmount > 0) {
+        releaseBalance(order.sellerId, order.cryptoAmount);
+      }
       notifier.notifyExpired(order);
       broadcast('order', { id: order.id, status: order.status, amount: order.amount });
     }
@@ -342,21 +620,21 @@ export async function createSellOrder(params: {
   cryptoAmount: number;
   crypto: string;
   customerBankInfo: { bankName: string; branchName: string; accountNumber: string; accountHolder: string };
-}): Promise<any> {
+}): Promise<Order> {
   const id = generateId().replace('ORD', 'SELL');
   const now = Date.now();
 
   // Fetch current sell rate from aggregator
   let sellRate = 0;
   try {
-    const res = await fetch(`http://localhost:3003/api/rates/${params.crypto}`);
-    const data = await res.json() as any;
+    const res = await fetchWithTimeout(`http://localhost:3003/api/rates/${params.crypto}`);
+    const data = await res.json() as RatesApiResponse;
     if (data.success && data.data) {
-      const allSell: any[] = [];
+      const allSell: P2PMatchCandidate[] = [];
       for (const ex of data.data.rates) {
         for (const o of (ex.sellOrders || [])) allSell.push(o);
       }
-      allSell.sort((a: any, b: any) => Number(b.price) - Number(a.price));
+      allSell.sort((a, b) => Number(b.price) - Number(a.price));
       if (allSell.length > 0) sellRate = Number(allSell[0].price);
     }
   } catch {}
@@ -372,10 +650,22 @@ export async function createSellOrder(params: {
   } catch (e) { /* spread optimizer not critical */ }
 
   const jpyAmount = Math.floor(params.cryptoAmount * sellRate); // gross before fee
-  const wallet = dbSvc.getWalletConfig() as any;
+  const wallet = dbSvc.getWalletConfig();
 
-  // Fee calculation for sell
-  const sellFeeRate = getFeeRateForRank('bronze');
+  // Fee calculation for sell with margin safety
+  let sellFeeRate = getFeeRateForRank('bronze');
+  const sellCostEstimate = dbSvc.estimateOrderCost(jpyAmount, 'sell');
+  const sellCostConfig = dbSvc.getCostConfig();
+  if (sellCostConfig.auto_adjust_fee && sellFeeRate < sellCostEstimate.minFeeRate) {
+    sellFeeRate = sellCostEstimate.minFeeRate;
+    logger.info('Sell fee auto-adjusted to cover costs', {
+      orderId: id,
+      originalRate: getFeeRateForRank('bronze'),
+      adjustedRate: sellFeeRate,
+      estimatedCost: sellCostEstimate.estimatedCost,
+      minFeeJpy: sellCostEstimate.minFeeJpy,
+    });
+  }
   const feeCrypto = parseFloat((params.cryptoAmount * sellFeeRate).toFixed(6));
   const effectiveCrypto = params.cryptoAmount - feeCrypto;
   const jpyAmountAfterFee = Math.floor(effectiveCrypto * sellRate);
@@ -390,18 +680,24 @@ export async function createSellOrder(params: {
     expiresAt: now + 30 * 60 * 1000, // 30 minutes for sell
   });
 
-  const order = {
+  const order: Order = {
     id,
+    mode: 'self',
     direction: 'sell',
     status: 'awaiting_deposit',
+    amount: jpyAmountAfterFee,
     cryptoAmount: params.cryptoAmount,
     crypto: params.crypto,
     rate: sellRate,
+    payMethod: 'crypto',
+    paymentInfo: null,
     jpyAmount: jpyAmountAfterFee,
     jpyGross: jpyAmount,
     feeRate: sellFeeRate,
     feeCrypto,
     feeJpy: Math.round(jpyAmount - jpyAmountAfterFee),
+    estimatedCost: sellCostEstimate.estimatedCost,
+    estimatedMargin: Math.round(jpyAmount - jpyAmountAfterFee) - sellCostEstimate.estimatedCost,
     customerBankInfo: params.customerBankInfo,
     depositAddress: wallet?.address || '（ウォレット未設定）',
     depositNetwork: wallet?.network || 'TRC-20',
@@ -409,17 +705,18 @@ export async function createSellOrder(params: {
     expiresAt: now + 30 * 60 * 1000,
   };
 
-  orders.set(id, order as any);
-  notifier.notifyNewOrder({ ...order, amount: jpyAmount, payMethod: 'crypto', mode: 'sell', exchange: 'BK Pay（売却）' } as any);
+  orders.set(id, order);
+  notifier.notifyNewOrder({ ...order, amount: jpyAmount, payMethod: 'crypto', mode: 'sell', exchange: 'BK Pay（売却）' } as Order);
   broadcast('order', { id, status: 'awaiting_deposit', amount: jpyAmount, crypto: params.crypto, direction: 'sell' });
 
   return order;
 }
 
 // Mark sell order deposit received
-export function markDepositReceived(orderId: string): any {
+export function markDepositReceived(orderId: string): Order | null {
   const order = orders.get(orderId) || dbSvc.getOrder(orderId);
   if (!order) return null;
+  if (!canTransition(order.status, 'deposit_received')) return null;
   dbSvc.updateOrderStatus(orderId, 'deposit_received');
   if (order) order.status = 'deposit_received';
   broadcast('order', { id: orderId, status: 'deposit_received' });
@@ -427,14 +724,15 @@ export function markDepositReceived(orderId: string): any {
 }
 
 // Mark sell order withdrawal complete
-export function markWithdrawalComplete(orderId: string): any {
+export function markWithdrawalComplete(orderId: string): Order | null {
   const order = orders.get(orderId) || dbSvc.getOrder(orderId);
   if (!order) return null;
+  if (!canTransition(order.status, 'completed')) return null;
   dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: Date.now() });
   if (order) { order.status = 'completed'; order.completedAt = Date.now(); }
   // Record profit
   try {
-    const rates = getCachedRates(order.crypto) as any;
+    const rates = getCachedRates(order.crypto) as { spotPrices?: Record<string, number> } | undefined;
     const marketRate = rates?.spotPrices?.[order.crypto] || order.rate;
     recordProfit(order, marketRate);
   } catch {}
@@ -443,4 +741,4 @@ export function markWithdrawalComplete(orderId: string): any {
   return order;
 }
 
-export default { createOrder, createSellOrder, markPaid, markDepositReceived, markWithdrawalComplete, cancelOrder, getOrder, getAllOrders };
+export default { createOrder, createSellOrder, markPaid, markDepositReceived, markWithdrawalComplete, cancelOrder, getOrder, getAllOrders, adminVerifyPayment, adminManualComplete };

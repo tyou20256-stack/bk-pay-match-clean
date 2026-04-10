@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Funnel Analytics - Pay Match</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#0a0e17;color:#e0e6ed;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px}
+    h1{font-size:20px;margin-bottom:8px;color:#4fc3f7}
+    .meta{font-size:12px;color:#6b7280;margin-bottom:24px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+    .card{background:#111827;border:1px solid #1f2937;border-radius:8px;padding:16px}
+    .card h2{font-size:14px;color:#9ca3af;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:6px 8px;color:#6b7280;border-bottom:1px solid #1f2937;font-weight:500}
+    td{padding:6px 8px;border-bottom:1px solid #111}
+    .num{text-align:right;font-variant-numeric:tabular-nums}
+    .total{font-size:28px;font-weight:700;color:#4fc3f7}
+    .back{color:#4fc3f7;text-decoration:none;font-size:13px}
+    .back:hover{text-decoration:underline}
+    @media(max-width:768px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <a class="back" href="/admin.html">Back to Admin</a>
+  <h1>Funnel Analytics</h1>
+  <div class="meta">Period: 24h | Auto-refresh: 60s | <span id="lastUpdate">-</span></div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Total Events (24h)</h2>
+      <div class="total" id="totalCount">-</div>
+    </div>
+    <div class="card">
+      <h2>Funnel Events</h2>
+      <table><thead><tr><th>Event</th><th class="num">Count</th></tr></thead><tbody id="eventsBody"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>A/B Test Results</h2>
+      <table><thead><tr><th>Variant</th><th class="num">Views</th><th class="num">Conv.</th><th class="num">Rate</th></tr></thead><tbody id="abBody"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>UTM Sources</h2>
+      <table><thead><tr><th>Source</th><th class="num">Count</th></tr></thead><tbody id="utmBody"></tbody></table>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <h2>Referral Leaderboard (Top 10)</h2>
+      <table><thead><tr><th>Code</th><th class="num">Referrals</th><th class="num">Volume (JPY)</th><th class="num">Reward (USDT)</th></tr></thead><tbody id="refBody"></tbody></table>
+    </div>
+  </div>
+
+  <script>
+    async function load(){
+      try{
+        const r=await fetch('/api/p2p-buy/analytics');
+        const d=await r.json();
+        if(!d.success)return;
+        document.getElementById('totalCount').textContent=d.total?.toLocaleString()||'0';
+        document.getElementById('lastUpdate').textContent=new Date().toLocaleTimeString('ja-JP');
+        const eb=document.getElementById('eventsBody');
+        eb.innerHTML=(d.events||[]).map(e=>`<tr><td>${esc(e.event)}</td><td class="num">${e.count}</td></tr>`).join('');
+        const ab=document.getElementById('abBody');
+        ab.innerHTML=(d.abTest||[]).map(a=>{const rate=a.views?((a.conversions/a.views)*100).toFixed(1)+'%':'0%';return`<tr><td>${esc(a.variant||'-')}</td><td class="num">${a.views}</td><td class="num">${a.conversions}</td><td class="num">${rate}</td></tr>`;}).join('');
+        const ub=document.getElementById('utmBody');
+        ub.innerHTML=(d.utmSources||[]).map(u=>`<tr><td>${esc(u.source||'-')}</td><td class="num">${u.count}</td></tr>`).join('')||'<tr><td colspan="2" style="color:#6b7280">No UTM data</td></tr>';
+        const rb=document.getElementById('refBody');
+        rb.innerHTML=(d.referralLeaders||[]).map(r=>`<tr><td>${esc(r.referrer_code)}</td><td class="num">${r.total_referrals}</td><td class="num">${Number(r.total_volume_jpy||0).toLocaleString()}</td><td class="num">${Number(r.total_reward_usdt||0).toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="4" style="color:#6b7280">No referral data</td></tr>';
+      }catch(e){console.error('Analytics load error',e);}
+    }
+    function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+    load();
+    setInterval(load,60000);
+  </script>
+</body>
+</html>

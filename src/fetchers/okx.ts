@@ -6,6 +6,7 @@
 import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
 import { CONFIG } from '../config';
+import logger from '../services/logger.js';
 
 export class OKXFetcher implements FetcherInterface {
   name = 'OKX';
@@ -26,23 +27,23 @@ export class OKXFetcher implements FetcherInterface {
       );
       let items = res.data?.data?.[side] || res.data?.data || [];
       if (!Array.isArray(items)) items = [];
-      return items.slice(0, CONFIG.maxOrdersPerExchange).map((item: any) => ({
+      return items.slice(0, CONFIG.maxOrdersPerExchange).map((item: Record<string, unknown>) => ({
         exchange: this.name, side, crypto, fiat: CONFIG.fiat,
-        price: parseFloat(item.price || '0'),
-        available: parseFloat(item.availableAmount || item.quoteMaxAmountPerOrder || '0'),
-        minLimit: parseFloat(item.quoteMinAmountPerOrder || '0'),
-        maxLimit: parseFloat(item.quoteMaxAmountPerOrder || '0'),
+        price: parseFloat(String(item.price || '0')),
+        available: parseFloat(String(item.availableAmount || item.quoteMaxAmountPerOrder || '0')),
+        minLimit: parseFloat(String(item.quoteMinAmountPerOrder || '0')),
+        maxLimit: parseFloat(String(item.quoteMaxAmountPerOrder || '0')),
         merchant: {
-          name: item.nickName || 'Unknown',
-          completionRate: parseFloat(item.completedRate || '0') * 100,
-          orderCount: parseInt(item.completedOrderQuantity || '0'),
+          name: String(item.nickName || 'Unknown'),
+          completionRate: parseFloat(String(item.completedRate || '0')) * 100,
+          orderCount: parseInt(String(item.completedOrderQuantity || '0')),
           isOnline: true,
         },
-        paymentMethods: (item.paymentMethods || []).map((p: any) => typeof p === 'string' ? p : (p.paymentMethod || '')),
+        paymentMethods: ((item.paymentMethods || []) as unknown[]).map((p) => typeof p === 'string' ? p : String((p as Record<string, unknown>).paymentMethod || '')),
         fetchedAt: Date.now(),
       }));
-    } catch (err: any) {
-      console.error(`[OKX] ${side} ${crypto}: ${err.message}`);
+    } catch (err: unknown) {
+      logger.error('Fetch orders failed', { exchange: 'OKX', side, crypto, error: err instanceof Error ? err.message : String(err) });
       return [];
     }
   }

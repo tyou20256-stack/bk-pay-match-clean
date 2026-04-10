@@ -6,6 +6,7 @@
  */
 import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
+import logger from '../services/logger.js';
 import { CONFIG } from '../config';
 
 export class BinanceFetcher implements FetcherInterface {
@@ -26,27 +27,27 @@ export class BinanceFetcher implements FetcherInterface {
         }
       );
       const items = res.data?.data || [];
-      return items.map((item: any) => {
-        const adv = item.adv || {};
-        const ad = item.advertiser || {};
+      return items.map((item: Record<string, unknown>) => {
+        const adv = (item.adv || {}) as Record<string, unknown>;
+        const ad = (item.advertiser || {}) as Record<string, unknown>;
         return {
           exchange: this.name, side, crypto, fiat: CONFIG.fiat,
-          price: parseFloat(adv.price || '0'),
-          available: parseFloat(adv.surplusAmount || '0'),
-          minLimit: parseFloat(adv.minSingleTransAmount || '0'),
-          maxLimit: parseFloat(adv.maxSingleTransAmount || '0'),
+          price: parseFloat(String(adv.price || '0')),
+          available: parseFloat(String(adv.surplusAmount || '0')),
+          minLimit: parseFloat(String(adv.minSingleTransAmount || '0')),
+          maxLimit: parseFloat(String(adv.maxSingleTransAmount || '0')),
           merchant: {
-            name: ad.nickName || 'Unknown',
-            completionRate: parseFloat(ad.monthFinishRate || '0') * 100,
-            orderCount: ad.monthOrderCount || 0,
+            name: String(ad.nickName || 'Unknown'),
+            completionRate: parseFloat(String(ad.monthFinishRate || '0')) * 100,
+            orderCount: (ad.monthOrderCount as number) || 0,
             isOnline: ad.userOnlineStatus === 'online',
           },
-          paymentMethods: (adv.tradeMethods || []).map((m: any) => m.tradeMethodName || m.identifier),
+          paymentMethods: ((adv.tradeMethods || []) as Record<string, unknown>[]).map((m) => String(m.tradeMethodName || m.identifier)),
           fetchedAt: Date.now(),
         };
       });
-    } catch (err: any) {
-      console.error(`[Binance] ${side} ${crypto}: ${err.message}`);
+    } catch (err: unknown) {
+      logger.error('Fetch orders failed', { exchange: 'Binance', side, crypto, error: err instanceof Error ? err.message : String(err) });
       return [];
     }
   }

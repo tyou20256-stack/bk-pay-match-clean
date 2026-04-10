@@ -8,6 +8,7 @@
 // TronGrid USDT deposit monitor
 import * as dbSvc from './database.js';
 import notifier from './notifier.js';
+import logger from './logger.js';
 
 const TRONGRID_API = 'https://api.trongrid.io';
 const USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'; // USDT TRC-20
@@ -26,7 +27,7 @@ interface TRC20Transfer {
 }
 
 async function checkDeposits(): Promise<void> {
-  const wallet = dbSvc.getWalletConfig() as any;
+  const wallet = dbSvc.getWalletConfig() as { address?: string } | null;
   if (!wallet?.address) return;
 
   try {
@@ -34,7 +35,7 @@ async function checkDeposits(): Promise<void> {
     const res = await fetch(url, {
       headers: { 'TRON-PRO-API-KEY': process.env.TRONGRID_API_KEY || '' }
     });
-    const data = await res.json() as any;
+    const data = await res.json() as { data?: TRC20Transfer[] };
     
     if (!data.data?.length) return;
 
@@ -43,18 +44,18 @@ async function checkDeposits(): Promise<void> {
       if (tx.to.toLowerCase() !== wallet.address.toLowerCase()) continue;
       
       const usdtAmount = parseFloat(tx.value) / 1e6; // USDT has 6 decimals
-      console.log(`[TronMonitor] Incoming USDT: ${usdtAmount} from ${tx.from} tx:${tx.transaction_id}`);
+      logger.info('Incoming USDT', { amount: usdtAmount, from: tx.from, txId: tx.transaction_id });
 
       // Try to match with pending buy orders
-      const orders = dbSvc.getAllOrders() as any[];
-      const pendingOrders = orders.filter((o: any) => 
-        o.status === 'confirming' && 
+      const orders = dbSvc.getAllOrders() as { id: string; status: string; cryptoAmount: number; amount: number; rate: number; payMethod: string; crypto: string; exchange?: string }[];
+      const pendingOrders = orders.filter(o =>
+        o.status === 'confirming' &&
         Math.abs(o.cryptoAmount - usdtAmount) < 0.01 // Allow tiny variance
       );
 
       // Also check sell orders awaiting deposit
-      const sellOrders = dbSvc.getSellOrdersAwaitingDeposit();
-      const matchedSell = sellOrders.filter((o: any) =>
+      const sellOrders = dbSvc.getSellOrdersAwaitingDeposit() as { id: string; status: string; cryptoAmount: number; amount: number; rate: number; payMethod: string; crypto: string; exchange?: string }[];
+      const matchedSell = sellOrders.filter(o =>
         o.crypto === 'USDT' &&
         Math.abs(o.cryptoAmount - usdtAmount) < 0.01
       );
@@ -62,7 +63,7 @@ async function checkDeposits(): Promise<void> {
       if (matchedSell.length > 0) {
         const order = matchedSell[0];
         dbSvc.updateOrderStatus(order.id, 'deposit_received');
-        console.log(`[TronMonitor] Sell order deposit received: ${order.id} (${usdtAmount} USDT)`);
+        logger.info('Sell order deposit received', { orderId: order.id, amount: usdtAmount });
         notifier.notifyNewOrder({
           id: order.id,
           amount: order.amount,
@@ -75,7 +76,7 @@ async function checkDeposits(): Promise<void> {
       } else if (pendingOrders.length > 0) {
         const order = pendingOrders[0];
         dbSvc.updateOrderStatus(order.id, 'completed', { completedAt: Date.now() });
-        console.log(`[TronMonitor] Auto-completed order ${order.id} (${usdtAmount} USDT)`);
+        logger.info('Auto-completed order', { orderId: order.id, amount: usdtAmount });
         notifier.notifyCompleted({ ...order, status: 'completed', completedAt: Date.now() });
       } else {
         // Notify about unmatched deposit
@@ -94,19 +95,19 @@ async function checkDeposits(): Promise<void> {
         lastCheckedTimestamp = tx.block_timestamp + 1;
       }
     }
-  } catch (e: any) {
-    console.error('[TronMonitor] Error:', e.message);
+  } catch (e: unknown) {
+    logger.error('Monitor error', { error: e instanceof Error ? e.message : String(e) });
   }
 }
 
 export function startMonitor(): void {
   if (monitorInterval) return;
-  const wallet = dbSvc.getWalletConfig() as any;
+  const wallet = dbSvc.getWalletConfig() as { address?: string } | null;
   if (!wallet?.address) {
-    console.log('[TronMonitor] No wallet configured. Monitor inactive.');
+    logger.info('No wallet configured. Monitor inactive.');
     return;
   }
-  console.log(`[TronMonitor] Monitoring ${wallet.address} for USDT deposits (${CHECK_INTERVAL/1000}s interval)`);
+  logger.info('Monitoring for USDT deposits', { address: wallet.address, intervalSec: CHECK_INTERVAL / 1000 });
   monitorInterval = setInterval(checkDeposits, CHECK_INTERVAL);
   checkDeposits(); // Initial check
 }

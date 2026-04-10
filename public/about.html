@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayMatchとは？ — サービス紹介 | P2P暗号通貨・PayPay変換プラットフォーム</title>
+  <meta name="description" content="PayMatchは銀行振込でUSDTを最安購入、PayPayマネーライト⇄マネー変換、USDT⇄PayPay変換ができるP2Pプラットフォームです。KYC不要・即時マッチング・エスクロー保護。">
+  <link rel="canonical" href="https://bkpay.app/about.html">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="PayMatchとは？ — P2P暗号通貨・PayPay変換プラットフォーム">
+  <meta property="og:description" content="銀行振込でUSDT購入、PayPayマネーライト⇄マネー変換、USDT⇄PayPay変換。KYC不要・即時マッチング。">
+  <meta property="og:url" content="https://bkpay.app/about.html">
+  <meta property="og:site_name" content="PayMatch">
+  <meta property="og:image" content="https://bkpay.app/og-image.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PayMatchとは？ — サービス紹介">
+  <meta name="twitter:description" content="銀行振込でUSDT購入、PayPay変換。KYC不要・即時マッチング。">
+  <meta name="theme-color" content="#34d399">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"PayMatch","item":"https://bkpay.app/"},{"@type":"ListItem","position":2,"name":"サービス紹介","item":"https://bkpay.app/about.html"}]}</script>
+  <style>
+    :root { --bg:#0f1117; --card:#1a1d27; --border:#2a2d3a; --text:#edf0f7; --text2:#c0c8d8; --dim:#aab8d0; --accent:#34d399; --accent2:#10b981; --warn:#f59e0b; }
+    [data-theme="light"] { --bg:#f5f7fa; --card:#fff; --border:#e2e8f0; --text:#1a202c; --text2:#4a5568; --dim:#718096; --accent:#10b981; --accent2:#059669; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; line-height:1.7; }
+    .container { max-width:720px; margin:0 auto; padding:0 16px; }
+    nav { background:var(--card); border-bottom:1px solid var(--border); padding:10px 16px; display:flex; justify-content:space-between; align-items:center; max-width:720px; margin:0 auto; }
+    nav a { text-decoration:none; }
+    .nav-links { display:flex; gap:8px; align-items:center; font-size:12px; }
+    .nav-links a { color:var(--text2); }
+    .btn-primary { display:inline-block; padding:8px 20px; background:var(--accent); color:#fff; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; }
+    .btn-secondary { display:inline-block; padding:8px 20px; background:var(--card); color:var(--warn); border:1px solid var(--warn); border-radius:8px; text-decoration:none; font-weight:600; font-size:13px; }
+    .hero { text-align:center; padding:40px 16px 32px; }
+    .hero h1 { font-size:28px; margin-bottom:8px; }
+    .hero h1 span { color:var(--accent); }
+    .hero p { font-size:14px; color:var(--text2); max-width:480px; margin:0 auto 20px; }
+    .hero-badges { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:24px; }
+    .badge { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:11px; color:var(--text2); }
+    .hero-cta { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+    .section { padding:32px 0; border-top:1px solid var(--border); }
+    .section h2 { font-size:20px; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+    .section p { font-size:13px; color:var(--text2); margin-bottom:12px; }
+    .service-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0; }
+    @media(max-width:480px) { .service-grid { grid-template-columns:1fr; } }
+    .service-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+    .service-card .icon { font-size:24px; margin-bottom:8px; }
+    .service-card h3 { font-size:14px; margin-bottom:6px; }
+    .service-card p { font-size:11px; color:var(--dim); margin:0; }
+    .service-card .fee { font-size:12px; color:var(--accent); font-weight:700; margin-top:8px; }
+    .flow { display:flex; align-items:center; gap:0; margin:16px 0; flex-wrap:wrap; justify-content:center; }
+    .flow-step { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:11px; text-align:center; min-width:80px; }
+    .flow-arrow { color:var(--accent); font-size:16px; padding:0 4px; }
+    .feature-list { list-style:none; padding:0; }
+    .feature-list li { padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; display:flex; gap:8px; align-items:flex-start; }
+    .feature-list li::before { content:""; display:none; }
+    .check { color:var(--accent); font-size:14px; flex-shrink:0; }
+    .compare-table { width:100%; border-collapse:collapse; margin:16px 0; font-size:12px; }
+    .compare-table th, .compare-table td { padding:10px 8px; border-bottom:1px solid var(--border); text-align:left; }
+    .compare-table th { color:var(--dim); font-weight:600; font-size:11px; }
+    .compare-table .highlight { background:var(--accent); color:#fff; border-radius:4px; padding:2px 6px; font-size:10px; font-weight:700; }
+    .faq-item { background:var(--card); border:1px solid var(--border); border-radius:8px; margin-bottom:8px; overflow:hidden; }
+    .faq-q { padding:12px 16px; font-size:13px; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+    .faq-q::after { content:"+"; color:var(--dim); font-size:16px; }
+    .faq-q.open::after { content:"-"; }
+    .faq-a { padding:0 16px 12px; font-size:12px; color:var(--text2); display:none; }
+    .faq-a.open { display:block; }
+    footer { text-align:center; padding:24px 16px; font-size:10px; color:var(--dim); border-top:1px solid var(--border); max-width:720px; margin:0 auto; }
+    footer a { color:inherit; }
+    .cta-bottom { text-align:center; padding:32px 16px; background:var(--card); border:1px solid var(--border); border-radius:12px; margin:32px 0; }
+    .cta-bottom h2 { font-size:18px; margin-bottom:8px; }
+    .cta-bottom p { font-size:12px; color:var(--text2); margin-bottom:16px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/" style="color:var(--accent);text-decoration:none;font-weight:700;font-size:14px">Pay<span style="color:var(--text)">Match</span></a>
+    <div style="display:flex;gap:8px;font-size:11px;align-items:center">
+      <a href="/buy-usdt.html" style="color:var(--text2);text-decoration:none" data-i18n="nav_buy_usdt">USDT購入</a>
+      <a href="/paypay-convert.html" style="color:var(--text2);text-decoration:none" data-i18n="nav_paypay">PayPay変換</a>
+      <a href="/guide.html" style="color:var(--text2);text-decoration:none" data-i18n="nav_guide">ガイド</a>
+      <!-- about self-link omitted -->
+      <a href="https://t.me/paymatch_rates" style="color:var(--text2);text-decoration:none" target="_blank" rel="noopener">Telegram</a>
+      <div style="display:flex;gap:2px;margin-left:4px">
+        <button class="lang-btn" data-lang="ja" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">JA</button>
+        <button class="lang-btn" data-lang="en" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">EN</button>
+        <button class="lang-btn" data-lang="zh" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">ZH</button>
+        <button class="lang-btn" data-lang="vi" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">VI</button>
+      </div>
+      <button id="themeToggleAbout" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--text2);font-size:12px;cursor:pointer" aria-label="テーマ切り替え">&#9774;</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Hero -->
+    <div class="hero">
+      <h1><span data-i18n="about_hero_title_pre">Pay</span><span>Match</span><span data-i18n="about_hero_title_post">でできること</span></h1>
+      <p data-i18n="about_hero_desc">銀行振込でUSDT購入、PayPayマネー変換、USDT売却まで。KYC不要のP2Pプラットフォーム。</p>
+      <div class="hero-badges">
+        <span class="badge" data-i18n="about_badge_kyc">KYC不要</span>
+        <span class="badge" data-i18n="about_badge_instant">即時マッチング</span>
+        <span class="badge" data-i18n="about_badge_escrow">エスクロー保護</span>
+        <span class="badge" data-i18n="about_badge_4lang">4言語対応</span>
+        <span class="badge" data-i18n="about_badge_ai">AIサポート</span>
+      </div>
+      <div class="hero-cta">
+        <a href="/buy-usdt.html" class="btn-primary" data-i18n="nav_buy_usdt">USDT購入</a>
+        <a href="/paypay-convert.html" class="btn-secondary" data-i18n="nav_paypay">PayPay変換</a>
+      </div>
+    </div>
+
+    <!-- Service 1: USDT Purchase -->
+    <div class="section">
+      <h2 data-i18n="about_s1_title">💰 銀行振込でUSDT購入</h2>
+      <p data-i18n="about_s1_desc">日本の銀行口座から振り込むだけで、Bybit・Binance・OKXの3取引所を比較した最安レートでUSDTを購入できます。</p>
+
+      <div class="flow">
+        <div class="flow-step"><span data-i18n="about_s1_flow1">金額入力</span><br><span style="font-size:9px;color:var(--dim)">¥10,000〜</span></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step"><span data-i18n="about_s1_flow2">自動マッチング</span><br><span style="font-size:9px;color:var(--dim)" data-i18n="about_s1_flow2_hint">数秒〜数分</span></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step"><span data-i18n="about_s1_flow3">銀行振込</span><br><span style="font-size:9px;color:var(--dim)" data-i18n="about_s1_flow3_hint">30分以内</span></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step" style="border-color:var(--accent)"><span data-i18n="about_s1_flow4">USDT受取</span><br><span style="font-size:9px;color:var(--accent)">TRC-20</span></div>
+      </div>
+
+      <ul class="feature-list">
+        <li><span class="check">&#10003;</span><span data-i18n="about_s1_feat1">3取引所のレートをリアルタイム比較 — 常に最安</span></li>
+        <li><span class="check">&#10003;</span><span data-i18n="about_s1_feat2">アカウント登録・本人確認（KYC）不要</span></li>
+        <li><span class="check">&#10003;</span><span data-i18n="about_s1_feat3">必要なのは銀行口座とTRONウォレットだけ</span></li>
+        <li><span class="check">&#10003;</span><span data-i18n="about_s1_feat4">エスクロー保護 — 着金確認までUSDTをロック</span></li>
+        <li><span class="check">&#10003;</span><span data-i18n="about_s1_feat5">AI解析で振込明細を自動確認</span></li>
+        <li><span class="check">&#10003;</span><span data-i18n="about_s1_feat6">取引手数料 0%</span></li>
+      </ul>
+      <div style="margin-top:12px"><a href="/buy-usdt.html" class="btn-primary" data-i18n="about_s1_cta">USDT購入ページへ</a></div>
+    </div>
+
+    <!-- Service 2: PayPay Conversion -->
+    <div class="section">
+      <h2 data-i18n="about_s2_title">💴 PayPay変換サービス</h2>
+      <p data-i18n="about_s2_desc">PayPayマネーライトをマネーに変換したり、PayPay残高でUSDTを購入・売却できます。全6タイプの変換に対応。</p>
+
+      <div class="service-grid">
+        <div class="service-card">
+          <div class="icon">🔄</div>
+          <h3 data-i18n="pp_lite_to_money">マネーライト → マネー</h3>
+          <p data-i18n="about_s2_card1_desc">PayPayマネーライトを出金可能なマネーに変換</p>
+          <div class="fee"><span data-i18n="about_fee_label">手数料</span> 5%</div>
+        </div>
+        <div class="service-card">
+          <div class="icon">🔄</div>
+          <h3 data-i18n="pp_money_to_lite">マネー → ライト</h3>
+          <p data-i18n="about_s2_card2_desc">PayPayマネーをマネーライトに変換</p>
+          <div class="fee"><span data-i18n="about_fee_label">手数料</span> 2%</div>
+        </div>
+        <div class="service-card">
+          <div class="icon">💎</div>
+          <h3 data-i18n="pp_money_to_usdt">マネー → USDT</h3>
+          <p data-i18n="about_s2_card3_desc">PayPayマネーでUSDTを購入</p>
+          <div class="fee"><span data-i18n="about_fee_label">手数料</span> 3%</div>
+        </div>
+        <div class="service-card">
+          <div class="icon">💎</div>
+          <h3 data-i18n="pp_lite_to_usdt">ライト → USDT</h3>
+          <p data-i18n="about_s2_card4_desc">PayPayマネーライトでUSDTを購入</p>
+          <div class="fee"><span data-i18n="about_fee_label">手数料</span> 7%</div>
+        </div>
+        <div class="service-card">
+          <div class="icon">💴</div>
+          <h3 data-i18n="pp_usdt_to_money">USDT → マネー</h3>
+          <p data-i18n="about_s2_card5_desc">USDTをPayPayマネーに変換</p>
+          <div class="fee"><span data-i18n="about_fee_label">手数料</span> 3%</div>
+        </div>
+        <div class="service-card">
+          <div class="icon">💴</div>
+          <h3 data-i18n="pp_usdt_to_lite">USDT → ライト</h3>
+          <p data-i18n="about_s2_card6_desc">USDTをPayPayマネーライトに変換</p>
+          <div class="fee"><span data-i18n="about_fee_label">手数料</span> 2%</div>
+        </div>
+      </div>
+      <div style="margin-top:12px"><a href="/paypay-convert.html" class="btn-secondary" data-i18n="about_s2_cta">PayPay変換ページへ</a></div>
+    </div>
+
+    <!-- Service 3: Rate Dashboard -->
+    <div class="section">
+      <h2 data-i18n="about_s3_title">📊 リアルタイムレート比較</h2>
+      <p data-i18n="about_s3_desc">Bybit・Binance・OKXのP2Pレートを30秒ごとに自動更新。スプレッドや完了率も一目で確認できます。</p>
+      <ul class="feature-list">
+        <li><span class="check">&#10003;</span><span data-i18n="about_s3_feat1">USDT / BTC / ETH の3通貨に対応</span></li>
+        <li><span class="check">&#10003;</span><span data-i18n="about_s3_feat2">購入レート・売却レートをリアルタイム表示</span></li>
+        <li><span class="check">&#10003;</span><span data-i18n="about_s3_feat3">マーチャントの完了率・取引量を確認</span></li>
+        <li><span class="check">&#10003;</span><span data-i18n="about_s3_feat4">決済方法（銀行振込/PayPay等）でフィルタ</span></li>
+        <li><span class="check">&#10003;</span><span data-i18n="about_s3_feat5">4言語対応（日本語/英語/中国語/ベトナム語）</span></li>
+      </ul>
+      <div style="margin-top:12px"><a href="/" class="btn-primary" style="background:var(--card);color:var(--accent);border:1px solid var(--accent)" data-i18n="about_s3_cta">ダッシュボードを見る</a></div>
+    </div>
+
+    <!-- Service 4: Additional Tools -->
+    <div class="section">
+      <h2 data-i18n="about_s4_title">🛠 便利ツール</h2>
+      <div class="service-grid">
+        <div class="service-card">
+          <div class="icon">🌏</div>
+          <h3 data-i18n="about_s4_card1_title">海外送金コスト比較</h3>
+          <p data-i18n="about_s4_card1_desc">銀行送金 vs USDT送金のコストを即時比較。ベトナム・フィリピン・中国・タイ対応。</p>
+          <div style="margin-top:8px"><a href="/tools/remittance-compare.html" style="color:var(--accent);font-size:11px;text-decoration:none" data-i18n="about_s4_card1_link">比較ツールを使う →</a></div>
+        </div>
+        <div class="service-card">
+          <div class="icon">🤝</div>
+          <h3 data-i18n="about_s4_card2_title">紹介プログラム</h3>
+          <p data-i18n="about_s4_card2_desc">友達を紹介すると取引額の0.15%を報酬として獲得。2段階報酬で紹介の紹介にも0.05%。</p>
+          <div style="margin-top:8px"><a href="/referral.html" style="color:var(--accent);font-size:11px;text-decoration:none" data-i18n="about_s4_card2_link">紹介ダッシュボード →</a></div>
+        </div>
+        <div class="service-card">
+          <div class="icon">🤖</div>
+          <h3 data-i18n="about_s4_card3_title">AIサポートチャット</h3>
+          <p data-i18n="about_s4_card3_desc">使い方がわからない？AIが24時間4言語で自動対応。購入ページの右下ボタンから利用可能。</p>
+        </div>
+        <div class="service-card">
+          <div class="icon">🔔</div>
+          <h3 data-i18n="about_s4_card4_title">レートアラート</h3>
+          <p data-i18n="about_s4_card4_desc">Telegram Botでレートアラートを設定。目標レートに達したら自動通知。</p>
+          <div style="margin-top:8px"><a href="https://t.me/BKnewsmanagerbot" target="_blank" rel="noopener" style="color:var(--accent);font-size:11px;text-decoration:none" data-i18n="about_s4_card4_link">Telegram Botを使う →</a></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="section">
+      <h2 data-i18n="about_s5_title">🆚 PayMatch vs 他のサービス</h2>
+      <table class="compare-table">
+        <thead>
+          <tr><th>機能</th><th>PayMatch</th><th>Binance P2P</th><th>OKX P2P</th><th>銀行送金</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>KYC（本人確認）</td><td><span class="highlight">不要</span></td><td>必須</td><td>必須</td><td>必須</td></tr>
+          <tr><td>JPY銀行振込</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
+          <tr><td>PayPay対応</td><td><span class="highlight">6タイプ</span></td><td>-</td><td>-</td><td>-</td></tr>
+          <tr><td>USDT購入手数料</td><td>0%</td><td>0%</td><td>0%</td><td>-</td></tr>
+          <tr><td>レート比較</td><td>3取引所</td><td>自社のみ</td><td>自社のみ</td><td>-</td></tr>
+          <tr><td>AIサポート</td><td><span class="highlight">4言語</span></td><td>-</td><td>-</td><td>-</td></tr>
+          <tr><td>エスクロー保護</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td><td>-</td></tr>
+          <tr><td>紹介報酬</td><td><span class="highlight">2段階</span></td><td>-</td><td>-</td><td>-</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FAQ -->
+    <div class="section">
+      <h2 data-i18n="about_s6_title">❓ よくある質問</h2>
+      <div class="faq-item"><div class="faq-q" data-i18n="about_faq_q1">PayMatchとは何ですか？</div><div class="faq-a" data-i18n="about_faq_a1">PayMatchはP2Pマッチングプラットフォームです。銀行振込でUSDTを購入したい人と、USDT出金リクエストを自動でマッチングします。取引所ではありません。</div></div>
+      <div class="faq-item"><div class="faq-q" data-i18n="about_faq_q2">本当にKYC不要ですか？</div><div class="faq-a" data-i18n="about_faq_a2">はい。USDT購入にアカウント登録・メールアドレス・本人確認書類は一切不要です。銀行口座とTRONウォレットがあれば利用できます。</div></div>
+      <div class="faq-item"><div class="faq-q" data-i18n="about_faq_q3">手数料はいくらですか？</div><div class="faq-a" data-i18n="about_faq_a3">USDT購入の手数料は0%です。PayPay変換は変換タイプにより2〜7%の手数料がかかります。</div></div>
+      <div class="faq-item"><div class="faq-q" data-i18n="about_faq_q4">最低いくらから利用できますか？</div><div class="faq-a" data-i18n="about_faq_a4">USDT購入は¥10,000から、PayPay変換は¥1,000から利用可能です。</div></div>
+      <div class="faq-item"><div class="faq-q" data-i18n="about_faq_q5">安全ですか？</div><div class="faq-a" data-i18n="about_faq_a5">エスクロー保護により、銀行振込の着金確認が完了するまでUSDTはロックされます。AI解析で振込明細を自動確認し、不正取引を防止しています。</div></div>
+      <div class="faq-item"><div class="faq-q" data-i18n="about_faq_q6">どのくらい時間がかかりますか？</div><div class="faq-a" data-i18n="about_faq_a6">マッチングは通常数秒〜数分。銀行振込後の着金確認は18〜40分です。PayPay変換は双方の送金確認後に即完了します。</div></div>
+      <div class="faq-item"><div class="faq-q" data-i18n="about_faq_q7">Telegram Botでも利用できますか？</div><div class="faq-a" data-i18n="about_faq_a7">はい。@BKnewsmanagerbot でUSDT購入の全フローが完結します。レートアラート設定も可能です。</div></div>
+      <div class="faq-item"><div class="faq-q" data-i18n="about_faq_q8">紹介プログラムの報酬は？</div><div class="faq-a" data-i18n="about_faq_a8">紹介した方の取引額の0.15%が報酬として加算されます。さらに、紹介された方が他の方を紹介した場合、0.05%の2段階報酬も獲得できます。</div></div>
+    </div>
+
+    <!-- CTA Bottom -->
+    <div class="cta-bottom">
+      <h2 data-i18n="about_cta_title">今すぐ始めましょう</h2>
+      <p data-i18n="about_cta_desc">アカウント登録不要。金額を入力して、数分でUSDTを手に入れましょう。</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <a href="/buy-usdt.html" class="btn-primary" data-i18n="nav_buy_usdt">USDT購入</a>
+        <a href="/paypay-convert.html" class="btn-secondary" data-i18n="nav_paypay">PayPay変換</a>
+        <a href="/" class="btn-primary" style="background:var(--card);color:var(--text);border:1px solid var(--border)" data-i18n="about_cta_rate">レート確認</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="/buy-usdt.html">USDT購入</a> · <a href="/paypay-convert.html">PayPay変換</a> · <a href="/guide.html">使い方ガイド</a> · <a href="/referral.html">紹介プログラム</a> · <a href="/terms.html">利用規約</a> · <a href="/privacy.html">プライバシー</a> · <a href="https://t.me/paymatch_rates" target="_blank" rel="noopener">Telegram</a>
+    <br><span style="margin-top:4px;display:inline-block" data-i18n="about_footer_tagline">PayMatch &mdash; P2P暗号通貨・PayPay変換プラットフォーム</span>
+  </footer>
+
+  <script src="/i18n.js"></script>
+  <script src="/buyer-chat.js"></script>
+  <script src="/floating-cta.js"></script>
+  <script>
+    (function(){
+      var savedTheme=localStorage.getItem('theme')||'dark';
+      document.documentElement.setAttribute('data-theme',savedTheme);
+      // Theme toggle
+      var themeBtn = document.getElementById('themeToggleAbout');
+      if (themeBtn) {
+        themeBtn.innerHTML = savedTheme === 'dark' ? '&#9774;' : '&#9728;';
+        themeBtn.addEventListener('click', function() {
+          var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('theme', next);
+          themeBtn.innerHTML = next === 'dark' ? '&#9774;' : '&#9728;';
+        });
+      }
+      // Language selector
+      document.querySelectorAll('.lang-btn[data-lang]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          if (typeof setLanguage === 'function') setLanguage(this.dataset.lang);
+        });
+      });
+      // FAQ accordion
+      document.querySelectorAll('.faq-q').forEach(function(q){
+        q.addEventListener('click',function(){
+          this.classList.toggle('open');
+          this.nextElementSibling.classList.toggle('open');
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

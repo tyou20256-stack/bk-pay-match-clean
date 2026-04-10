@@ -1,3 +1,4 @@
+function escapeHtml(s){if(s==null)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 var volThreshold=5.0;
 
 function adjustDeviation(delta) {
@@ -28,11 +29,11 @@ function clearFilter(type){if(type==='payment')filters.payments.clear();else fil
 function buildChips(){
   var ph=document.getElementById('paymentFilters');
   var eh=document.getElementById('exchangeFilters');
-  var pArr=['<span class="filter-chip '+(filters.payments.size===0?'active':'')+'" onclick="clearFilter(\'payment\')">全て</span>'];
-  allPaymentMethods.forEach(function(m){var a=filters.payments.has(m)?'active':'';pArr.push('<span class="filter-chip '+a+'" onclick="toggleFilter(\'payment\',\''+m.replace(/'/g,"\\'")+'\')">'+m+'</span>');});
+  var pArr=['<button type="button" class="filter-chip '+(filters.payments.size===0?'active':'')+'" data-filter-clear="payment">全て</button>'];
+  allPaymentMethods.forEach(function(m){var a=filters.payments.has(m)?'active':'';pArr.push('<button type="button" class="filter-chip '+a+'" data-filter-toggle="payment" data-filter-val="'+escapeHtml(m)+'">'+escapeHtml(m)+'</button>');});
   ph.innerHTML=pArr.join('');
-  var eArr=['<span class="filter-chip '+(filters.exchanges.size===0?'active':'')+'" onclick="clearFilter(\'exchange\')">全て</span>'];
-  allExchanges.forEach(function(ex){var a=filters.exchanges.has(ex)?'active':'';eArr.push('<span class="filter-chip '+a+'" onclick="toggleFilter(\'exchange\',\''+ex+'\')">'+ex+'</span>');});
+  var eArr=['<button type="button" class="filter-chip '+(filters.exchanges.size===0?'active':'')+'" data-filter-clear="exchange">全て</button>'];
+  allExchanges.forEach(function(ex){var a=filters.exchanges.has(ex)?'active':'';eArr.push('<button type="button" class="filter-chip '+a+'" data-filter-toggle="exchange" data-filter-val="'+escapeHtml(ex)+'">'+escapeHtml(ex)+'</button>');});
   eh.innerHTML=eArr.join('');
 }
 function pass(o){if(filters.payments.size>0&&!o.paymentMethods.some(m=>filters.payments.has(m)))return false;if(filters.exchanges.size>0&&!filters.exchanges.has(o.exchange))return false;if(filters.amount>0&&(o.minLimit>filters.amount||(o.maxLimit>0&&o.maxLimit<filters.amount)))return false;if(filters.completionRate>0&&o.merchant.completionRate<filters.completionRate)return false;if(filters.minAvail>0&&o.available<filters.minAvail)return false;if(filters.onlineOnly&&!o.merchant.isOnline)return false;return true;}
@@ -50,7 +51,7 @@ function switchArbTab(tab){arbTab=tab;document.getElementById('arbTabActive').cl
 
 async function loadArbitrage(){try{const r=await fetch('/api/arbitrage');const j=await r.json();if(j.success)renderArbitrage(j.data);}catch(e){}}
 function renderSparkline(snaps){if(!snaps||snaps.length<2)return '';const mx=Math.max(...snaps.map(s=>s.profit)),mn=Math.min(...snaps.map(s=>s.profit)),rng=mx-mn||1;return`<div class="arb-spark">${snaps.map(s=>`<div class="arb-spark-bar" style="height:${Math.max(2,((s.profit-mn)/rng)*18)}px"></div>`).join('')}</div>`;}
-function renderArbCard(w,live){const sc=live?'live':'closed',st=live?t('arb_status_open'):t('arb_status_closed');return`<div class="arb-card ${sc}"><div class="arb-route"><span class="arb-exchange exchange-badge exchange-${w.buyExchange}">${w.buyExchange}</span><span class="arb-arrow"> → </span><span class="arb-exchange exchange-badge exchange-${w.sellExchange}">${w.sellExchange}</span><div style="font-size:10px;color:var(--dim);margin-top:4px">${w.crypto}/JPY</div></div><div class="arb-prices"><div><span class="label">${t('arb_buy_at')}</span> <span style="color:var(--green)">¥${fmt(w.buyPrice)}</span></div><div><span class="label">${t('arb_sell_at')}</span> <span style="color:var(--red)">¥${fmt(w.sellPrice)}</span></div><div><span class="label">${t('arb_per_unit')}</span> +¥${fmt(w.profitPerUnit)}</div></div><div class="arb-volume-cell"><div class="arb-volume-row"><span class="label">${t('arb_volume')}</span> ${fmtInt(w.maxVolume)} ${w.crypto}</div><div class="arb-volume-row"><span class="label">${t('arb_max_profit')}</span> <span class="arb-max-profit">¥${fmtInt(w.maxProfitJPY)}</span></div><div class="arb-volume-row"><span class="label">${t('arb_buy_limit')}</span> ¥${fmtInt(w.buyMinLimit)}-¥${fmtInt(w.buyMaxLimit)}</div><div class="arb-volume-row"><span class="label">${t('arb_sell_limit')}</span> ¥${fmtInt(w.sellMinLimit)}-¥${fmtInt(w.sellMaxLimit)}</div></div><div class="arb-profit-cell"><div class="arb-profit-big">+${fmt(w.profitPercent,2)}%</div><div style="font-size:10px;color:var(--dim)">${t('arb_peak')}: +${fmt(w.peakProfit,2)}%</div>${renderSparkline(w.snapshots)}</div><div class="arb-timing"><div><span class="arb-status ${sc}">${st}</span></div><div class="arb-duration-val">${fmtDuration(w.durationMs||0)}</div><div style="font-size:10px">${t('arb_opened')}: ${fmtTime(w.openedAt)}</div>${w.closedAt?`<div style="font-size:10px">${t('arb_closed')}: ${fmtTime(w.closedAt)}</div>`:`<div style="font-size:10px;color:var(--green)">${t('arb_now')}</div>`}</div></div>`;}
+function renderArbCard(w,live){const sc=live?'live':'closed',st=live?t('arb_status_open'):t('arb_status_closed');return`<div class="arb-card ${sc}"><div class="arb-route"><span class="arb-exchange exchange-badge exchange-${escapeHtml(w.buyExchange)}">${escapeHtml(w.buyExchange)}</span><span class="arb-arrow"> → </span><span class="arb-exchange exchange-badge exchange-${escapeHtml(w.sellExchange)}">${escapeHtml(w.sellExchange)}</span><div style="font-size:10px;color:var(--dim);margin-top:4px">${escapeHtml(w.crypto)}/JPY</div></div><div class="arb-prices"><div><span class="label">${t('arb_buy_at')}</span> <span style="color:var(--green)">¥${fmt(w.buyPrice)}</span></div><div><span class="label">${t('arb_sell_at')}</span> <span style="color:var(--red)">¥${fmt(w.sellPrice)}</span></div><div><span class="label">${t('arb_per_unit')}</span> +¥${fmt(w.profitPerUnit)}</div></div><div class="arb-volume-cell"><div class="arb-volume-row"><span class="label">${t('arb_volume')}</span> ${fmtInt(w.maxVolume)} ${w.crypto}</div><div class="arb-volume-row"><span class="label">${t('arb_max_profit')}</span> <span class="arb-max-profit">¥${fmtInt(w.maxProfitJPY)}</span></div><div class="arb-volume-row"><span class="label">${t('arb_buy_limit')}</span> ¥${fmtInt(w.buyMinLimit)}-¥${fmtInt(w.buyMaxLimit)}</div><div class="arb-volume-row"><span class="label">${t('arb_sell_limit')}</span> ¥${fmtInt(w.sellMinLimit)}-¥${fmtInt(w.sellMaxLimit)}</div></div><div class="arb-profit-cell"><div class="arb-profit-big">+${fmt(w.profitPercent,2)}%</div><div style="font-size:10px;color:var(--dim)">${t('arb_peak')}: +${fmt(w.peakProfit,2)}%</div>${renderSparkline(w.snapshots)}</div><div class="arb-timing"><div><span class="arb-status ${sc}">${st}</span></div><div class="arb-duration-val">${fmtDuration(w.durationMs||0)}</div><div style="font-size:10px">${t('arb_opened')}: ${fmtTime(w.openedAt)}</div>${w.closedAt?`<div style="font-size:10px">${t('arb_closed')}: ${fmtTime(w.closedAt)}</div>`:`<div style="font-size:10px;color:var(--green)">${t('arb_now')}</div>`}</div></div>`;}
 function renderArbitrage(data){const aEl=document.getElementById('arbActiveList'),hEl=document.getElementById('arbHistoryList'),badge=document.getElementById('arbActiveBadge');badge.textContent=data.active.length;badge.classList.toggle('zero',data.active.length===0);aEl.innerHTML=data.active.length?data.active.map(w=>renderArbCard(w,true)).join(''):`<div class="arb-empty">${t('arb_none_active')}</div>`;hEl.innerHTML=data.history.length?data.history.map(w=>renderArbCard(w,false)).join(''):`<div class="arb-empty">${t('arb_none_history')}</div>`;}
 
 // Data
@@ -101,11 +102,87 @@ function renderTable(tid,cid,orders,side,spot){
     const pc=prem>0?'premium-positive':'premium-negative';
     const compVal=o.merchant.completionRate;
     const cc=compVal>=95?'completion-high':compVal>=80?'completion-mid':'completion-low';
-    const pays=o.paymentMethods.slice(0,3).map(p=>`<span class="payment-tag ${filters.payments.size&&filters.payments.has(p)?'payment-active':''}">${p}</span>`).join('');
-    return`<tr><td><span class="rank ${rc}">${r}</span></td><td><span class="exchange-badge exchange-${o.exchange}">${o.exchange}</span></td><td class="price-cell">${fmt(o.price)}</td><td><span class="${pc}">${prem!=null?(prem>0?'+':'')+fmt(prem,2)+'%':'--'}</span></td><td>${fmtInt(o.available)}</td><td style="font-size:10px">${fmtInt(o.minLimit)}-${fmtInt(o.maxLimit)}</td><td><span class="online-dot ${o.merchant.isOnline?'on':'off'}"></span>${o.merchant.name}</td><td class="${cc}"><div class="completion-bar"><div class="completion-fill" style="width:${Math.min(compVal,100)}%"></div></div>${fmt(compVal,0)}%</td><td>${pays}</td></tr>`;
+    const pays=o.paymentMethods.slice(0,3).map(p=>`<span class="payment-tag ${filters.payments.size&&filters.payments.has(p)?'payment-active':''}">${escapeHtml(p)}</span>`).join('');
+    return`<tr><td><span class="rank ${rc}">${r}</span></td><td><span class="exchange-badge exchange-${escapeHtml(o.exchange)}">${escapeHtml(o.exchange)}</span></td><td class="price-cell">${fmt(o.price)}</td><td><span class="${pc}">${prem!=null?(prem>0?'+':'')+fmt(prem,2)+'%':'--'}</span></td><td>${fmtInt(o.available)}</td><td style="font-size:10px">${fmtInt(o.minLimit)}-${fmtInt(o.maxLimit)}</td><td><span class="online-dot ${o.merchant.isOnline?'on':'off'}"></span>${escapeHtml(o.merchant.name)}</td><td class="${cc}"><div class="completion-bar"><div class="completion-fill" style="width:${Math.min(compVal,100)}%"></div></div>${fmt(compVal,0)}%</td><td>${pays}</td></tr>`;
   }).join('');
 }
 
 async function refresh(){document.getElementById('refreshBtn').innerHTML='&#x23F3;';await loadData();document.getElementById('refreshBtn').innerHTML='&#x21bb;';countdown=30;}
 setInterval(()=>{countdown--;document.getElementById('countdown').textContent=countdown;if(countdown<=0){countdown=30;loadData();}},1000);
 loadData();
+
+// --- Event bindings (moved from inline handlers) ---
+document.addEventListener('DOMContentLoaded', function() {
+  // Refresh button
+  document.getElementById('refreshBtn').addEventListener('click', function() { refresh(); });
+
+  // Language selector buttons
+  document.querySelectorAll('.lang-btn[data-lang]').forEach(function(btn) {
+    btn.addEventListener('click', function() { setLanguage(btn.dataset.lang); });
+  });
+
+  // Theme toggle
+  document.getElementById('themeToggle').addEventListener('click', function() { toggleTheme(); });
+
+  // Arbitrage alert bar
+  document.getElementById('arbAlertBar').addEventListener('click', function() { toggleArbPanel(); });
+
+  // Arb close mobile
+  var arbClose = document.getElementById('arbCloseMobile');
+  if (arbClose) arbClose.addEventListener('click', function() { toggleArbPanel(); });
+
+  // Filter reset button
+  document.querySelector('.filter-reset-btn').addEventListener('click', function() { resetFilters(); });
+
+  // Volume adjustment buttons (threshold & deviation)
+  document.querySelectorAll('.vol-adj-btn[data-action]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var val = parseFloat(btn.dataset.adjust);
+      if (btn.dataset.action === 'adjustThreshold') adjustThreshold(val);
+      else if (btn.dataset.action === 'adjustDeviation') adjustDeviation(val);
+    });
+  });
+
+  // Arb tab buttons
+  document.querySelectorAll('.arb-tab[data-arb-tab]').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      switchArbTab(btn.dataset.arbTab);
+    });
+  });
+
+  // Event delegation for dynamically generated filter chips
+  document.getElementById('paymentFilters').addEventListener('click', function(e) {
+    var chip = e.target.closest('[data-filter-clear],[data-filter-toggle]');
+    if (!chip) return;
+    if (chip.dataset.filterClear) clearFilter(chip.dataset.filterClear);
+    else if (chip.dataset.filterToggle) toggleFilter(chip.dataset.filterToggle, chip.dataset.filterVal);
+  });
+  document.getElementById('exchangeFilters').addEventListener('click', function(e) {
+    var chip = e.target.closest('[data-filter-clear],[data-filter-toggle]');
+    if (!chip) return;
+    if (chip.dataset.filterClear) clearFilter(chip.dataset.filterClear);
+    else if (chip.dataset.filterToggle) toggleFilter(chip.dataset.filterToggle, chip.dataset.filterVal);
+  });
+});
+
+// --- WebSocket real-time updates ---
+(function() {
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  var ws = new WebSocket(proto + '//' + location.host + '/ws');
+  ws.onmessage = function(e) {
+    var msg = JSON.parse(e.data);
+    if (msg.type === 'rates') {
+      renderData(msg.data);
+    }
+  };
+  ws.onclose = function() {
+    setTimeout(function reconnect() {
+      var p = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      var w = new WebSocket(p + '//' + location.host + '/ws');
+      w.onmessage = ws.onmessage;
+      w.onclose = function() { setTimeout(reconnect, 5000); };
+    }, 5000);
+  };
+})();
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(function() {}); }

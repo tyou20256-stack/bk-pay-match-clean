@@ -21,7 +21,17 @@ const insertStmt = db.prepare(
   `INSERT INTO price_history (timestamp, crypto, exchange, best_buy, best_sell, spot, spread) VALUES (?, ?, ?, ?, ?, ?, ?)`
 );
 
-const insertMany = db.transaction((rows: any[]) => {
+interface PriceHistoryInsertRow {
+  timestamp: number;
+  crypto: string;
+  exchange: string;
+  bestBuy: number | null;
+  bestSell: number | null;
+  spot: number | null;
+  spread: number | null;
+}
+
+const insertMany = db.transaction((rows: PriceHistoryInsertRow[]) => {
   for (const r of rows) {
     insertStmt.run(r.timestamp, r.crypto, r.exchange, r.bestBuy, r.bestSell, r.spot, r.spread);
   }
@@ -43,17 +53,28 @@ export function recordSnapshot(crypto: string, aggregated: AggregatedRates): voi
   }
 }
 
-export function getHistory(crypto: string, hours: number = 24): any[] {
-  const since = Date.now() - hours * 60 * 60 * 1000;
-  return db.prepare(
-    `SELECT timestamp, exchange, best_buy as bestBuy, best_sell as bestSell, spot, spread FROM price_history WHERE crypto = ? AND timestamp >= ? ORDER BY timestamp ASC`
-  ).all(crypto, since) as any[];
+export interface PriceHistoryRecord {
+  timestamp: number;
+  exchange: string;
+  bestBuy: number | null;
+  bestSell: number | null;
+  best_buy: number;
+  best_sell: number;
+  spot: number | null;
+  spread: number | null;
 }
 
-export function getHistoryByRange(crypto: string, from: number, to: number): any[] {
+export function getHistory(crypto: string, hours: number = 24): PriceHistoryRecord[] {
+  const since = Date.now() - hours * 60 * 60 * 1000;
   return db.prepare(
-    `SELECT timestamp, exchange, best_buy as bestBuy, best_sell as bestSell, spot, spread FROM price_history WHERE crypto = ? AND timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC`
-  ).all(crypto, from, to) as any[];
+    `SELECT timestamp, exchange, best_buy, best_sell, best_buy as bestBuy, best_sell as bestSell, spot, spread FROM price_history WHERE crypto = ? AND timestamp >= ? ORDER BY timestamp ASC`
+  ).all(crypto, since) as PriceHistoryRecord[];
+}
+
+export function getHistoryByRange(crypto: string, from: number, to: number): PriceHistoryRecord[] {
+  return db.prepare(
+    `SELECT timestamp, exchange, best_buy, best_sell, best_buy as bestBuy, best_sell as bestSell, spot, spread FROM price_history WHERE crypto = ? AND timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC`
+  ).all(crypto, from, to) as PriceHistoryRecord[];
 }
 
 // Cleanup old data (keep 30 days)

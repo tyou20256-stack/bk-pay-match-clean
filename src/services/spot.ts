@@ -5,6 +5,7 @@
  *   無料枠制限(月10,000回)あり。エラー時は前回の値をキャッシュして返却。
  */
 import ccxt from 'ccxt';
+import logger from './logger.js';
 
 const exchange = new ccxt.binance({ enableRateLimit: true });
 
@@ -44,8 +45,8 @@ export async function getSpotPrice(crypto: string, fiat: string): Promise<number
       return ticker.last * usdtJpy;
     }
     return null;
-  } catch (err: any) {
-    console.error(`[Spot] ${crypto}/${fiat}: ${err.message}`);
+  } catch (err: unknown) {
+    logger.error('Spot price fetch failed', { crypto, fiat, error: err instanceof Error ? err.message : String(err) });
     return null;
   }
 }

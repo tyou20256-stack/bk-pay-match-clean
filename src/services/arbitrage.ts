@@ -5,6 +5,7 @@
  *   閾値(CONFIG.arbitrageThreshold %)以上の利益率で機会を記録。
  */
 import { AggregatedRates, ArbitrageOpp, P2POrder } from '../types';
+import logger from './logger.js';
 
 export interface ArbitrageWindow {
   id: string;
@@ -94,7 +95,7 @@ export function processArbitrage(rates: AggregatedRates, crypto: string): void {
         snapshots: [{ time: now, buyPrice: opp.buyPrice, sellPrice: opp.sellPrice, profit: opp.profitPercent }],
       };
       activeWindows.set(id, w);
-      console.log(`[Arbitrage] OPEN: ${id} +${opp.profitPercent.toFixed(2)}% vol=${maxVolume.toFixed(1)} maxProfit=¥${maxProfitJPY.toFixed(0)}`);
+      logger.info('Arbitrage window opened', { id, profitPct: opp.profitPercent.toFixed(2), volume: maxVolume.toFixed(1), maxProfitJPY: maxProfitJPY.toFixed(0) });
     }
   }
 

@@ -7,14 +7,16 @@
 import { getNotificationSubscribers } from './database.js';
 import { getHistory } from './priceHistory.js';
 import db from './database.js';
+import logger from './logger.js';
 
-const BOT_TOKEN = '8447506670:AAGY2bcpbZxTe9OL3Jzxpdo86CHkb47XIig';
-const API_BASE = 'http://localhost:3003';
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const API_BASE = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3003}`;
 
 let lastDailySentDate = '';
 let lastWeeklySentDate = '';
 let running = false;
 let intervalId: ReturnType<typeof setInterval> | null = null;
+const arbNotifyCooldown = new Map<string, number>();
 
 interface RateSnapshot {
   timestamp: number;
@@ -23,21 +25,21 @@ interface RateSnapshot {
 const recentSnapshots: RateSnapshot[] = [];
 const MAX_SNAPSHOTS = 10;
 
-async function tg(method: string, body: any): Promise<any> {
+async function tg(method: string, body: Record<string, unknown>): Promise<Record<string, unknown> | null> {
   try {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    return await res.json();
+    return await res.json() as Record<string, unknown>;
   } catch (e) {
-    console.error(`[PriceNotifier] TG API error (${method}):`, e);
+    logger.error('TG API error', { method, error: e instanceof Error ? e.message : String(e) });
     return null;
   }
 }
 
-async function sendMessage(chatId: number, text: string, opts?: { reply_markup?: any }) {
+async function sendMessage(chatId: number, text: string, opts?: { reply_markup?: Record<string, unknown> }) {
   return tg('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', ...opts });
 }
 
@@ -46,22 +48,23 @@ async function fetchCurrentRates(): Promise<Record<string, { buy: number; sell: 
   for (const crypto of ['USDT', 'BTC', 'ETH']) {
     try {
       const res = await fetch(`${API_BASE}/api/rates/${crypto}`);
-      const data: any = await res.json();
+      const data = await res.json() as Record<string, unknown>;
       if (data.success && data.data) {
-        const exchanges = data.data.rates || [];
-        const allBuy: any[] = [];
-        const allSell: any[] = [];
+        const dataData = data.data as Record<string, unknown>;
+        const exchanges = (dataData.rates || []) as Record<string, unknown>[];
+        const allBuy: Record<string, unknown>[] = [];
+        const allSell: Record<string, unknown>[] = [];
         for (const ex of exchanges) {
-          for (const o of (ex.buyOrders || [])) allBuy.push(o);
-          for (const o of (ex.sellOrders || [])) allSell.push(o);
+          for (const o of ((ex.buyOrders || []) as Record<string, unknown>[])) allBuy.push(o);
+          for (const o of ((ex.sellOrders || []) as Record<string, unknown>[])) allSell.push(o);
         }
-        allBuy.sort((a: any, b: any) => Number(a.price) - Number(b.price));
-        allSell.sort((a: any, b: any) => Number(b.price) - Number(a.price));
+        allBuy.sort((a, b) => Number(a.price) - Number(b.price));
+        allSell.sort((a, b) => Number(b.price) - Number(a.price));
         if (allBuy.length > 0) {
           result[crypto] = {
             buy: Number(allBuy[0].price),
             sell: allSell.length > 0 ? Number(allSell[0].price) : 0,
-            exchange: allBuy[0].exchange || '-',
+            exchange: String(allBuy[0].exchange || '-'),
           };
         }
       }
@@ -76,7 +79,7 @@ function getYesterdayAvgRate(crypto: string): { buy: number; sell: number } | nu
   const dayBefore = yesterday - 24 * 60 * 60 * 1000;
   const rows = db.prepare(
     `SELECT AVG(best_buy) as avgBuy, AVG(best_sell) as avgSell FROM price_history WHERE crypto = ? AND timestamp >= ? AND timestamp < ?`
-  ).get(crypto, dayBefore, yesterday) as any;
+  ).get(crypto, dayBefore, yesterday) as { avgBuy: number | null; avgSell: number | null } | undefined;
   if (!rows || (!rows.avgBuy && !rows.avgSell)) return null;
   return { buy: rows.avgBuy || 0, sell: rows.avgSell || 0 };
 }
@@ -86,10 +89,10 @@ function getWeeklyStats(crypto: string): { min: number; max: number; minDate: st
   const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
   const minRow = db.prepare(
     `SELECT MIN(best_buy) as val, timestamp FROM price_history WHERE crypto = ? AND timestamp >= ? AND best_buy > 0`
-  ).get(crypto, weekAgo) as any;
+  ).get(crypto, weekAgo) as { val: number | null; timestamp: number } | undefined;
   const maxRow = db.prepare(
     `SELECT MAX(best_buy) as val, timestamp FROM price_history WHERE crypto = ? AND timestamp >= ? AND best_buy > 0`
-  ).get(crypto, weekAgo) as any;
+  ).get(crypto, weekAgo) as { val: number | null; timestamp: number } | undefined;
   if (!minRow?.val || !maxRow?.val) return null;
   const fmt = (ts: number) => new Date(ts).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' });
   return { min: minRow.val, max: maxRow.val, minDate: fmt(minRow.timestamp), maxDate: fmt(maxRow.timestamp) };
@@ -154,7 +157,7 @@ async function sendDailySummary() {
   for (const telegramId of subscribers) {
     await sendMessage(telegramId, text, { reply_markup: markup });
   }
-  console.log(`[PriceNotifier] 日次サマリー送信完了: ${subscribers.length}人`);
+  logger.info('日次サマリー送信完了', { subscriberCount: subscribers.length });
 }
 
 // ━━━━━━━━━━━━━━━━━━ B. スパイクアラート ━━━━━━━━━━━━━━━━━━
@@ -201,16 +204,20 @@ async function checkSpikeAlerts() {
       for (const telegramId of subscribers) {
         await sendMessage(telegramId, text, { reply_markup: markup });
       }
-      console.log(`[PriceNotifier] スパイクアラート送信: ${crypto} ${changePct.toFixed(1)}%`);
+      logger.info('スパイクアラート送信', { crypto, changePct: changePct.toFixed(1) });
     }
   }
 
-  // アービトラージ機会チェック
+  // アービトラージ機会チェック（閾値25%、1時間に1回まで）
   for (const crypto of ['USDT']) {
     const rate = rates[crypto];
     if (!rate || rate.buy === 0 || rate.sell === 0) continue;
     const arbPct = ((rate.sell - rate.buy) / rate.buy) * 100;
-    if (arbPct >= 5) {
+    const arbCooldownKey = `arb_notify_${crypto}`;
+    const lastArbNotify = arbNotifyCooldown.get(arbCooldownKey) || 0;
+    const now = Date.now();
+    if (arbPct >= 25 && now - lastArbNotify > 60 * 60 * 1000) {
+      arbNotifyCooldown.set(arbCooldownKey, now);
       const text =
         `🔥 <b>アービトラージ機会</b>\n\n` +
         `${crypto} スプレッド: ${arbPct.toFixed(1)}%\n` +
@@ -228,7 +235,7 @@ async function checkSpikeAlerts() {
   try {
     const alertRows = db.prepare(
       `SELECT telegram_id, alert_crypto, alert_threshold FROM notification_preferences WHERE alert_threshold > 0`
-    ).all() as any[];
+    ).all() as { telegram_id: number; alert_crypto: string; alert_threshold: number }[];
 
     for (const row of alertRows) {
       const rate = rates[row.alert_crypto];
@@ -280,8 +287,8 @@ async function sendWeeklySummary() {
     try {
       const orderCount = db.prepare(
         `SELECT COUNT(*) as cnt, COALESCE(SUM(amount), 0) as total FROM orders WHERE created_at >= ?`
-      ).get(weekAgoTs) as any;
-      if (orderCount?.cnt > 0) {
+      ).get(weekAgoTs) as { cnt: number; total: number } | undefined;
+      if (orderCount && orderCount.cnt > 0) {
         personalText += `あなたの取引: ${orderCount.cnt}回 / ¥${Number(orderCount.total).toLocaleString()}\n\n`;
       }
     } catch (_) {}
@@ -292,7 +299,7 @@ async function sendWeeklySummary() {
       },
     });
   }
-  console.log(`[PriceNotifier] 週次レポート送信完了: ${subscribers.length}人`);
+  logger.info('週次レポート送信完了', { subscriberCount: subscribers.length });
 }
 
 // ━━━━━━━━━━━━━━━━━━ メインループ ━━━━━━━━━━━━━━━━━━
@@ -306,25 +313,25 @@ async function tick() {
 
   if (hour === 9 && minute === 0 && lastDailySentDate !== today) {
     lastDailySentDate = today;
-    try { await sendDailySummary(); } catch (e) { console.error('[PriceNotifier] 日次サマリーエラー:', e); }
+    try { await sendDailySummary(); } catch (e) { logger.error('日次サマリーエラー', { error: e instanceof Error ? e.message : String(e) }); }
 
     if (dayOfWeek === 1 && lastWeeklySentDate !== today) {
       lastWeeklySentDate = today;
-      try { await sendWeeklySummary(); } catch (e) { console.error('[PriceNotifier] 週次レポートエラー:', e); }
+      try { await sendWeeklySummary(); } catch (e) { logger.error('週次レポートエラー', { error: e instanceof Error ? e.message : String(e) }); }
     }
   }
 
-  try { await checkSpikeAlerts(); } catch (e) { console.error('[PriceNotifier] スパイクアラートエラー:', e); }
+  try { await checkSpikeAlerts(); } catch (e) { logger.error('スパイクアラートエラー', { error: e instanceof Error ? e.message : String(e) }); }
 }
 
 export function startPriceNotifier() {
   if (running) return;
   running = true;
-  console.log('[PriceNotifier] 価格通知サービス起動');
+  logger.info('価格通知サービス起動');
   intervalId = setInterval(() => {
-    tick().catch(e => console.error('[PriceNotifier] tick error:', e));
+    tick().catch(e => logger.error('tick error', { error: e instanceof Error ? e.message : String(e) }));
   }, 60 * 1000);
-  tick().catch(e => console.error('[PriceNotifier] initial tick error:', e));
+  tick().catch(e => logger.error('initial tick error', { error: e instanceof Error ? e.message : String(e) }));
 }
 
 export function stopPriceNotifier() {

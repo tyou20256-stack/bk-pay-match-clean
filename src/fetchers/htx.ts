@@ -8,6 +8,7 @@
 import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
 import { CONFIG } from '../config';
+import logger from '../services/logger.js';
 
 // HTX coinId mapping
 const COIN_IDS: Record<string, number> = { USDT: 2, BTC: 1, ETH: 3 };
@@ -41,23 +42,23 @@ export class HTXFetcher implements FetcherInterface {
         }
       );
       const items = res.data?.data || [];
-      return items.slice(0, CONFIG.maxOrdersPerExchange).map((item: any) => ({
+      return items.slice(0, CONFIG.maxOrdersPerExchange).map((item: Record<string, unknown>) => ({
         exchange: this.name, side, crypto, fiat: CONFIG.fiat,
-        price: parseFloat(item.price || '0'),
-        available: parseFloat(item.tradeCount || '0'),
-        minLimit: parseFloat(item.minTradeLimit || '0'),
-        maxLimit: parseFloat(item.maxTradeLimit || '0'),
+        price: parseFloat(String(item.price || '0')),
+        available: parseFloat(String(item.tradeCount || '0')),
+        minLimit: parseFloat(String(item.minTradeLimit || '0')),
+        maxLimit: parseFloat(String(item.maxTradeLimit || '0')),
         merchant: {
-          name: item.userName || 'Unknown',
-          completionRate: parseFloat(item.orderCompleteRate || '0'),
-          orderCount: item.tradeMonthTimes || 0,
+          name: String(item.userName || 'Unknown'),
+          completionRate: parseFloat(String(item.orderCompleteRate || '0')),
+          orderCount: (item.tradeMonthTimes as number) || 0,
           isOnline: item.isOnline === true,
         },
-        paymentMethods: (item.payMethods || []).map((p: any) => PAY_METHODS[p.payMethodId] || p.name || String(p.payMethodId)),
+        paymentMethods: ((item.payMethods || []) as Record<string, unknown>[]).map((p) => PAY_METHODS[p.payMethodId as number] || String(p.name || String(p.payMethodId))),
         fetchedAt: Date.now(),
       }));
-    } catch (err: any) {
-      console.error(`[HTX] ${side} ${crypto}: ${err.message}`);
+    } catch (err: unknown) {
+      logger.error('Fetch orders failed', { exchange: 'HTX', side, crypto, error: err instanceof Error ? err.message : String(err) });
       return [];
     }
   }
