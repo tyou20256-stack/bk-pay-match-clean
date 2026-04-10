@@ -1,0 +1,111 @@
+name: Deploy to VPS
+
+# Triggers:
+#  - Push to master (auto-deploy)
+#  - Manual dispatch with optional "only_public" flag (public/ files only, no rebuild)
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-vps.yml'
+  workflow_dispatch:
+    inputs:
+      only_public:
+        description: 'Only sync public/ files (no Docker rebuild)'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Backup current public/ on VPS
+        run: |
+          ssh root@${{ secrets.VPS_HOST }} \
+            'cd /opt/bk-pay-match && TS=$(date +%Y%m%d-%H%M%S) && cp -r public public.backup.$TS && echo "BACKUP=public.backup.$TS"'
+
+      - name: Sync public/ to VPS
+        run: |
+          rsync -avz --delete \
+            --exclude='public.backup.*' \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            public/ root@${{ secrets.VPS_HOST }}:/opt/bk-pay-match/public/
+
+      - name: Sync src/ to VPS (unless only_public)
+        if: github.event.inputs.only_public != 'true'
+        run: |
+          rsync -avz \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            src/ root@${{ secrets.VPS_HOST }}:/opt/bk-pay-match/src/
+          rsync -avz \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            package.json package-lock.json tsconfig.json Dockerfile docker-compose.yml \
+            root@${{ secrets.VPS_HOST }}:/opt/bk-pay-match/
+
+      - name: Docker rebuild and restart
+        if: github.event.inputs.only_public != 'true'
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.VPS_HOST }} \
+            'cd /opt/bk-pay-match && docker compose up -d --build'
+
+      - name: Restart container if only_public
+        if: github.event.inputs.only_public == 'true'
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.VPS_HOST }} \
+            'cd /opt/bk-pay-match && docker compose restart app'
+
+      - name: Wait for container to become healthy
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            STATUS=$(ssh -o StrictHostKeyChecking=no root@${{ secrets.VPS_HOST }} \
+              "docker inspect -f '{{.State.Health.Status}}' bk-pay-match 2>/dev/null || echo starting")
+            echo "Attempt $i: $STATUS"
+            if [ "$STATUS" = "healthy" ]; then exit 0; fi
+            sleep 5
+          done
+          echo "Container did not become healthy in time" >&2
+          exit 1
+
+      - name: Health check via public URL
+        run: |
+          HTTP_CODE=$(curl -sSo /dev/null -w '%{http_code}' https://bkpay.app/health)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Health check failed: HTTP $HTTP_CODE" >&2
+            exit 1
+          fi
+          echo "Health: OK"
+
+      - name: Notify on failure via Telegram
+        if: failure() && env.TELEGRAM_BOT_TOKEN != ''
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_STAFF_CHAT_ID }}
+        run: |
+          curl -sS -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=❌ bk-pay-match deploy failed on ${{ github.sha }} (commit: ${{ github.event.head_commit.message }})" \
+            || true

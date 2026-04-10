@@ -1,39 +1,61 @@
-﻿name: CI
+name: CI
+
 on:
   push:
-    branches: [ "**" ]
+    branches: [main, master]
   pull_request:
-    branches: [ "**" ]
+    branches: [main, master]
+
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Node.js
+      - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
+          node-version: ${{ matrix.node-version }}
           cache: "npm"
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
-      - name: Run autodetected tests
+      - name: Install dependencies
+        run: npm ci
+      - name: Security audit
+        run: npm audit --audit-level=critical
+      - name: Lint
+        run: npx eslint src/ --max-warnings 0
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+      - name: Unit tests with coverage
+        run: npx vitest run --coverage
+      - name: TypeScript build
+        run: npm run build
+      - name: Integration tests
         run: |
-          set -e
-          echo "Detecting project type..."
-          if [ -f package.json ]; then
-            echo "Node project detected"
-            npm ci
-            if npm test --silent; then echo "npm tests passed"; fi
-          fi
-          if [ -f requirements.txt ]; then
-            echo "Python project detected"
-            python -m pip install -r requirements.txt
-            if [ -f pytest.ini ] || [ -d tests ]; then
-              python -m pytest -q
-            fi
-          fi
-          if [ -f pom.xml ]; then
-            echo "Maven project detected"
-            mvn -B -q test
-          fi
+          node dist/index.js &
+          SERVER_PID=$!
+          sleep 8
+          TEST_URL=http://localhost:3003 npx vitest run tests/api-security.test.ts tests/e2e.test.ts tests/api.test.ts tests/integration.test.ts
+          TEST_EXIT=$?
+          kill $SERVER_PID 2>/dev/null || true
+          exit $TEST_EXIT
+        env:
+          NODE_ENV: test
+          BK_ENC_KEY: test_key_0000000000000000000000000000000000000000000000
+          BK_ADMIN_PASSWORD: TestPass123!@#
+          PORT: 3003
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: bk-pay-match:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
