@@ -97,15 +97,3 @@ jobs:
             exit 1
           fi
           echo "Health: OK"
-
-      - name: Notify on failure via Telegram
-        if: failure() && env.TELEGRAM_BOT_TOKEN != ''
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_STAFF_CHAT_ID }}
-        run: |
-          curl -sS -X POST \
-            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            -d "text=❌ bk-pay-match deploy failed on ${{ github.sha }} (commit: ${{ github.event.head_commit.message }})" \
-            || true
