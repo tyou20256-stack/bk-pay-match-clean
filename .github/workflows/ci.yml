@@ -31,7 +31,22 @@ jobs:
       - name: TypeScript type check
         run: npx tsc --noEmit
       - name: Unit tests with coverage
-        run: npx vitest run --coverage
+        # Excludes tests that require a running HTTP server on :3003
+        # (those run later in the "Integration tests" step which boots the
+        # server first). Pure unit tests only here.
+        run: |
+          npx vitest run --coverage \
+            --exclude='**/node_modules/**' \
+            --exclude='tests/api.test.ts' \
+            --exclude='tests/api-security.test.ts' \
+            --exclude='tests/e2e.test.ts' \
+            --exclude='tests/integration.test.ts' \
+            --exclude='tests/extended.test.ts' \
+            --exclude='tests/phase3-5.test.ts'
+        env:
+          NODE_ENV: test
+          BK_ENC_KEY: test_key_0000000000000000000000000000000000000000000000
+          BK_ADMIN_PASSWORD: TestPass123!@#
       - name: TypeScript build
         run: npm run build
       - name: Integration tests
