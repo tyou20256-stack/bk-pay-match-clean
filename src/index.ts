@@ -152,7 +152,18 @@ app.post('/api/auth/login', loginLimiter, (req, res) => {
   recordAuditLog({ userId: result.userId, username, action: 'login', ipAddress: ip });
   res.cookie('bkpay_token', result.token, { ...COOKIE_OPTS, maxAge: 24*60*60*1000 });
   const csrfToken = setCsrfCookie(res);
-  res.json({ success: true, forcePasswordChange: result.forcePasswordChange, csrfToken });
+  // Body also returns the token for non-browser clients (tests, external
+  // API consumers, mobile apps) that use Authorization: Bearer instead of
+  // cookies. The Bearer path is exempt from CSRF checks (see
+  // src/middleware/auth.ts:42) so these clients don't need the csrfToken.
+  // Browser clients continue to use the httpOnly cookie + CSRF header
+  // combination and can ignore the body token field.
+  res.json({
+    success: true,
+    forcePasswordChange: result.forcePasswordChange,
+    csrfToken,
+    token: result.token,
+  });
 });
 
 app.post('/api/auth/logout', (req, res) => {

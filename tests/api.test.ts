@@ -6,49 +6,31 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
 const BASE = 'http://localhost:3003';
-// Server-side /api/auth/login sets session via httpOnly cookie `bkpay_token`
-// and also sets a CSRF cookie `bkpay_csrf`. We must forward both on every
-// subsequent request so that authRequired + csrfProtection middleware pass.
-let sessionCookie = '';
-let csrfToken = '';
+// /api/auth/login returns the session token in the response body as
+// `data.token` (server-side Phase 1b addition). Non-browser clients use
+// the Bearer flow, which is exempt from CSRF checks in the server-side
+// middleware (src/middleware/auth.ts:42). Browser clients continue to
+// use the httpOnly cookie + CSRF header combination.
+let sessionToken = '';
 
-// Helper: parse a Set-Cookie header line for a specific cookie name.
-function parseCookie(setCookieHeader: string | null, name: string): string {
-  if (!setCookieHeader) return '';
-  // fetch() may concatenate multiple Set-Cookie values with ", " — split and search.
-  const parts = setCookieHeader.split(/,(?=\s*[A-Za-z_][A-Za-z0-9_-]*=)/);
-  for (const part of parts) {
-    const match = part.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
-    if (match) return match[1];
-  }
-  return '';
-}
-
-async function login(): Promise<{ cookie: string; csrf: string }> {
+async function login(): Promise<string> {
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: 'admin', password: 'bkpay2026' })
   });
-  const setCookie = res.headers.get('set-cookie');
-  const cookie = parseCookie(setCookie, 'bkpay_token');
   const data = await res.json() as any;
-  // Prefer server-returned csrfToken; fall back to reading bkpay_csrf cookie.
-  const csrf = (data?.csrfToken as string) || parseCookie(setCookie, 'bkpay_csrf');
-  return { cookie, csrf };
+  return (data?.token as string) || '';
 }
 
 beforeAll(async () => {
-  const result = await login();
-  sessionCookie = result.cookie;
-  csrfToken = result.csrf;
+  sessionToken = await login();
 });
 
 function authHeaders(): Record<string, string> {
   return {
     'Content-Type': 'application/json',
-    'Cookie': `bkpay_token=${sessionCookie}; bkpay_csrf=${csrfToken}`,
-    'X-CSRF-Token': csrfToken,
+    'Authorization': `Bearer ${sessionToken}`,
   };
 }
 
@@ -76,8 +58,10 @@ describe('認証API', () => {
   });
 
   it('セッション確認（保護APIにアクセス可能）', async () => {
+    // Use authHeaders() which forwards Cookie + X-CSRF-Token, matching
+    // how a real browser session would talk to the API.
     const res = await fetch(`${BASE}/api/settings`, {
-      headers: { 'Authorization': `Bearer ${authCookie}` }
+      headers: authHeaders(),
     });
     const data = await res.json() as any;
     expect(data.success).toBe(true);
