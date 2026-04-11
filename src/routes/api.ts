@@ -1036,7 +1036,10 @@ router.post('/customer/login', (req, res) => {
     if (!result) throw new AuthenticationError('Invalid credentials');
     const IS_PRODUCTION = process.env.NODE_ENV === 'production';
     res.cookie('bkpay_customer_token', result.token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000, sameSite: 'strict', secure: IS_PRODUCTION });
-    res.json({ success: true });
+    // Body also returns the token for non-browser clients (tests, mobile
+    // apps, external API consumers) that use Authorization: Bearer. Browser
+    // clients continue to use the httpOnly cookie and can ignore this.
+    res.json({ success: true, token: result.token });
   } catch (e: unknown) { res.json({ success: false, error: safeError(e) }); }
 });
 
