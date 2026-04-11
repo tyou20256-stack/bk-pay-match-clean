@@ -24,10 +24,10 @@ jobs:
       - name: Security audit
         run: npm audit --audit-level=critical
       - name: Lint
-        # Errors fail the build; warnings are tolerated for legacy code.
-        # Tracked: 74 warnings from ESLint v9 migration to be cleaned up
-        # incrementally — see eslint.config.js for current rule levels.
-        run: npx eslint src/
+        # Strict: 0 errors, 0 warnings. The eslint.config.js rules were
+        # tuned in c7af17a to silence the ESLint v9 migration noise, and
+        # the remaining dead-code warnings were fixed in the same commit.
+        run: npx eslint src/ --max-warnings 0
       - name: TypeScript type check
         run: npx tsc --noEmit
       - name: Unit tests with coverage
@@ -64,7 +64,13 @@ jobs:
           node dist/index.js &
           SERVER_PID=$!
           sleep 8
-          TEST_URL=http://127.0.0.1:3003 npx vitest run tests/api-security.test.ts tests/e2e.test.ts tests/api.test.ts tests/integration.test.ts
+          TEST_URL=http://127.0.0.1:3003 npx vitest run \
+            tests/api-security.test.ts \
+            tests/e2e.test.ts \
+            tests/api.test.ts \
+            tests/integration.test.ts \
+            tests/extended.test.ts \
+            tests/phase3-5.test.ts
           TEST_EXIT=$?
           kill $SERVER_PID 2>/dev/null || true
           exit $TEST_EXIT

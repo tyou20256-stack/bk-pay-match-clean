@@ -5,7 +5,10 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const BASE = 'http://localhost:3003';
+// Use explicit IPv4 loopback to avoid Node 20 undici IPv4/IPv6 dual-stack
+// flake that triggers the admin session IP binding check. See
+// tests/api.test.ts for the full explanation.
+const BASE = process.env.TEST_URL || 'http://127.0.0.1:3003';
 let authToken = '';
 
 async function login(): Promise<string> {
