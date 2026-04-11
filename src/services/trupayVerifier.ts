@@ -17,7 +17,7 @@ import {
   TruPayWithdrawalRow,
   recordAuditLog,
 } from './database.js';
-import { sendUSDT } from './walletService.js';
+import { enqueueOrSendUSDT } from './walletService.js';
 import { broadcast } from './websocket.js';
 import { notifyTruPayTransferConfirmed, notifyTruPayUsdtSent, notifyTruPayTimeout, notifyTruPaySendFailed } from './notifier.js';
 import logger from './logger.js';
@@ -128,10 +128,15 @@ async function sendUsdtForMatch(match: TruPayMatchRow, withdrawal: TruPayWithdra
     wallet: match.buyer_wallet,
   });
 
-  // Retry up to 3 times
+  // Retry up to 3 times. Routes through enqueueOrSendUSDT so Phase 1c
+  // signer-container mode actually runs the worker for TruPay sends.
+  // The idempotencyKey is the match id, so worker restarts / caller
+  // retries never produce two on-chain transactions for the same match.
   let result = { success: false, txId: '', error: 'No attempts made' };
   for (let attempt = 1; attempt <= 3; attempt++) {
-    const res = await sendUSDT(match.buyer_wallet, match.amount_usdt);
+    const res = await enqueueOrSendUSDT(match.buyer_wallet, match.amount_usdt, {
+      idempotencyKey: `trupay-match-${match.id}`,
+    });
     if (res.success) {
       result = { success: true, txId: res.txId || '', error: '' };
       break;

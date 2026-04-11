@@ -246,3 +246,12 @@ export async function stopQueueEventMonitoring(): Promise<void> {
     usdtSendEvents = null;
   }
 }
+
+/**
+ * Accessor for the QueueEvents instance. Used by `enqueueOrSendUSDT` to
+ * `job.waitUntilFinished(events)`. Returns null if event monitoring is
+ * disabled or hasn't been started yet.
+ */
+export function getUsdtSendQueueEvents(): QueueEvents | null {
+  return usdtSendEvents;
+}

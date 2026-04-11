@@ -186,28 +186,39 @@ export async function sendUSDT(toAddress: string, amount: number): Promise<SendR
 }
 
 /**
- * Enqueue a USDT send via BullMQ, or fall back to the synchronous
- * `sendUSDT` above if the queue feature flag is off.
+ * Enqueue a USDT send via BullMQ and synchronously wait for the result.
  *
- * When `ENABLE_JOB_QUEUE=true`:
- *   - Returns immediately with `{ success: true, queued: true, jobId }`
- *   - The actual on-chain send happens asynchronously in a worker
- *     (either in this process or in a dedicated signer container)
- *   - Caller must observe job status via BullMQ events or DB state
+ * This wraps the sync `sendUSDT` path when the queue flag is off, or
+ * enqueues a BullMQ job and awaits its completion (via
+ * `job.waitUntilFinished`) when the flag is on. Either way, the caller
+ * gets back a `{ success, txId, error }` shape identical to `sendUSDT`,
+ * so existing retry loops and DB recording logic (e.g. in
+ * `processCryptoSend` and `trupayVerifier.sendUsdtForMatch`) keep working
+ * unchanged.
  *
- * When `ENABLE_JOB_QUEUE=false`:
- *   - Behaves exactly like the synchronous `sendUSDT`
- *   - Preserves the pre-queue execution model for gradual rollout
+ * Why sync-wait on the queue? The order/TruPay flows immediately record
+ * the txId in SQLite on success and then transition to the next state.
+ * Returning `{ queued: true }` without a txId would require a full async
+ * refactor of the order state machine, which is a Phase 2 project.
+ * Waiting keeps the migration incremental: Phase 1b runs the worker
+ * in-process with no observable latency difference; Phase 1c (signer
+ * container) adds a Redis round-trip (~5-50 ms on localhost).
  *
- * @param opts.idempotencyKey — if provided, a prior job with the same
- *   key is returned instead of creating a new one. Critical for
+ * @param opts.idempotencyKey — used as the BullMQ jobId. If a previous
+ *   send with the same key is still in the queue, BullMQ returns the
+ *   existing job instead of creating a duplicate. Critical for
  *   at-least-once delivery from the order flow to prevent double-sends.
+ * @param opts.timeoutMs — hard timeout to wait for the job. Defaults to
+ *   60s. On timeout, returns `{ success: false, error: 'queue timeout' }`
+ *   without cancelling the job (it may still complete eventually — the
+ *   caller's retry logic and the DB-backed order state prevent double
+ *   processing).
  */
 export async function enqueueOrSendUSDT(
   toAddress: string,
   amount: number,
-  opts: { orderId?: string; idempotencyKey?: string } = {}
-): Promise<{ success: boolean; queued?: boolean; jobId?: string; txId?: string; error?: string }> {
+  opts: { orderId?: string; idempotencyKey?: string; timeoutMs?: number } = {}
+): Promise<SendResult> {
   // Lazy import to avoid pulling bullmq/ioredis into code paths where
   // the queue is disabled (e.g. unit tests that don't need Redis).
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -224,6 +235,7 @@ export async function enqueueOrSendUSDT(
     return sendUSDT(toAddress, amount);
   }
 
+  const timeoutMs = opts.timeoutMs ?? 60_000;
   try {
     const jobId = opts.idempotencyKey || `${toAddress}-${amount}-${Date.now()}`;
     const job = await queue.add(
@@ -231,12 +243,33 @@ export async function enqueueOrSendUSDT(
       { toAddress, amount, orderId: opts.orderId, idempotencyKey: opts.idempotencyKey },
       { jobId }
     );
-    logger.info('USDT send enqueued', { jobId: job.id, toAddress, amount, orderId: opts.orderId });
-    return { success: true, queued: true, jobId: job.id };
+    logger.info('USDT send enqueued, awaiting result', { jobId: job.id, toAddress, amount, orderId: opts.orderId });
+
+    // Wait for the worker (either in-process or in the signer container)
+    // to finish. `waitUntilFinished` needs a QueueEvents listener — get
+    // the one already started by startQueueEventMonitoring() at boot.
+    const queueEvents = queues.getUsdtSendQueueEvents();
+    if (!queueEvents) {
+      logger.warn('QueueEvents not available, falling back to sync sendUSDT');
+      return sendUSDT(toAddress, amount);
+    }
+
+    const result = await Promise.race([
+      job.waitUntilFinished(queueEvents),
+      new Promise<SendResult>((_, reject) =>
+        setTimeout(() => reject(new Error('queue timeout')), timeoutMs)
+      ),
+    ]);
+
+    logger.info('USDT send queue result', { jobId: job.id, success: result.success });
+    return result as SendResult;
   } catch (e: unknown) {
     const errMsg = e instanceof Error ? e.message : 'Enqueue failed';
-    logger.error('USDT send enqueue failed, falling back to sync', { error: errMsg });
-    // Fall back to sync on queue errors so orders don't silently stall
+    logger.error('USDT send via queue failed, falling back to sync', { error: errMsg, orderId: opts.orderId });
+    // Fall back to sync on queue errors so orders don't silently stall.
+    // The atomic `claimOrderForSending` upstream already prevents double
+    // processing, so falling back is safe even if the job was already
+    // picked up by a worker — one of the two will fail with `DUP_TX`.
     return sendUSDT(toAddress, amount);
   }
 }
@@ -465,11 +498,17 @@ async function _doProcessCryptoSend(orderId: string): Promise<SendResult> {
     details: JSON.stringify({ crypto: order.crypto, amount: order.cryptoAmount, toAddress: customerAddr }),
   });
 
-  // Send USDT with retry (3 attempts, exponential backoff)
-  // Track txId from first attempt to prevent double-send on timeout
+  // Send USDT with retry (3 attempts, exponential backoff).
+  // Routes through enqueueOrSendUSDT so that when ENABLE_JOB_QUEUE=true
+  // the send runs in a worker (in-process or signer container) — the
+  // idempotencyKey is the orderId, so retrying the same order never
+  // produces two on-chain transactions.
   let result: SendResult = { success: false, error: 'No attempts made' };
   for (let attempt = 1; attempt <= 3; attempt++) {
-    result = await sendUSDT(customerAddr, order.cryptoAmount);
+    result = await enqueueOrSendUSDT(customerAddr, order.cryptoAmount, {
+      orderId,
+      idempotencyKey: `order-${orderId}`,
+    });
     if (result.success) {
       break;
     }

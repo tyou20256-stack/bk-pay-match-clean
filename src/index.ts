@@ -47,7 +47,6 @@ import {
   isJobQueueEnabled,
   shouldRunUsdtSendWorker,
   startUsdtSendWorker,
-  startNotificationWorker,
   startQueueEventMonitoring,
   stopQueueEventMonitoring,
   closeQueues,
@@ -634,18 +633,12 @@ async function start() {
       logger.info('usdt-send worker delegated to signer container');
     }
 
-    // Notification worker always runs in the main app (it needs access
-    // to the Telegram bot client, which lives here).
-    // For now this worker is a placeholder — existing code calls notifier
-    // functions directly and doesn't yet route through the queue. When
-    // the order/send flows are migrated to enqueue notifications, they
-    // will land here.
-    startNotificationWorker(async (job) => {
-      logger.info('Notification job processed (queue is ready)', {
-        type: job.data.type,
-        priority: job.data.priority,
-      });
-    });
+    // Notifications currently flow through `notifier.ts` called directly
+    // from the send/confirm paths — they don't need a queue. If and when
+    // that changes (e.g. high-volume fan-out to multiple channels),
+    // uncomment the startNotificationWorker call and implement real
+    // dispatch in the handler body. Removed placeholder to avoid
+    // misleading operators into thinking notifications route via Redis.
   } else {
     logger.info('Job queue disabled (ENABLE_JOB_QUEUE != true)');
   }
