@@ -46,7 +46,10 @@ jobs:
         env:
           NODE_ENV: test
           BK_ENC_KEY: test_key_0000000000000000000000000000000000000000000000
-          BK_ADMIN_PASSWORD: TestPass123!@#
+          # Matches the hard-coded password in api.test.ts + phase3-5.test.ts
+          # TODO(test-refactor): make all tests read from env var instead of
+          # hard-coding 'bkpay2026'.
+          BK_ADMIN_PASSWORD: bkpay2026
       - name: TypeScript build
         run: npm run build
       - name: Integration tests
@@ -58,14 +61,17 @@ jobs:
           node dist/index.js &
           SERVER_PID=$!
           sleep 8
-          TEST_URL=http://localhost:3003 npx vitest run tests/api-security.test.ts tests/e2e.test.ts tests/api.test.ts tests/integration.test.ts
+          TEST_URL=http://127.0.0.1:3003 npx vitest run tests/api-security.test.ts tests/e2e.test.ts tests/api.test.ts tests/integration.test.ts
           TEST_EXIT=$?
           kill $SERVER_PID 2>/dev/null || true
           exit $TEST_EXIT
         env:
           NODE_ENV: test
           BK_ENC_KEY: test_key_0000000000000000000000000000000000000000000000
-          BK_ADMIN_PASSWORD: TestPass123!@#
+          # Matches the hard-coded password in api.test.ts + phase3-5.test.ts
+          # TODO(test-refactor): make all tests read from env var instead of
+          # hard-coding 'bkpay2026'.
+          BK_ADMIN_PASSWORD: bkpay2026
           PORT: 3003
 
   build:
