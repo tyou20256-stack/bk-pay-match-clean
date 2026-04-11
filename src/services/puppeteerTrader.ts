@@ -65,7 +65,7 @@ class P2PTrader {
       const cookies = await page.cookies();
       const data = JSON.stringify(cookies);
       // Encrypt cookie data before saving to disk
-      const crypto = require('crypto');
+      // (uses the top-level `crypto` import, no shadowing)
       const key = process.env.BK_ENC_KEY || 'bkpay-default-key-change-me-32ch';
       const derivedKey = crypto.pbkdf2Sync(key, 'bkpay-cookie-salt', 100000, 32, 'sha256');
       const iv = crypto.randomBytes(12);
@@ -91,7 +91,7 @@ class P2PTrader {
       let cookieData: string | null = null;
       if (fs.existsSync(encPath)) {
         const encrypted = fs.readFileSync(encPath, 'utf-8');
-        const crypto = require('crypto');
+        // (uses the top-level `crypto` import, no shadowing)
         const key = process.env.BK_ENC_KEY || 'bkpay-default-key-change-me-32ch';
         const derivedKey = crypto.pbkdf2Sync(key, 'bkpay-cookie-salt', 100000, 32, 'sha256');
         const parts = encrypted.split(':');
@@ -714,6 +714,8 @@ class P2PTrader {
   }
 
   setCredentials(creds: { exchange: string; email?: string; password?: string; apiKey?: string; apiSecret?: string; totpSecret?: string }) {
+    // Lazy require to avoid circular dependency with database.ts
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { saveExchangeCreds } = require('./database.js');
     saveExchangeCreds(creds.exchange, creds);
     logger.info('Credentials saved', { exchange: creds.exchange });

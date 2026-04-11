@@ -780,6 +780,7 @@ export function verifyMfaAndLogin(pendingToken: string, totpCode: string, ip?: s
   if (!mfaSecret || mfaSecret === '[DECRYPTION_FAILED]') return null;
 
   // Verify TOTP (import at top level would cause issues, use dynamic require pattern)
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { authenticator } = require('otplib');
   const valid = authenticator.check(totpCode, mfaSecret);
   if (!valid) return null;
@@ -796,6 +797,7 @@ export function verifyMfaAndLogin(pendingToken: string, totpCode: string, ip?: s
 export function setupMfa(userId: number): { secret: string; otpauthUrl: string } | null {
   const user = db.prepare('SELECT username FROM admin_users WHERE id = ?').get(userId) as { username: string } | undefined;
   if (!user) return null;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { authenticator } = require('otplib');
   const secret = authenticator.generateSecret();
   db.prepare('UPDATE admin_users SET mfa_secret = ? WHERE id = ?').run(encrypt(secret), userId);
@@ -809,6 +811,7 @@ export function enableMfa(userId: number, totpCode: string): boolean {
   if (!user?.mfa_secret) return false;
   const mfaSecret = user.mfa_secret.includes(':') ? decrypt(user.mfa_secret) : user.mfa_secret;
   if (!mfaSecret || mfaSecret === '[DECRYPTION_FAILED]') return false;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { authenticator } = require('otplib');
   if (!authenticator.check(totpCode, mfaSecret)) return false;
   db.prepare('UPDATE admin_users SET mfa_enabled = 1 WHERE id = ?').run(userId);

@@ -212,6 +212,7 @@ const migrations: Migration[] = [
     name: 'migrate_cbc_to_gcm',
     up() {
       // Re-encrypt any CBC data to GCM
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { encrypt, decrypt } = require('./database.js');
       const bankRows = db.prepare('SELECT id, account_number, account_holder FROM bank_accounts').all() as { id: number; account_number: string; account_holder: string }[];
       for (const row of bankRows) {

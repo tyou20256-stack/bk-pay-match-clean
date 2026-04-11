@@ -55,7 +55,15 @@ module.exports = [
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-require-imports': 'warn',
       '@typescript-eslint/no-namespace': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      // unused-vars: tolerate `_`-prefixed args, ignore caught errors entirely
+      // (a try/catch where the error is intentionally swallowed is a common
+      // valid pattern), ignore destructured rest siblings.
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrors: 'none',
+        ignoreRestSiblings: true,
+      }],
       'no-console': 'off',
       'no-empty': ['error', { allowEmptyCatch: true }],
     },

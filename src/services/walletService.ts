@@ -81,6 +81,8 @@ function getTronWeb(): TronWebInstance | null {
   let privateKey = process.env.TRON_WALLET_PRIVATE_KEY;
   if (!privateKey) {
     try {
+      // Lazy require to avoid circular dependency with database.ts
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { getSystemConfig } = require('./database.js');
       privateKey = getSystemConfig('TRON_WALLET_PRIVATE_KEY');
     } catch { /* DB not ready yet */ }
@@ -91,7 +93,9 @@ function getTronWeb(): TronWebInstance | null {
   }
 
   try {
-    // Dynamic import workaround for CommonJS compat
+    // Dynamic import workaround for CommonJS compat (tronweb has both
+    // ESM `default` and CJS root exports depending on bundler).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const TronWeb = require('tronweb').default || require('tronweb');
     const instance: TronWebInstance = new TronWeb({
       fullHost: TRONGRID_API,
@@ -215,6 +219,8 @@ export async function getWalletBalance(): Promise<{ trx: number; usdt: number } 
 export function isWalletReady(): boolean {
   if (process.env.TRON_WALLET_PRIVATE_KEY) return true;
   try {
+    // Lazy require to avoid circular dependency with database.ts
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getSystemConfig } = require('./database.js');
     return !!getSystemConfig('TRON_WALLET_PRIVATE_KEY');
   } catch { return false; }
