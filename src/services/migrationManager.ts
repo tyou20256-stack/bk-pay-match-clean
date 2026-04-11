@@ -374,43 +374,68 @@ const migrations: Migration[] = [
       // Addresses the Performance audit finding that every operational
       // table had ZERO indexes, causing full table scans on every API
       // request. Expected latency improvement at 50k rows: 200ms → <5ms
-      // per query. Safe to run on production — CREATE INDEX IF NOT EXISTS
-      // is idempotent and SQLite builds them online.
-      db.exec(`
-        CREATE INDEX IF NOT EXISTS idx_orders_status_created ON orders(status, created_at);
-        CREATE INDEX IF NOT EXISTS idx_orders_direction_status ON orders(direction, status);
-        CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
-        CREATE INDEX IF NOT EXISTS idx_orders_seller ON orders(seller_id);
-        CREATE INDEX IF NOT EXISTS idx_orders_expires ON orders(expires_at);
+      // per query.
+      //
+      // Defensive: production databases may have schema drift — some
+      // tables were created before certain columns existed. We verify
+      // both the table AND each referenced column exist before creating
+      // the index, so the migration never aborts on drift.
+      const tableExists = (name: string): boolean => {
+        const row = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name) as { [k: string]: unknown } | undefined;
+        return !!row;
+      };
+      const columnsOf = (table: string): Set<string> => {
+        if (!tableExists(table)) return new Set();
+        const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+        return new Set(rows.map((r) => r.name));
+      };
+      const safeIndex = (indexName: string, table: string, columns: string[]) => {
+        const existing = columnsOf(table);
+        if (existing.size === 0) {
+          logger.warn('Skipping index — table missing', { indexName, table });
+          return;
+        }
+        const missing = columns.filter((c) => !existing.has(c));
+        if (missing.length > 0) {
+          logger.warn('Skipping index — columns missing', { indexName, table, missing });
+          return;
+        }
+        db.exec(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${table}(${columns.join(', ')})`);
+      };
 
-        CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
-        CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+      safeIndex('idx_orders_status_created', 'orders', ['status', 'created_at']);
+      safeIndex('idx_orders_direction_status', 'orders', ['direction', 'status']);
+      safeIndex('idx_orders_created', 'orders', ['created_at']);
+      safeIndex('idx_orders_seller', 'orders', ['seller_id']);
+      safeIndex('idx_orders_expires', 'orders', ['expires_at']);
 
-        CREATE INDEX IF NOT EXISTS idx_withdrawals_status_amount ON withdrawals(status, amount, pay_method);
-        CREATE INDEX IF NOT EXISTS idx_withdrawals_tracking ON withdrawals(tracking_token);
-        CREATE INDEX IF NOT EXISTS idx_withdrawals_created ON withdrawals(created_at);
+      safeIndex('idx_sessions_expires', 'sessions', ['expires_at']);
+      safeIndex('idx_sessions_user', 'sessions', ['user_id']);
 
-        CREATE INDEX IF NOT EXISTS idx_p2p_sellers_status ON p2p_sellers(status);
-        CREATE INDEX IF NOT EXISTS idx_p2p_sellers_email ON p2p_sellers(email);
-        CREATE INDEX IF NOT EXISTS idx_p2p_sellers_token ON p2p_sellers(confirm_token);
+      safeIndex('idx_withdrawals_status_amount', 'withdrawals', ['status', 'amount', 'pay_method']);
+      safeIndex('idx_withdrawals_tracking', 'withdrawals', ['tracking_token']);
+      safeIndex('idx_withdrawals_created', 'withdrawals', ['created_at']);
 
-        CREATE INDEX IF NOT EXISTS idx_trupay_wd_trupay_id ON trupay_withdrawals(trupay_id);
-        CREATE INDEX IF NOT EXISTS idx_trupay_wd_status ON trupay_withdrawals(status, created_at);
+      safeIndex('idx_p2p_sellers_status', 'p2p_sellers', ['status']);
+      safeIndex('idx_p2p_sellers_email', 'p2p_sellers', ['email']);
+      safeIndex('idx_p2p_sellers_token', 'p2p_sellers', ['confirm_token']);
 
-        CREATE INDEX IF NOT EXISTS idx_trupay_matches_status ON trupay_matches(status, created_at);
-        CREATE INDEX IF NOT EXISTS idx_trupay_matches_withdrawal ON trupay_matches(withdrawal_id);
-        CREATE INDEX IF NOT EXISTS idx_trupay_matches_buyer ON trupay_matches(buyer_id);
+      safeIndex('idx_trupay_wd_trupay_id', 'trupay_withdrawals', ['trupay_id']);
+      safeIndex('idx_trupay_wd_status', 'trupay_withdrawals', ['status', 'created_at']);
 
-        CREATE INDEX IF NOT EXISTS idx_crypto_tx_order ON crypto_transactions(order_id, created_at);
-        CREATE INDEX IF NOT EXISTS idx_crypto_tx_txid ON crypto_transactions(tx_id);
+      safeIndex('idx_trupay_matches_status', 'trupay_matches', ['status', 'created_at']);
+      safeIndex('idx_trupay_matches_withdrawal', 'trupay_matches', ['withdrawal_id']);
+      safeIndex('idx_trupay_matches_buyer', 'trupay_matches', ['buyer_id']);
 
-        CREATE INDEX IF NOT EXISTS idx_bank_transfers_status ON bank_transfers(status, created_at);
-        CREATE INDEX IF NOT EXISTS idx_bank_transfers_order ON bank_transfers(order_id);
+      safeIndex('idx_crypto_tx_order', 'crypto_transactions', ['order_id', 'created_at']);
+      safeIndex('idx_crypto_tx_txid', 'crypto_transactions', ['tx_id']);
 
-        CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
+      safeIndex('idx_bank_transfers_status', 'bank_transfers', ['status', 'created_at']);
+      safeIndex('idx_bank_transfers_order', 'bank_transfers', ['order_id']);
 
-        CREATE INDEX IF NOT EXISTS idx_exchange_orders_order ON exchange_orders(order_id);
-      `);
+      safeIndex('idx_customers_email', 'customers', ['email']);
+
+      safeIndex('idx_exchange_orders_order', 'exchange_orders', ['order_id']);
     },
   },
 ];
