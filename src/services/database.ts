@@ -943,6 +943,55 @@ export function updateOrderStatus(id: string, status: string, extra: OrderStatus
 }
 
 /**
+ * Find all orders in `pending_payment` status whose expiry has passed.
+ * Used by the expire cleanup interval — previously iterated only the
+ * in-memory Map, missing orders created before the last process restart.
+ */
+export function getExpiredPendingOrders(now: number): OrderData[] {
+  return (db.prepare(`
+    SELECT * FROM orders
+    WHERE status = 'pending_payment' AND expires_at < ?
+    ORDER BY expires_at ASC
+    LIMIT 100
+  `).all(now) as OrderRow[]).map(rowToOrder);
+}
+
+/**
+ * Atomically transition an order from one status to another using a
+ * compare-and-swap (CAS) UPDATE. Returns true only if this caller
+ * successfully flipped the status — the DB row was unchanged if another
+ * process / request had already moved it to a different state.
+ *
+ * This replaces the read-then-write pattern used in orderManager.ts
+ * which was vulnerable to TOCTOU races: two concurrent requests could
+ * both read status='pending_payment', both pass canTransition, and
+ * both issue UPDATE, overwriting each other and desynchronizing the
+ * state machine (e.g. an already-expired order getting re-paid).
+ *
+ * Callers MUST check the return value and abort downstream side-effects
+ * (notifier calls, webhook dispatch, P2P seller balance release) when
+ * this returns false.
+ */
+export function transitionOrderStatus(
+  id: string,
+  fromStatus: string,
+  toStatus: string,
+  extra: OrderStatusExtra = {}
+): boolean {
+  const sets = ['status = ?'];
+  const vals: (string | number)[] = [toStatus];
+  if (extra.paidAt) { sets.push('paid_at = ?'); vals.push(extra.paidAt); }
+  if (extra.completedAt) { sets.push('completed_at = ?'); vals.push(extra.completedAt); }
+  if (extra.verifiedAt) { sets.push('verified_at = ?'); vals.push(extra.verifiedAt); }
+  if (extra.txId) { sets.push('tx_id = ?'); vals.push(extra.txId); }
+  vals.push(id, fromStatus);
+  const result = db.prepare(
+    `UPDATE orders SET ${sets.join(', ')} WHERE id = ? AND status = ?`
+  ).run(...vals);
+  return result.changes > 0;
+}
+
+/**
  * Atomically claim an order for crypto sending (CAS: compare-and-swap).
  * Sets status to 'sending_crypto' only if current status is 'payment_verified'.
  * Returns true if claim succeeded (this process owns the send), false if already claimed.
@@ -1942,6 +1991,63 @@ export function updateWithdrawalStatus(id: number, status: string, extra?: {
 export function listWithdrawals(limit: number = 100): WithdrawalData[] {
   return (db.prepare('SELECT * FROM withdrawals ORDER BY created_at DESC LIMIT ?').all(limit) as WithdrawalRow[])
     .map(rowToWithdrawal);
+}
+
+/**
+ * Revert a withdrawal back to 'pending' ONLY if it's still matched to
+ * the expected order. Prevents a cancel-then-remarch race where the
+ * trupayMatcher has already moved the withdrawal to another state or
+ * matched it to a different order.
+ */
+export function revertWithdrawalToPending(id: number, expectedOrderId: string): boolean {
+  const result = db.prepare(`
+    UPDATE withdrawals SET status = 'pending', matched_order_id = NULL, matched_seller_id = NULL
+    WHERE id = ? AND status = 'matched' AND matched_order_id = ?
+  `).run(id, expectedOrderId);
+  return result.changes > 0;
+}
+
+/**
+ * Atomically claim a pending withdrawal for matching with a new order.
+ * Replaces the non-atomic find-then-update pattern that allowed two
+ * concurrent createOrder calls to both match the same withdrawal.
+ *
+ * Returns the claimed withdrawal row (now in 'matched' state) or null
+ * if no eligible withdrawal exists or another process claimed it first.
+ *
+ * Note: because SQLite doesn't support `SELECT FOR UPDATE` over WAL,
+ * we use an UPDATE-then-SELECT pattern inside a synchronous
+ * better-sqlite3 transaction (which holds the RESERVED lock for the
+ * duration). The `matched_order_id` uniquely identifies this claim
+ * so the follow-up SELECT returns exactly the row we just claimed.
+ */
+export function claimPendingWithdrawalByAmount(
+  amount: number,
+  payMethod: string,
+  orderId: string,
+  sellerId: number
+): WithdrawalData | null {
+  const now = Date.now();
+  const claim = db.transaction(() => {
+    // Find oldest eligible withdrawal still pending
+    const candidate = db.prepare(`
+      SELECT id FROM withdrawals
+      WHERE status = 'pending' AND amount = ? AND pay_method = ? AND expires_at > ?
+      ORDER BY created_at ASC LIMIT 1
+    `).get(amount, payMethod, now) as { id: number } | undefined;
+    if (!candidate) return null;
+    // Claim it via CAS
+    const r = db.prepare(`
+      UPDATE withdrawals
+      SET status = 'matched', matched_order_id = ?, matched_seller_id = ?
+      WHERE id = ? AND status = 'pending'
+    `).run(orderId, sellerId, candidate.id);
+    if (r.changes === 0) return null; // another process won the race
+    // Return the claimed row
+    const row = db.prepare('SELECT * FROM withdrawals WHERE id = ?').get(candidate.id) as WithdrawalRow | undefined;
+    return row ? rowToWithdrawal(row) : null;
+  });
+  return claim();
 }
 
 export function findPendingWithdrawalByAmount(amount: number, payMethod: string): WithdrawalData | null {

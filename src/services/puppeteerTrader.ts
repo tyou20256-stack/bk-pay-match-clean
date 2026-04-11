@@ -66,7 +66,10 @@ class P2PTrader {
       const data = JSON.stringify(cookies);
       // Encrypt cookie data before saving to disk
       // (uses the top-level `crypto` import, no shadowing)
-      const key = process.env.BK_ENC_KEY || 'bkpay-default-key-change-me-32ch';
+      const key = process.env.BK_ENC_KEY;
+      if (!key || key === 'bkpay-default-key-change-me-32ch') {
+        throw new Error('BK_ENC_KEY must be set to a secure value (no fallback)');
+      }
       const derivedKey = crypto.pbkdf2Sync(key, 'bkpay-cookie-salt', 100000, 32, 'sha256');
       const iv = crypto.randomBytes(12);
       const cipher = crypto.createCipheriv('aes-256-gcm', derivedKey, iv);
@@ -92,7 +95,10 @@ class P2PTrader {
       if (fs.existsSync(encPath)) {
         const encrypted = fs.readFileSync(encPath, 'utf-8');
         // (uses the top-level `crypto` import, no shadowing)
-        const key = process.env.BK_ENC_KEY || 'bkpay-default-key-change-me-32ch';
+        const key = process.env.BK_ENC_KEY;
+      if (!key || key === 'bkpay-default-key-change-me-32ch') {
+        throw new Error('BK_ENC_KEY must be set to a secure value (no fallback)');
+      }
         const derivedKey = crypto.pbkdf2Sync(key, 'bkpay-cookie-salt', 100000, 32, 'sha256');
         const parts = encrypted.split(':');
         const iv = Buffer.from(parts[0], 'hex');

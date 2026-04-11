@@ -366,6 +366,53 @@ const migrations: Migration[] = [
       )`);
     },
   },
+  {
+    version: 26,
+    name: 'hot_path_indexes',
+    up() {
+      // Core indexes for every WHERE clause hit on the hot path.
+      // Addresses the Performance audit finding that every operational
+      // table had ZERO indexes, causing full table scans on every API
+      // request. Expected latency improvement at 50k rows: 200ms → <5ms
+      // per query. Safe to run on production — CREATE INDEX IF NOT EXISTS
+      // is idempotent and SQLite builds them online.
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_orders_status_created ON orders(status, created_at);
+        CREATE INDEX IF NOT EXISTS idx_orders_direction_status ON orders(direction, status);
+        CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
+        CREATE INDEX IF NOT EXISTS idx_orders_seller ON orders(seller_id);
+        CREATE INDEX IF NOT EXISTS idx_orders_expires ON orders(expires_at);
+
+        CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+        CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+
+        CREATE INDEX IF NOT EXISTS idx_withdrawals_status_amount ON withdrawals(status, amount, pay_method);
+        CREATE INDEX IF NOT EXISTS idx_withdrawals_tracking ON withdrawals(tracking_token);
+        CREATE INDEX IF NOT EXISTS idx_withdrawals_created ON withdrawals(created_at);
+
+        CREATE INDEX IF NOT EXISTS idx_p2p_sellers_status ON p2p_sellers(status);
+        CREATE INDEX IF NOT EXISTS idx_p2p_sellers_email ON p2p_sellers(email);
+        CREATE INDEX IF NOT EXISTS idx_p2p_sellers_token ON p2p_sellers(confirm_token);
+
+        CREATE INDEX IF NOT EXISTS idx_trupay_wd_trupay_id ON trupay_withdrawals(trupay_id);
+        CREATE INDEX IF NOT EXISTS idx_trupay_wd_status ON trupay_withdrawals(status, created_at);
+
+        CREATE INDEX IF NOT EXISTS idx_trupay_matches_status ON trupay_matches(status, created_at);
+        CREATE INDEX IF NOT EXISTS idx_trupay_matches_withdrawal ON trupay_matches(withdrawal_id);
+        CREATE INDEX IF NOT EXISTS idx_trupay_matches_buyer ON trupay_matches(buyer_id);
+
+        CREATE INDEX IF NOT EXISTS idx_crypto_tx_order ON crypto_transactions(order_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_crypto_tx_txid ON crypto_transactions(tx_id);
+
+        CREATE INDEX IF NOT EXISTS idx_bank_transfers_status ON bank_transfers(status, created_at);
+        CREATE INDEX IF NOT EXISTS idx_bank_transfers_order ON bank_transfers(order_id);
+
+        CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
+
+        CREATE INDEX IF NOT EXISTS idx_exchange_orders_order ON exchange_orders(order_id);
+      `);
+    },
+  },
 ];
 
 /**

@@ -100,16 +100,6 @@ interface P2PMatchCandidate {
   maxLimit: number;
 }
 
-interface RatesApiResponse {
-  success: boolean;
-  data?: {
-    rates: Array<{
-      buyOrders: P2PMatchCandidate[];
-      sellOrders?: P2PMatchCandidate[];
-    }>;
-  };
-}
-
 interface AccountRouterResponse {
   success: boolean;
   account?: {
@@ -123,7 +113,11 @@ interface AccountRouterResponse {
   error?: string;
 }
 
-const orders = new Map<string, Order>();
+// In-memory orders Map removed — all reads now go through DB.
+// Previously this Map was never evicted (~2KB × 1000 orders/day × 90 days
+// ≈ 540 MB of permanently pinned heap) and the cleanup interval iterated
+// only the Map, so post-restart orders never expired and seller locks
+// accumulated forever. See audit finding P3.
 
 function generateId(): string {
   return 'ORD-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -173,9 +167,11 @@ async function getAccountFromRouter(amount: number, payMethod: string): Promise<
 // Try auto-match via P2P exchanges
 async function tryAutoMatch(amount: number, payMethod: string, crypto: string): Promise<{ matched: boolean; order?: P2PMatchCandidate }> {
   try {
-    const res = await fetchWithTimeout(`http://localhost:3003/api/rates/${crypto}`);
-    const data = await res.json() as { success: boolean; data?: { rates: Array<{ buyOrders: P2PMatchCandidate[] }> } };
-    if (!data.success || !data.data) return { matched: false };
+    // Direct in-process call — previously fetched http://localhost:3003
+    // over TCP which burned a TCP handshake + Express middleware chain
+    // for data already in memory. See Performance audit finding Q2.
+    const rates = getCachedRates(crypto) as { rates?: Array<{ buyOrders: P2PMatchCandidate[] }> } | undefined;
+    if (!rates || !rates.rates) return { matched: false };
 
     const payMap: Record<string, string[]> = {
       bank: ['銀行振込', 'Bank Transfer', 'Bank'],
@@ -186,7 +182,7 @@ async function tryAutoMatch(amount: number, payMethod: string, crypto: string): 
     const keys = payMap[payMethod] || [];
 
     let candidates: P2PMatchCandidate[] = [];
-    for (const ex of data.data.rates) {
+    for (const ex of rates.rates) {
       for (const o of ex.buyOrders) {
         if (o.minLimit <= amount && (o.maxLimit === 0 || o.maxLimit >= amount)
           && o.merchant.completionRate >= 90
@@ -227,8 +223,7 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
     orderToken,
   };
 
-  orders.set(id, order);
-  // Will save to DB after matching
+  // Will save to DB after matching — Map removed (see top-of-file comment)
 
   // Try auto-match first
   const match = await tryAutoMatch(amount, payMethod, crypto);
@@ -305,13 +300,12 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
     order.mode = 'self';
     order.status = 'pending_payment';
 
-    // Get rate from aggregator
+    // Get rate from aggregator (direct in-process call)
     try {
-      const res = await fetchWithTimeout(`http://localhost:3003/api/rates/${crypto}`);
-      const data = await res.json() as RatesApiResponse;
-      if (data.success && data.data) {
+      const rates = getCachedRates(crypto) as { rates?: Array<{ buyOrders: P2PMatchCandidate[] }> } | undefined;
+      if (rates && rates.rates) {
         let best: P2PMatchCandidate | null = null;
-        for (const ex of data.data.rates) {
+        for (const ex of rates.rates) {
           for (const o of ex.buyOrders) {
             if (!best || o.price < best.price) best = o;
           }
@@ -408,36 +402,48 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
   // ── 出金三角マッチング（最優先）───────────────────────────────
   // 同額 pending の出金リクエストがあればAの口座情報をバイヤーBに表示し、
   // セラーCのUSDTをロックして三角マッチングを成立させる
+  //
+  // Atomic claim: claimPendingWithdrawalByAmount runs a transaction that
+  // SELECTs + UPDATEs inside a RESERVED lock, so two concurrent
+  // createOrder calls cannot both match the same withdrawal. Previously
+  // used find-then-update which allowed the race.
   if (order.cryptoAmount > 0) {
-    const pendingWd = dbSvc.findPendingWithdrawalByAmount(amount, payMethod);
-    if (pendingWd) {
-      // A の口座情報を paymentInfo にセット
-      if (payMethod === 'bank') {
-        order.paymentInfo = {
-          type: 'bank',
-          bankName: pendingWd.bankName || '',
-          branchName: pendingWd.branchName || '',
-          accountType: pendingWd.accountType || '普通',
-          accountNumber: pendingWd.accountNumber || '',
-          accountHolder: pendingWd.accountHolder || '',
+    const supplier = findSellerForUsdtSupply(order.cryptoAmount);
+    if (supplier) {
+      // Lock seller balance FIRST so the withdrawal claim only
+      // succeeds if we have a seller to back it. Release if claim fails.
+      const locked = lockBalance(supplier.id, order.cryptoAmount);
+      if (locked) {
+        const pendingWd = dbSvc.claimPendingWithdrawalByAmount(
           amount,
-        };
-      } else {
-        order.paymentInfo = { type: payMethod, payId: pendingWd.paypayId || '', amount };
-      }
-
-      // C (セラー) を payMethod無関係で選択
-      const supplier = findSellerForUsdtSupply(order.cryptoAmount);
-      if (supplier) {
-        lockBalance(supplier.id, order.cryptoAmount);
-        order.sellerId = supplier.id;
-        order.withdrawalId = pendingWd.id;
-        dbSvc.updateWithdrawalStatus(pendingWd.id, 'matched', {
-          matchedOrderId: order.id,
-          matchedSellerId: supplier.id,
-        });
-        order.mode = 'auto';
-        order.status = 'pending_payment';
+          payMethod,
+          order.id,
+          supplier.id
+        );
+        if (pendingWd) {
+          // A の口座情報を paymentInfo にセット
+          if (payMethod === 'bank') {
+            order.paymentInfo = {
+              type: 'bank',
+              bankName: pendingWd.bankName || '',
+              branchName: pendingWd.branchName || '',
+              accountType: pendingWd.accountType || '普通',
+              accountNumber: pendingWd.accountNumber || '',
+              accountHolder: pendingWd.accountHolder || '',
+              amount,
+            };
+          } else {
+            order.paymentInfo = { type: payMethod, payId: pendingWd.paypayId || '', amount };
+          }
+          order.sellerId = supplier.id;
+          order.withdrawalId = pendingWd.id;
+          order.mode = 'auto';
+          order.status = 'pending_payment';
+        } else {
+          // No eligible withdrawal, or another process claimed it first.
+          // Release the speculative lock and fall through to self-merchant mode.
+          releaseBalance(supplier.id, order.cryptoAmount);
+        }
       }
     }
   }
@@ -481,14 +487,30 @@ function canTransition(from: string, to: string): boolean {
   return VALID_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
-// Mark order as paid (customer reports payment sent)
+/**
+ * Mark order as paid (customer reports payment sent).
+ *
+ * CAS-protected: the status transition is atomic at the DB layer.
+ * If another concurrent request (e.g. a cleanup interval expiring the
+ * order) flipped the status in the meantime, this call returns null
+ * and skips all downstream side-effects.
+ */
 export function markPaid(orderId: string): Order | null {
-  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
+  const current = dbSvc.getOrder(orderId);
+  if (!current) return null;
+  if (!canTransition(current.status, 'confirming')) return null;
+
+  const paidAt = Date.now();
+  const claimed = dbSvc.transitionOrderStatus(orderId, current.status, 'confirming', { paidAt });
+  if (!claimed) {
+    logger.warn('markPaid CAS failed — order moved concurrently', { orderId, previousStatus: current.status });
+    return null;
+  }
+
+  // Re-fetch authoritative state after CAS
+  const order = dbSvc.getOrder(orderId);
   if (!order) return null;
-  if (!canTransition(order.status, 'confirming')) return null;
-  order.status = 'confirming';
-  order.paidAt = Date.now();
-  dbSvc.updateOrderStatus(orderId, 'confirming', { paidAt: order.paidAt });
+
   notifier.notifyPaid(order);
   broadcast('order', { id: order.id, status: order.status, amount: order.amount });
   // P2P セラーへ Telegram 通知（telegram_chat_id 設定済みの場合）
@@ -505,7 +527,11 @@ export function markPaid(orderId: string): Order | null {
     const w = dbSvc.getWithdrawal(order.withdrawalId);
     if (w?.webhookUrl) {
       const keyRow = w.merchantApiKeyId ? getMerchantApiKeyById(w.merchantApiKeyId) : null;
-      notifyWithdrawalEvent(w, keyRow?.webhook_secret || null, 'withdrawal.payment_sent', { orderId }).catch(() => {});
+      notifyWithdrawalEvent(w, keyRow?.webhook_secret || null, 'withdrawal.payment_sent', { orderId })
+        .catch((e: unknown) => logger.error('withdrawal webhook dispatch failed', {
+          orderId,
+          error: e instanceof Error ? e.message : String(e),
+        }));
     }
   }
   // 自動取引: 取引所に支払い完了を報告
@@ -521,29 +547,51 @@ export function markPaid(orderId: string): Order | null {
   return order;
 }
 
-// Admin verifies bank deposit was received
+/**
+ * Admin verifies bank deposit was received.
+ * CAS-protected against concurrent transitions.
+ */
 export function adminVerifyPayment(orderId: string): Order | null {
-  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
+  const current = dbSvc.getOrder(orderId);
+  if (!current) return null;
+  if (!canTransition(current.status, 'payment_verified')) return null;
+
+  const verifiedAt = Date.now();
+  const claimed = dbSvc.transitionOrderStatus(orderId, current.status, 'payment_verified', { verifiedAt });
+  if (!claimed) {
+    logger.warn('adminVerifyPayment CAS failed', { orderId, previousStatus: current.status });
+    return null;
+  }
+
+  const order = dbSvc.getOrder(orderId);
   if (!order) return null;
-  if (!canTransition(order.status, 'payment_verified')) return null;
-  order.status = 'payment_verified';
-  order.verifiedAt = Date.now();
-  dbSvc.updateOrderStatus(orderId, 'payment_verified', { verifiedAt: order.verifiedAt });
   notifier.notifyPaymentVerified(order);
   broadcast('order', { id: order.id, status: order.status, amount: order.amount });
   return order;
 }
 
-// Admin manually completes order (when crypto was sent outside system)
+/**
+ * Admin manually completes order (when crypto was sent outside system).
+ *
+ * Accepts from 'confirming', 'payment_verified', or 'sending_crypto'.
+ * Since CAS requires a known fromStatus, we try each allowed source
+ * status in order. Only one will succeed.
+ */
 export function adminManualComplete(orderId: string, txId?: string): Order | null {
-  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
+  const current = dbSvc.getOrder(orderId);
+  if (!current) return null;
+  if (!canTransition(current.status, 'completed')) return null;
+
+  const completedAt = Date.now();
+  const claimed = dbSvc.transitionOrderStatus(orderId, current.status, 'completed', { completedAt, txId });
+  if (!claimed) {
+    logger.warn('adminManualComplete CAS failed', { orderId, previousStatus: current.status });
+    return null;
+  }
+
+  const order = dbSvc.getOrder(orderId);
   if (!order) return null;
-  // Allow from confirming, payment_verified, or sending_crypto
-  if (!canTransition(order.status, 'completed')) return null;
-  order.status = 'completed';
-  order.completedAt = Date.now();
-  if (txId) order.txId = txId;
-  dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: order.completedAt, txId });
+
   // Record profit
   try {
     const rates = getCachedRates(order.crypto) as { spotPrices?: Record<string, number> } | undefined;
@@ -553,33 +601,48 @@ export function adminManualComplete(orderId: string, txId?: string): Order | nul
   notifier.notifyCompleted(order);
   broadcast('order', { id: order.id, status: order.status, amount: order.amount });
   // Webhook通知（外部APIで作成された注文の場合）
-  const freshOrder = dbSvc.getOrder(orderId);
-  if (freshOrder?.webhookUrl) {
-    const keyRow = freshOrder.merchantApiKeyId
-      ? getMerchantApiKeyById(freshOrder.merchantApiKeyId)
+  if (order.webhookUrl) {
+    const keyRow = order.merchantApiKeyId
+      ? getMerchantApiKeyById(order.merchantApiKeyId)
       : null;
-    notifyOrderCompleted(freshOrder, keyRow?.webhook_secret || null).catch(() => {});
+    notifyOrderCompleted(order, keyRow?.webhook_secret || null).catch((e: unknown) =>
+      logger.error('order completed webhook dispatch failed', {
+        orderId,
+        error: e instanceof Error ? e.message : String(e),
+      })
+    );
   }
   return order;
 }
 
-// Cancel order
+/**
+ * Cancel order.
+ * CAS-protected so a concurrent markPaid cannot race with cancel.
+ */
 export function cancelOrder(orderId: string): Order | null {
-  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
+  const current = dbSvc.getOrder(orderId);
+  if (!current) return null;
+  if (!canTransition(current.status, 'cancelled')) return null;
+
+  const claimed = dbSvc.transitionOrderStatus(orderId, current.status, 'cancelled', {});
+  if (!claimed) {
+    logger.warn('cancelOrder CAS failed', { orderId, previousStatus: current.status });
+    return null;
+  }
+
+  const order = dbSvc.getOrder(orderId);
   if (!order) return null;
-  if (!canTransition(order.status, 'cancelled')) return null;
-  order.status = 'cancelled';
-  dbSvc.updateOrderStatus(orderId, 'cancelled');
+
   // Release P2P seller locked balance if applicable
   if (order.sellerId && order.cryptoAmount > 0) {
     releaseBalance(order.sellerId, order.cryptoAmount);
   }
   // 出金三角マッチング: 注文キャンセル時に出金リクエストを pending に戻す
+  // CAS: only revert if still matched to THIS order, avoiding a race
+  // where trupayMatcher has already advanced the withdrawal to a
+  // different state (verifying/matched to another order).
   if (order.withdrawalId) {
-    const w = dbSvc.getWithdrawal(order.withdrawalId);
-    if (w && w.status === 'matched') {
-      dbSvc.updateWithdrawalStatus(w.id, 'pending');
-    }
+    dbSvc.revertWithdrawalToPending(order.withdrawalId, orderId);
   }
   notifier.notifyCancelled(order);
   broadcast('order', { id: order.id, status: order.status, amount: order.amount });
@@ -588,7 +651,7 @@ export function cancelOrder(orderId: string): Order | null {
 
 // Get order
 export function getOrder(orderId: string): Order | null {
-  return orders.get(orderId) || dbSvc.getOrder(orderId);
+  return dbSvc.getOrder(orderId);
 }
 
 // Get all orders
@@ -596,21 +659,26 @@ export function getAllOrders(): Order[] {
   return dbSvc.getAllOrders();
 }
 
-// Cleanup expired orders
+// Cleanup expired orders — queries DB directly so post-restart pending
+// orders are also processed (previously only iterated in-memory Map).
+// Uses CAS transition so a concurrent markPaid cannot race with expiry.
 setInterval(() => {
-  const now = Date.now();
-  orders.forEach((order, id) => {
-    if (order.status === 'pending_payment' && now > order.expiresAt) {
-      order.status = 'expired';
-      dbSvc.updateOrderStatus(id, 'expired');
+  try {
+    const now = Date.now();
+    const expired = dbSvc.getExpiredPendingOrders(now);
+    for (const order of expired) {
+      const claimed = dbSvc.transitionOrderStatus(order.id, 'pending_payment', 'expired', {});
+      if (!claimed) continue; // another process won the race
       // Release P2P seller locked balance if applicable
       if (order.sellerId && order.cryptoAmount > 0) {
         releaseBalance(order.sellerId, order.cryptoAmount);
       }
-      notifier.notifyExpired(order);
-      broadcast('order', { id: order.id, status: order.status, amount: order.amount });
+      notifier.notifyExpired({ ...order, status: 'expired' });
+      broadcast('order', { id: order.id, status: 'expired', amount: order.amount });
     }
-  });
+  } catch (e: unknown) {
+    logger.error('expire-cleanup failed', { error: e instanceof Error ? e.message : String(e) });
+  }
 }, 10000);
 
 
@@ -624,14 +692,13 @@ export async function createSellOrder(params: {
   const id = generateId().replace('ORD', 'SELL');
   const now = Date.now();
 
-  // Fetch current sell rate from aggregator
+  // Fetch current sell rate from aggregator (direct in-process call)
   let sellRate = 0;
   try {
-    const res = await fetchWithTimeout(`http://localhost:3003/api/rates/${params.crypto}`);
-    const data = await res.json() as RatesApiResponse;
-    if (data.success && data.data) {
+    const rates = getCachedRates(params.crypto) as { rates?: Array<{ sellOrders?: P2PMatchCandidate[] }> } | undefined;
+    if (rates && rates.rates) {
       const allSell: P2PMatchCandidate[] = [];
-      for (const ex of data.data.rates) {
+      for (const ex of rates.rates) {
         for (const o of (ex.sellOrders || [])) allSell.push(o);
       }
       allSell.sort((a, b) => Number(b.price) - Number(a.price));
@@ -705,7 +772,6 @@ export async function createSellOrder(params: {
     expiresAt: now + 30 * 60 * 1000,
   };
 
-  orders.set(id, order);
   notifier.notifyNewOrder({ ...order, amount: jpyAmount, payMethod: 'crypto', mode: 'sell', exchange: 'BK Pay（売却）' } as Order);
   broadcast('order', { id, status: 'awaiting_deposit', amount: jpyAmount, crypto: params.crypto, direction: 'sell' });
 
@@ -714,29 +780,44 @@ export async function createSellOrder(params: {
 
 // Mark sell order deposit received
 export function markDepositReceived(orderId: string): Order | null {
-  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
+  const current = dbSvc.getOrder(orderId);
+  if (!current) return null;
+  if (!canTransition(current.status, 'deposit_received')) return null;
+
+  const claimed = dbSvc.transitionOrderStatus(orderId, current.status, 'deposit_received', {});
+  if (!claimed) {
+    logger.warn('markDepositReceived CAS failed', { orderId, previousStatus: current.status });
+    return null;
+  }
+
+  const order = dbSvc.getOrder(orderId);
   if (!order) return null;
-  if (!canTransition(order.status, 'deposit_received')) return null;
-  dbSvc.updateOrderStatus(orderId, 'deposit_received');
-  if (order) order.status = 'deposit_received';
   broadcast('order', { id: orderId, status: 'deposit_received' });
   return order;
 }
 
 // Mark sell order withdrawal complete
 export function markWithdrawalComplete(orderId: string): Order | null {
-  const order = orders.get(orderId) || dbSvc.getOrder(orderId);
+  const current = dbSvc.getOrder(orderId);
+  if (!current) return null;
+  if (!canTransition(current.status, 'completed')) return null;
+
+  const completedAt = Date.now();
+  const claimed = dbSvc.transitionOrderStatus(orderId, current.status, 'completed', { completedAt });
+  if (!claimed) {
+    logger.warn('markWithdrawalComplete CAS failed', { orderId, previousStatus: current.status });
+    return null;
+  }
+
+  const order = dbSvc.getOrder(orderId);
   if (!order) return null;
-  if (!canTransition(order.status, 'completed')) return null;
-  dbSvc.updateOrderStatus(orderId, 'completed', { completedAt: Date.now() });
-  if (order) { order.status = 'completed'; order.completedAt = Date.now(); }
   // Record profit
   try {
     const rates = getCachedRates(order.crypto) as { spotPrices?: Record<string, number> } | undefined;
     const marketRate = rates?.spotPrices?.[order.crypto] || order.rate;
     recordProfit(order, marketRate);
   } catch {}
-  notifier.notifyCompleted({ ...order, status: 'completed', completedAt: Date.now() });
+  notifier.notifyCompleted(order);
   broadcast('order', { id: orderId, status: 'completed' });
   return order;
 }

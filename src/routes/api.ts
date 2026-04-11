@@ -122,8 +122,26 @@ router.get('/arbitrage', (_req: Request, res: Response) => {
   res.json({ success: true, data: windows });
 });
 
+// /api/refresh — manual rate refresh trigger.
+// Previously unauthenticated + no throttle → trivial DoS vector
+// (any bot could fire 180 outbound API calls/sec and get the production
+// IP banned by the exchanges). Now throttled to 1 call per 15s process-
+// wide, and only serves the CACHED result if called more frequently
+// (callers still get a response, they just don't trigger the outbound
+// fetch). Admin auth is applied via app.use('/api/refresh', authRequired)
+// in src/index.ts.
+let lastRefreshAt = 0;
+const REFRESH_MIN_INTERVAL_MS = 15_000;
+
 router.post('/refresh', async (_req: Request, res: Response) => {
   const crypto = (_req.body?.crypto || 'USDT').toUpperCase();
+  const now = Date.now();
+  if (now - lastRefreshAt < REFRESH_MIN_INTERVAL_MS) {
+    // Return cached result without triggering another fetch
+    const cached = getCachedRates(crypto);
+    return res.json({ success: true, data: cached, throttled: true });
+  }
+  lastRefreshAt = now;
   const data = await fetchAllRates(crypto);
   res.json({ success: true, data });
 });
@@ -1675,6 +1693,36 @@ router.get('/p2p-buy/match/:buyerId', (req, res) => {
       }
     }
 
+    // Expose AI proof review outcome to the buyer (UX gap #1 from audit).
+    // Previously the match state sat at 'needs_review' forever with no
+    // explanation to the customer — they'd see "AI解析中" until a human
+    // manually approved it via Telegram. Now the client can render a
+    // clear "what went wrong" message when the review found a mismatch.
+    let proofReview: {
+      score: number;
+      reason: string;
+      confidence: string;
+      mismatches: string[];
+    } | null = null;
+    const matchExtra = match as unknown as { proof_analysis?: string; proof_score?: number };
+    if (match.status === 'needs_review' && matchExtra.proof_analysis) {
+      try {
+        const parsed = JSON.parse(matchExtra.proof_analysis);
+        const matchDetails = parsed.matches || {};
+        const mismatches: string[] = [];
+        if (matchDetails.bankNameMatch === false) mismatches.push('bank_name');
+        if (matchDetails.accountNumberMatch === false) mismatches.push('account_number');
+        if (matchDetails.accountNameMatch === false) mismatches.push('account_name');
+        if (matchDetails.amountMatch === false) mismatches.push('amount');
+        proofReview = {
+          score: matchExtra.proof_score ?? 0,
+          reason: parsed.reason || '',
+          confidence: parsed.confidence || 'low',
+          mismatches,
+        };
+      } catch { /* unparseable analysis — skip */ }
+    }
+
     res.json({
       success: true,
       status: match.status,
@@ -1689,6 +1737,7 @@ router.get('/p2p-buy/match/:buyerId', (req, res) => {
         createdAt: match.created_at,
       },
       bankInfo,
+      proofReview,
     });
   } catch (e: unknown) { res.json({ success: false, error: safeError(e) }); }
 });
@@ -1766,10 +1815,31 @@ router.post('/p2p-buy/paid/:matchId', uploadProof.single('proof'), async (req: R
   } catch (e: unknown) { res.json({ success: false, error: safeError(e) }); }
 });
 
-/** DELETE /api/p2p-buy/cancel/:buyerId — 購入キャンセル（公開） */
+/**
+ * DELETE /api/p2p-buy/cancel/:buyerId — 購入キャンセル
+ *
+ * Authenticated via the same buyerToken HMAC pattern as /paid/:matchId.
+ * Previously this endpoint was completely unauthenticated — anyone with
+ * a buyerId (leaked via logs, shoulder-surfing, URL sharing) could
+ * cancel another user's pending buyer registration. Now the caller
+ * must present the HMAC token that was returned at registration time.
+ */
 router.delete('/p2p-buy/cancel/:buyerId', (req, res) => {
   try {
-    const removed = removeBuyer(req.params.buyerId);
+    const { buyerToken } = req.query as { buyerToken?: string };
+    const buyerId = req.params.buyerId;
+    if (!buyerToken || typeof buyerToken !== 'string') {
+      return res.status(401).json({ success: false, error: 'buyerToken required' });
+    }
+    const hmacSecret = process.env.BK_ENC_KEY || 'bkpay-buyer-hmac-fallback';
+    const expectedToken = crypto.createHmac('sha256', hmacSecret).update(buyerId).digest('hex').slice(0, 32);
+    if (
+      buyerToken.length !== expectedToken.length ||
+      !crypto.timingSafeEqual(Buffer.from(buyerToken), Buffer.from(expectedToken))
+    ) {
+      return res.status(403).json({ success: false, error: 'Invalid buyerToken' });
+    }
+    const removed = removeBuyer(buyerId);
     res.json({ success: true, removed });
   } catch (e: unknown) { res.json({ success: false, error: safeError(e) }); }
 });

@@ -395,6 +395,11 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // Proof images (admin only via auth)
 app.use('/proofs', authRequired, express.static(path.join(process.cwd(), 'data', 'proofs')));
 
+// /api/refresh triggers an outbound fetch to all 3 exchanges; admin-only
+// to prevent DoS / exchange IP bans. Internal throttle in routes/api.ts
+// further limits to 1 call per 15s process-wide.
+app.post('/api/refresh', authRequired);
+
 // Protected API routes - orders: only GET list needs auth, POST is public (customer)
 app.get('/api/orders', authRequired);
 // POST /api/orders (create) is public for pay.html

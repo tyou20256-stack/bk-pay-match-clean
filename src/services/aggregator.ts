@@ -135,6 +135,19 @@ export function getCachedRates(crypto?: string): AggregatedRates | Map<string, A
 export async function updateAllCryptos(): Promise<void> {
   logger.info('Updating rates', { cryptos: CONFIG.cryptos });
   const start = Date.now();
-  for (const crypto of CONFIG.cryptos) { await fetchAllRates(crypto); }
+  // Parallelize per-crypto fetches. Previously this ran sequentially
+  // (5-9s per cycle); with Promise.all each crypto's 6 exchange calls
+  // still run in parallel within fetchAllRates, so total wall time is
+  // bounded by the slowest single exchange (~2-3s).
+  await Promise.all(
+    CONFIG.cryptos.map((crypto) =>
+      fetchAllRates(crypto).catch((e: unknown) =>
+        logger.error('fetchAllRates failed', {
+          crypto,
+          error: e instanceof Error ? e.message : String(e),
+        })
+      )
+    )
+  );
   logger.info('Rates updated', { durationMs: Date.now() - start });
 }
