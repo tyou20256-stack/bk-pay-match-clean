@@ -202,14 +202,12 @@ describe('注文API', () => {
     expect(Array.isArray(data.orders)).toBe(true);
   });
 
-  it('GET /api/orders — 認証なしは公開（オープンエンドポイント）', async () => {
-    // Note: /api/orders is intentionally public in current src/routes/api.ts
-    // (no authRequired middleware). This test documents that rather than
-    // enforcing a 401 that the server doesn't actually send.
+  it('GET /api/orders — 認証なしで401', async () => {
+    // src/index.ts:400 applies authRequired to GET /api/orders (list),
+    // while individual order endpoints (GET /:id, POST /:id/paid,
+    // POST /:id/cancel) remain public for the customer pay flow.
     const res = await fetch(`${BASE}/api/orders`);
-    const data = await res.json() as any;
-    expect(data.success).toBe(true);
-    expect(Array.isArray(data.orders)).toBe(true);
+    expect([401, 403]).toContain(res.status);
   });
 });
 
