@@ -38,6 +38,87 @@ services:
         reservations:
           memory: 512M
 
+  # Hot wallet signer worker (security-critical, optional)
+  # Enabled only with the "signer" profile and when the main app has
+  # ENABLE_JOB_QUEUE=true and ENABLE_SIGNER_WORKER=true.
+  #
+  # Start:
+  #   docker compose --profile signer up -d signer
+  #
+  # Security properties:
+  #   - Separate container = separate memory space from the Puppeteer/
+  #     Express app. An RCE in the main app cannot read this process's
+  #     TRON_WALLET_PRIVATE_KEY.
+  #   - No public ports. Communicates only via the shared Redis network.
+  #   - Read-only root filesystem (except /tmp).
+  #   - Drops all Linux capabilities.
+  #   - Reuses the main app's Docker image but runs a different entrypoint
+  #     (dist/workers/signer.js). No Puppeteer/Chromium in memory.
+  #
+  # Required env_file keys for THIS container only:
+  #   TRON_WALLET_PRIVATE_KEY=<hex>
+  #   TRONGRID_API_KEY=<optional>
+  #   REDIS_URL=redis://redis:6379
+  #   BK_ENC_KEY=<required by shared modules, can be any 32 chars>
+  #
+  # To revoke signing capability: `docker compose stop signer`. The main
+  # app will enqueue jobs that will stall until the signer is restarted;
+  # alternatively set ENABLE_SIGNER_WORKER=false and restart the main
+  # app to fall back to the synchronous sendUSDT path.
+  signer:
+    profiles: ["signer"]
+    build: .
+    container_name: bk-pay-match-signer
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+      - ENABLE_JOB_QUEUE=true
+      - ENABLE_SIGNER_WORKER=true
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      # Shares only the DB volume (read-only) so the signer can use
+      # better-sqlite3 init code without a writable mount. The signer
+      # does not write to the DB directly; audit logging happens via
+      # the main app after tx confirmation.
+      - app-data:/app/data:ro
+      - app-logs:/app/logs
+    # Override the default Dockerfile CMD (main app) with the signer
+    # entrypoint. The image layout keeps both compiled modules under
+    # dist/ so no separate Dockerfile is needed.
+    command: ["node", "dist/workers/signer.js"]
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # Signer has no HTTP endpoint; we use a BullMQ ping via Redis.
+      # If Redis is reachable AND the signer has not exited, we're healthy.
+      test: ["CMD", "node", "-e", "const IORedis = require('ioredis'); const r = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: 1, enableReadyCheck: false }); r.ping().then(() => { r.quit(); process.exit(0); }).catch(() => process.exit(1));"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   # Puppeteer worker (optional — start with: docker compose --profile puppeteer up -d)
   puppeteer:
     profiles: ["puppeteer"]
