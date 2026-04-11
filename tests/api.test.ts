@@ -224,10 +224,16 @@ describe('設定API（認証必須）', () => {
 
 // ==================== ウォレットAPI ====================
 describe('ウォレットAPI（認証必須）', () => {
+  // Valid TRON address: USDT TRC-20 contract itself. Using the contract address
+  // as a test fixture is safe — it is never used as a real destination in
+  // production flows, server-side validation accepts it, and no real funds
+  // can flow to it.
+  const TEST_TRON_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+
   it('POST /api/wallet — ウォレット保存', async () => {
     const res = await fetch(`${BASE}/api/wallet`, {
       method: 'POST', headers: authHeaders(),
-      body: JSON.stringify({ address: 'TTestAddress123', label: 'テスト' })
+      body: JSON.stringify({ address: TEST_TRON_ADDRESS, label: 'テスト' })
     });
     const data = await res.json() as any;
     expect(data.success).toBe(true);
@@ -237,6 +243,6 @@ describe('ウォレットAPI（認証必須）', () => {
     const res = await fetch(`${BASE}/api/wallet`, { headers: authHeaders() });
     const data = await res.json() as any;
     expect(data.success).toBe(true);
-    expect(data.wallet.address).toBe('TTestAddress123');
+    expect(data.wallet.address).toBe(TEST_TRON_ADDRESS);
   });
 });
