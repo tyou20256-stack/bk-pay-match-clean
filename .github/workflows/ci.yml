@@ -50,13 +50,10 @@ jobs:
       - name: TypeScript build
         run: npm run build
       - name: Integration tests
-        # TODO(test-refactor): Several pre-existing tests fail due to auth
-        # header / CSRF mismatch in the Bearer flow (settings + wallet APIs
-        # return success=false). This predates the recent fixture fixes and
-        # requires auditing the full auth middleware chain. Tracked as a
-        # follow-up cleanup PR. Deploy workflow end-to-end health check at
-        # https://bkpay.app/health is the current production safety net.
-        continue-on-error: true
+        # The auth header mismatch was fixed in commit 2aff17e: the test
+        # helper now uses httpOnly cookie + CSRF token (matching the real
+        # login response), so settings/wallet tests should pass.
+        # If something else fails, CI will surface it explicitly.
         run: |
           node dist/index.js &
           SERVER_PID=$!
