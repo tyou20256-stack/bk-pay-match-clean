@@ -95,9 +95,16 @@ function getMemoryStats() {
 // Simple request counter for metrics
 let requestCount = 0;
 let errorCount = 0;
+// Tether USDT blacklist check metrics — surfaces the fail-open path
+// documented in walletService.isAddressBlacklisted. Alert if
+// failOpen rate > 0 in a sustained window.
+let blacklistChecks = 0;
+let blacklistFailOpens = 0;
 
 export function incrementRequests() { requestCount++; }
 export function incrementErrors() { errorCount++; }
+export function incrementBlacklistCheck() { blacklistChecks++; }
+export function incrementBlacklistFailOpen() { blacklistFailOpens++; }
 
 export async function getMetrics(): Promise<string> {
   const mem = process.memoryUsage();
@@ -147,6 +154,12 @@ export async function getMetrics(): Promise<string> {
     `# HELP bkpay_webhook_dlq_pending Pending webhook retries in DLQ`,
     `# TYPE bkpay_webhook_dlq_pending gauge`,
     `bkpay_webhook_dlq_pending ${dlq.pending}`,
+    `# HELP bkpay_blacklist_checks_total Tether USDT blacklist lookups (cached + fresh)`,
+    `# TYPE bkpay_blacklist_checks_total counter`,
+    `bkpay_blacklist_checks_total ${blacklistChecks}`,
+    `# HELP bkpay_blacklist_fail_open_total Blacklist lookups that fell open due to RPC errors (safety concern if non-zero)`,
+    `# TYPE bkpay_blacklist_fail_open_total counter`,
+    `bkpay_blacklist_fail_open_total ${blacklistFailOpens}`,
     ...(await getBusinessMetrics()),
   ].join('\n') + '\n';
 }

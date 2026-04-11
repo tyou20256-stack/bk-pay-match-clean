@@ -25,6 +25,7 @@ import {
 } from './database.js';
 import orderManager from './orderManager.js';
 import walletService from './walletService.js';
+import logger from './logger.js';
 
 export interface P2PSeller {
   id: number;
@@ -141,8 +142,8 @@ export function releaseBalance(sellerId: number, usdtAmount: number): void {
   releaseP2PSellerBalance(sellerId, usdtAmount);
 }
 
-export function deductBalance(sellerId: number, usdtAmount: number): void {
-  deductP2PSellerBalance(sellerId, usdtAmount);
+export function deductBalance(sellerId: number, usdtAmount: number): boolean {
+  return deductP2PSellerBalance(sellerId, usdtAmount);
 }
 
 export function creditBalance(sellerId: number, usdtAmount: number): void {
@@ -181,8 +182,20 @@ export async function confirmPayment(
     return { success: false, error: `USDT送金に失敗しました: ${sendResult.error || '不明なエラー'}` };
   }
 
-  // セラー残高を減算
-  deductBalance(seller.id, order.cryptoAmount);
+  // セラー残高を減算（atomic guard: 残高不足なら false）
+  const deducted = deductBalance(seller.id, order.cryptoAmount);
+  if (!deducted) {
+    // USDT は既に送金済みなので、残高記録の不整合を error log に残し、
+    // 管理者が手動で reconciliation する必要がある。
+    // Return success=true because the on-chain transfer already happened;
+    // the accounting mismatch must be fixed by hand via admin reconciliation.
+    logger.error('P2P seller deductBalance failed AFTER successful USDT send', {
+      sellerId: seller.id,
+      orderId,
+      amount: order.cryptoAmount,
+      txId: sendResult.txId,
+    });
+  }
 
   return { success: true, txId: sendResult.txId };
 }

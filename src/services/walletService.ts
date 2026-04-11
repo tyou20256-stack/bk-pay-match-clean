@@ -40,11 +40,30 @@ const BLACKLIST_CACHE_TTL_MS = 5 * 60 * 1000;
  * Check if an address is on the Tether USDT TRC-20 blacklist.
  * Queries the USDT contract's `isBlackListed(address)` method.
  * Results cached for 5 minutes.
- * Returns true if blacklisted (REJECT), false if clean, or false on error (fail-open).
- * We log errors but do not block on them — better to occasionally let a send through
- * than to halt the entire service if TronGrid is flaky.
+ *
+ * Returns `true` if blacklisted (REJECT), `false` if clean, or `false`
+ * on error (fail-open). We log errors but do not block on them —
+ * halting all sends because TronGrid is flaky is worse than
+ * occasionally letting a send through to a legitimate address.
+ *
+ * **Safety note**: every fail-open increments
+ * `bkpay_blacklist_fail_open_total` in the Prometheus metrics endpoint.
+ * An alert should fire if this counter moves in production — it means
+ * an attacker could briefly bypass the check during a TronGrid outage,
+ * and the cache's 5-minute TTL compounds the window per address.
+ *
+ * **Mitigation path** when fail-opens are seen:
+ * 1. Shorten the cache TTL (`BLACKLIST_CACHE_TTL_MS`)
+ * 2. Add a second RPC provider (NowNodes, GetBlock) for redundancy
+ * 3. Upgrade to fail-closed with an explicit operator override
  */
 export async function isAddressBlacklisted(address: string): Promise<boolean> {
+  // Lazy import to avoid circular dep with healthService which may also
+  // read from database.ts during boot.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { incrementBlacklistCheck, incrementBlacklistFailOpen } = require('./healthService.js');
+  incrementBlacklistCheck();
+
   const now = Date.now();
   const cached = blacklistCache.get(address);
   if (cached && cached.expiresAt > now) {
@@ -52,7 +71,10 @@ export async function isAddressBlacklisted(address: string): Promise<boolean> {
   }
 
   const tronWeb = getTronWeb();
-  if (!tronWeb) return false; // fail-open when wallet not configured
+  if (!tronWeb) {
+    // Wallet not configured — not a runtime failure, don't count as fail-open
+    return false;
+  }
 
   try {
     return await tronCircuitBreaker.execute(async () => {
@@ -67,7 +89,13 @@ export async function isAddressBlacklisted(address: string): Promise<boolean> {
       return blacklisted;
     });
   } catch (e: unknown) {
-    logger.error('Blacklist check failed (fail-open)', { address, error: e instanceof Error ? e.message : String(e) });
+    incrementBlacklistFailOpen();
+    logger.error('Blacklist check failed (fail-open)', {
+      address,
+      error: e instanceof Error ? e.message : String(e),
+      // Include a marker so operators can grep for this in logs quickly
+      marker: 'BLACKLIST_FAIL_OPEN',
+    });
     return false; // fail-open on RPC errors
   }
 }

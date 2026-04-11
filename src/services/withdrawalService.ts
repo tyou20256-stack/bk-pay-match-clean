@@ -11,6 +11,7 @@ import orderManager from './orderManager.js';
 import walletService from './walletService.js';
 import { deductBalance, releaseBalance } from './p2pSellerService.js';
 import { notifyWithdrawalEvent } from './merchantApiService.js';
+import logger from './logger.js';
 
 // ── 出金リクエスト作成 ──────────────────────────────────────────
 export async function createWithdrawal(params: {
@@ -141,10 +142,20 @@ export async function confirmWithdrawalPayment(
     return { success: false, error: `USDT送金に失敗しました: ${sendResult.error || '不明なエラー'}` };
   }
 
-  // 3. セラーC 残高減算
+  // 3. セラーC 残高減算 (atomic guard: 残高不足で失敗しても USDT は既に
+  //    送金済みなので、reconciliation のために error log に残す)
   const order = dbSvc.getOrder(w.matchedOrderId);
   if (order && order.cryptoAmount > 0) {
-    deductBalance(w.matchedSellerId, order.cryptoAmount);
+    const deducted = deductBalance(w.matchedSellerId, order.cryptoAmount);
+    if (!deducted) {
+      logger.error('Seller deductBalance failed AFTER USDT send', {
+        withdrawalId: id,
+        sellerId: w.matchedSellerId,
+        orderId: w.matchedOrderId,
+        amount: order.cryptoAmount,
+        txId: sendResult.txId,
+      });
+    }
   }
 
   // 4. 出金ステータス → completed

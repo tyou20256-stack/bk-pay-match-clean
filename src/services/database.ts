@@ -1784,26 +1784,61 @@ export function updateP2PSeller(id: number, data: Partial<{
 }
 
 export function creditP2PSellerBalance(id: number, amount: number): void {
+  // Guard against negative or zero amounts — callers must not use credit
+  // as a backdoor deduct. Log and drop rather than corrupt the balance.
+  if (!Number.isFinite(amount) || amount <= 0) {
+    logger.error('creditP2PSellerBalance rejected non-positive amount', { id, amount });
+    return;
+  }
   db.prepare('UPDATE p2p_sellers SET usdt_balance = usdt_balance + ? WHERE id = ?').run(amount, id);
 }
 
 export function lockP2PSellerBalance(id: number, amount: number): boolean {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    logger.error('lockP2PSellerBalance rejected non-positive amount', { id, amount });
+    return false;
+  }
   const r = db.prepare(`UPDATE p2p_sellers SET usdt_locked = usdt_locked + ?
     WHERE id = ? AND (usdt_balance - usdt_locked) >= ?`).run(amount, id, amount);
   return r.changes > 0;
 }
 
 export function releaseP2PSellerBalance(id: number, amount: number): void {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    logger.error('releaseP2PSellerBalance rejected non-positive amount', { id, amount });
+    return;
+  }
   db.prepare('UPDATE p2p_sellers SET usdt_locked = MAX(0, usdt_locked - ?) WHERE id = ?').run(amount, id);
 }
 
-export function deductP2PSellerBalance(id: number, amount: number): void {
-  db.prepare(`UPDATE p2p_sellers SET
-    usdt_balance = MAX(0, usdt_balance - ?),
-    usdt_locked = MAX(0, usdt_locked - ?),
+/**
+ * Atomically deduct from seller balance. Returns false if the seller
+ * has insufficient locked funds — caller must handle (e.g. mark match
+ * as error rather than silently succeed).
+ *
+ * Previously this used `MAX(0, usdt_balance - ?)` which silently
+ * zeroed a non-existent balance when the locked amount was wrong.
+ * The new `WHERE usdt_locked >= ?` guard makes concurrency races and
+ * bookkeeping errors visible at the DB layer.
+ */
+export function deductP2PSellerBalance(id: number, amount: number): boolean {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    logger.error('deductP2PSellerBalance rejected non-positive amount', { id, amount });
+    return false;
+  }
+  const r = db.prepare(`UPDATE p2p_sellers SET
+    usdt_balance = usdt_balance - ?,
+    usdt_locked = usdt_locked - ?,
     total_trades = total_trades + 1,
     last_active = ?
-    WHERE id = ?`).run(amount, amount, Date.now(), id);
+    WHERE id = ?
+      AND usdt_locked >= ?
+      AND usdt_balance >= ?`).run(amount, amount, Date.now(), id, amount, amount);
+  if (r.changes === 0) {
+    logger.error('deductP2PSellerBalance: insufficient funds or missing seller', { id, amount });
+    return false;
+  }
+  return true;
 }
 
 export function saveOrderSellerId(orderId: string, sellerId: number): void {
