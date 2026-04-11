@@ -5,7 +5,13 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 
-const BASE = 'http://localhost:3003';
+// Use explicit IPv4 loopback rather than 'localhost'. Node 20's undici-based
+// fetch resolves 'localhost' to either ::1 or 127.0.0.1 depending on the
+// platform, and the server-side session has strict IP binding (see
+// src/services/database.ts:842 validateSession). If login hits ::1 but a
+// follow-up request hits 127.0.0.1, the session is invalidated mid-test
+// and every protected-route assertion fails with success:false.
+const BASE = process.env.TEST_URL || 'http://127.0.0.1:3003';
 // /api/auth/login returns the session token in the response body as
 // `data.token` (server-side Phase 1b addition). Non-browser clients use
 // the Bearer flow, which is exempt from CSRF checks in the server-side
