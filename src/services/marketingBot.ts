@@ -84,6 +84,9 @@ function generateOAuthSignature(
   return crypto.createHmac('sha1', signingKey).update(baseStr).digest('base64');
 }
 
+// Currently unused — reserved for future X/Twitter auto-posting feature.
+// Keep the implementation intact so the crypto-secure OAuth flow isn't lost.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function buildOAuthHeader(method: string, url: string, body?: Record<string, string>): string {
   const oauthParams: Record<string, string> = {
     oauth_consumer_key: X_CONSUMER_KEY,
@@ -377,7 +380,8 @@ function buildTweet(snap: RateSnapshot, queueCount: number): string {
   const url = `${BASE_URL}/buy-usdt.html`;
   const pattern = pickXPattern();
   // Unique identifier to prevent duplicate detection
-  const uid = crypto.randomBytes(2).toString('hex');
+  // (currently unused — kept for future anti-dedup reuse)
+  const _uid = crypto.randomBytes(2).toString('hex');
 
   switch (pattern) {
     // Pattern 0: Rate update (JP) with hashtags + URL

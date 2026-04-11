@@ -5,7 +5,6 @@
  */
 
 import { getNotificationSubscribers } from './database.js';
-import { getHistory } from './priceHistory.js';
 import db from './database.js';
 import logger from './logger.js';
 

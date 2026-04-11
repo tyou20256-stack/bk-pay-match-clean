@@ -468,11 +468,9 @@ async function _doProcessCryptoSend(orderId: string): Promise<SendResult> {
   // Send USDT with retry (3 attempts, exponential backoff)
   // Track txId from first attempt to prevent double-send on timeout
   let result: SendResult = { success: false, error: 'No attempts made' };
-  let lastTxId: string | undefined;
   for (let attempt = 1; attempt <= 3; attempt++) {
     result = await sendUSDT(customerAddr, order.cryptoAmount);
     if (result.success) {
-      lastTxId = result.txId;
       break;
     }
     // If error contains txId hint (transaction was broadcast but status unknown), don't retry

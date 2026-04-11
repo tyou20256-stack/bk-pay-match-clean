@@ -10,14 +10,12 @@
 import { getCachedRates } from './aggregator.js';
 import {
   getQueuedTruPayWithdrawals,
-  updateTruPayWithdrawalStatus,
   insertTruPayMatch,
   getTruPayMatchByWithdrawalId,
   TruPayWithdrawalRow,
   dbInsertPendingBuyer,
   dbGetActivePendingBuyers,
   dbDeletePendingBuyer,
-  dbExpireOldPendingBuyers,
 } from './database.js';
 import db from './database.js';
 import { broadcast } from './websocket.js';

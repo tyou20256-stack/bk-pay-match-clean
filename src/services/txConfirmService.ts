@@ -12,7 +12,12 @@ import notifier from './notifier.js';
 const TRONGRID_API = 'https://api.trongrid.io';
 const POLL_INTERVAL_MS = 30_000; // 30 seconds
 const MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes — give up after this
-const REQUIRED_CONFIRMATIONS = 19; // TRON: 19 blocks ≈ 57 seconds
+// TRON finality: 19 blocks ≈ 57 seconds. Kept here for reference even
+// though the current implementation infers confirmed-ness from blockNumber
+// being set (any block on TRON is irreversible once included in a super
+// representative block).
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const REQUIRED_CONFIRMATIONS = 19;
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 

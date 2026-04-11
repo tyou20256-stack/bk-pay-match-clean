@@ -4,7 +4,7 @@
  *   Long polling (getUpdates) を使用。ライブラリ不要。
  */
 
-import { getNotificationPreferences, setNotificationPreference, setAlertThreshold } from './database.js';
+import { getNotificationPreferences, setNotificationPreference } from './database.js';
 import logger from './logger.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -1241,7 +1241,7 @@ async function processUpdate(update: Record<string, unknown>) {
 // ━━━━━━━━━━━━━━━━━━ TruPay P2P USDT Purchase ━━━━━━━━━━━━━━━━━━
 
 import { registerBuyer, removeBuyer } from './trupayMatcher.js';
-import { getTruPayMatch, getTruPayMatches, getTruPayMatchByWithdrawalId, getTruPayWithdrawalById, updateTruPayMatchStatus } from './database.js';
+import { getTruPayMatch, updateTruPayMatchStatus } from './database.js';
 import { manualConfirm } from './trupayVerifier.js';
 import { isEnabled as isTruPayEnabled } from './trupayClient.js';
 
@@ -1845,7 +1845,6 @@ async function handleStaffMessage(chatId: number, text: string, from: Record<str
 async function handleSupportOrderId(chatId: number, text: string) {
   supportWaiting.delete(chatId);
   // Forward order ID concern to staff
-  const userName = String(chatId);
   await sendMessage(STAFF_CHAT_ID,
     `━━ 振込反映の問い合わせ ━━\n\n` +
     `From: Chat ${chatId}\n` +

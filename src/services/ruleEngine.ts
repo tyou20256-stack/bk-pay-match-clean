@@ -4,7 +4,7 @@
  *   条件評価 → 通知 or 自動売買実行。aggregatorの更新ごとに評価。
  */
 import db from './database.js';
-import { AggregatedRates, ExchangeRates } from '../types.js';
+import { AggregatedRates } from '../types.js';
 import { checkAndRecordUsage } from './tradingLimits.js';
 import logger from './logger.js';
 
@@ -270,7 +270,7 @@ function evaluateTimeConditions(conditions: TimeConditions): { passed: boolean; 
 function evaluateLiquidityConditions(conditions: LiquidityConditions, rates: AggregatedRates): { passed: boolean; matched: string[] } {
   if (!conditions.minAvailable) return { passed: true, matched: [] };
   for (const er of rates.rates) {
-    const side = 'buy'; // Check buy-side liquidity
+    // Check buy-side liquidity only
     const orders = er.buyOrders || [];
     const totalAvailable = orders.reduce((sum, o) => sum + o.available * o.price, 0);
     if (totalAvailable >= conditions.minAvailable) {

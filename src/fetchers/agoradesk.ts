@@ -3,9 +3,7 @@
  * @description AgoraDeskのAPIからJPY建ての売買オーダーを取得。
  *   LocalBitcoins後継の分散型P2P取引所。
  */
-import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
-import { CONFIG } from '../config';
 import logger from '../services/logger.js';
 
 export class AgoraDeskFetcher implements FetcherInterface {

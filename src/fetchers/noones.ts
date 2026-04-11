@@ -2,9 +2,7 @@
  * @file noones.ts — Noones P2P APIフェッチャー
  * @description NoonesのAPIからJPY建ての売買オーダーを取得。
  */
-import axios from 'axios';
 import { P2POrder, FetcherInterface } from '../types';
-import { CONFIG } from '../config';
 import logger from '../services/logger.js';
 
 export class NoonesFetcher implements FetcherInterface {

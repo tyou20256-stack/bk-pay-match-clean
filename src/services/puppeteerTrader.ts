@@ -430,7 +430,7 @@ class P2PTrader {
     return { success: true, orderId: orderId || `bybit-${Date.now()}`, paymentInfo: paymentInfo || undefined };
   }
 
-  private async createBinanceBuyOrder(page: Page, cryptoSymbol: string, amount: number, payMethod: string): Promise<TradeResult> {
+  private async createBinanceBuyOrder(page: Page, cryptoSymbol: string, amount: number, _payMethod: string): Promise<TradeResult> {
     logger.info('Binance: navigating to P2P page');
     await page.goto(`https://p2p.binance.com/trade/buy/${cryptoSymbol}?fiat=JPY&payment=all-payments`, { waitUntil: 'networkidle2', timeout: 30000 });
     await sleep(3000);
@@ -651,7 +651,7 @@ class P2PTrader {
 
   // ====== HELPERS ======
 
-  private async extractOrderId(page: Page, exchange: string): Promise<string | null> {
+  private async extractOrderId(page: Page, _exchange: string): Promise<string | null> {
     try {
       const url = page.url();
       const urlObj = new URL(url);

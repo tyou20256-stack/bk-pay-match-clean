@@ -3,7 +3,6 @@
  * @description 移動平均/線形回帰/時間帯パターン/ボラティリティから
  *   購入タイミングスコア(0-100)を算出。ML不使用の軽量実装。
  */
-import db from './database.js';
 import { getHistory } from './priceHistory.js';
 import logger from './logger.js';
 

@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import logger from './logger.js';
 import { getCachedRates } from './aggregator.js';
-import { ExchangeRates, AggregatedRates } from '../types.js';
+import { AggregatedRates } from '../types.js';
 
 export function generateDailyReport(): void {
   try {

@@ -15,8 +15,6 @@
  */
 import * as dbSvc from './database.js';
 import * as orderManager from './orderManager.js';
-import notifier from './notifier.js';
-import { broadcast } from './websocket.js';
 import logger from './logger.js';
 
 const CHECK_INTERVAL = 15_000; // 15 seconds

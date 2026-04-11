@@ -4,7 +4,6 @@
  *   管理画面からエラー履歴を閲覧可能。
  */
 import db from './database.js';
-import logger from './logger.js';
 
 // === Schema ===
 db.exec(`
@@ -146,10 +145,8 @@ export function resolveAllErrors(): void {
 }
 
 // === Hook into logger — intercept error/fatal calls ===
-// Override the logger's write function to also track errors
-const origWrite = process.stderr.write.bind(process.stderr);
-const origStdout = process.stdout.write.bind(process.stdout);
-
+// Override the logger's write function to also track errors.
+// (The actual originals are captured inside hookLogger() below.)
 let hooked = false;
 export function hookLogger(): void {
   if (hooked) return;

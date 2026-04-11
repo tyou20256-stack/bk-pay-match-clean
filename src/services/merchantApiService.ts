@@ -140,7 +140,7 @@ async function validateWebhookUrl(webhookUrl: string): Promise<void> {
 export async function sendWebhook(
   webhookUrl: string,
   webhookSecret: string | null,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
   attempt = 1
 ): Promise<void> {
   // SSRF protection: validate URL on first attempt

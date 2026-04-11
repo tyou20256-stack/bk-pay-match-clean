@@ -6,7 +6,6 @@
  */
 import db from './database.js';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import logger from './logger.js';
 
 // === Schema Migration ===

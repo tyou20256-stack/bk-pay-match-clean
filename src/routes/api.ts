@@ -572,7 +572,7 @@ router.get('/admin/customers', (req, res) => {
 });
 
 // === Spread Optimizer API ===
-import spreadOptimizer, { getSpreadConfig, updateSpreadConfig, get24hStats, getOptimalSpread } from '../services/spreadOptimizer.js';
+import spreadOptimizer, { getSpreadConfig, updateSpreadConfig, get24hStats } from '../services/spreadOptimizer.js';
 
 router.get('/spread/config', (_req, res) => {
   res.json({ success: true, data: getSpreadConfig() });
@@ -810,7 +810,7 @@ router.get('/auth/me', (req, res) => {
 });
 
 // === Trading Limits ===
-import { getLimits, getAllLimits, setLimits, deleteLimits, getUsageSummary, checkLimit } from '../services/tradingLimits.js';
+import { getAllLimits, setLimits, deleteLimits, getUsageSummary, checkLimit } from '../services/tradingLimits.js';
 
 router.get('/limits', (_req, res) => {
   try {
@@ -1499,7 +1499,7 @@ import { manualConfirm, adminConfirm } from '../services/trupayVerifier.js';
 import { pollWithdrawals } from '../services/trupayPoller.js';
 import {
   getTruPayWithdrawals, getTruPayMatches, getTruPayStats,
-  getTruPayMatch, getTruPayMatchByWithdrawalId, getTruPayWithdrawalById,
+  getTruPayMatch, getTruPayWithdrawalById,
   updateTruPayMatchStatus,
 } from '../services/database.js';
 
@@ -1724,7 +1724,7 @@ router.post('/p2p-buy/paid/:matchId', uploadProof.single('proof'), async (req: R
     const withdrawal = getTruPayWithdrawalById(match.withdrawal_id);
     if (withdrawal) {
       const { analyzeProof } = await import('../services/proofAnalyzer.js');
-      const { notifyProofReview, notifyProofAutoApproved } = await import('../services/notifier.js');
+      const { notifyProofReview } = await import('../services/notifier.js');
 
       analyzeProof(proofFile, {
         bankName: withdrawal.bank_name,

@@ -19,7 +19,6 @@ import {
   releaseP2PSellerBalance,
   deductP2PSellerBalance,
   creditP2PSellerBalance,
-  saveOrderSellerId,
   confirmOrderBySeller,
   getOrder,
   getOrdersBySellerId,

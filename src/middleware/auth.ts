@@ -14,8 +14,12 @@ import { validateSession } from '../services/database.js';
 import { getSessionInfo, hasPermission, Permission, SessionInfo } from '../services/rbac.js';
 import { validateCustomerSession } from '../services/customerAccounts.js';
 
-// Extend Express Request to include user info
+// Extend Express Request to include user info.
+// `namespace` is the canonical way to augment Express's global types;
+// ES2015 module syntax cannot merge with an external declaration file,
+// so the eslint warning here is a false positive.
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: SessionInfo;
