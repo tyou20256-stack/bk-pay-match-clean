@@ -6,25 +6,50 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
 const BASE = 'http://localhost:3003';
-let authCookie = '';
+// Server-side /api/auth/login sets session via httpOnly cookie `bkpay_token`
+// and also sets a CSRF cookie `bkpay_csrf`. We must forward both on every
+// subsequent request so that authRequired + csrfProtection middleware pass.
+let sessionCookie = '';
+let csrfToken = '';
 
-// ヘルパー: 認証Cookie取得
-async function login(): Promise<string> {
+// Helper: parse a Set-Cookie header line for a specific cookie name.
+function parseCookie(setCookieHeader: string | null, name: string): string {
+  if (!setCookieHeader) return '';
+  // fetch() may concatenate multiple Set-Cookie values with ", " — split and search.
+  const parts = setCookieHeader.split(/,(?=\s*[A-Za-z_][A-Za-z0-9_-]*=)/);
+  for (const part of parts) {
+    const match = part.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+    if (match) return match[1];
+  }
+  return '';
+}
+
+async function login(): Promise<{ cookie: string; csrf: string }> {
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: 'admin', password: 'bkpay2026' })
   });
+  const setCookie = res.headers.get('set-cookie');
+  const cookie = parseCookie(setCookie, 'bkpay_token');
   const data = await res.json() as any;
-  return data.token;
+  // Prefer server-returned csrfToken; fall back to reading bkpay_csrf cookie.
+  const csrf = (data?.csrfToken as string) || parseCookie(setCookie, 'bkpay_csrf');
+  return { cookie, csrf };
 }
 
 beforeAll(async () => {
-  authCookie = await login();
+  const result = await login();
+  sessionCookie = result.cookie;
+  csrfToken = result.csrf;
 });
 
-function authHeaders() {
-  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authCookie}` };
+function authHeaders(): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    'Cookie': `bkpay_token=${sessionCookie}; bkpay_csrf=${csrfToken}`,
+    'X-CSRF-Token': csrfToken,
+  };
 }
 
 // ==================== 認証 ====================
