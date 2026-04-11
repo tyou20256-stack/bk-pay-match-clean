@@ -53,23 +53,13 @@ jobs:
       - name: TypeScript build
         run: npm run build
       - name: Integration tests
-        # Auth flow is fixed (commits 22d85e4 + 4317a82 + ce7d189):
-        #   - Bearer token returned in login body
-        #   - 127.0.0.1 used instead of localhost to avoid undici IPv4/6 flake
-        #   - NODE_ENV=test skips admin session IP binding
-        #   - BK_ADMIN_PASSWORD matches the hard-coded 'bkpay2026' fixture
-        # BUT several pre-existing test failures remain in the order flow:
-        #   - tests/api.test.ts:124 POST /api/orders — likely schema drift
-        #     in the order creation payload (the test sends only amount
-        #     and payMethod, but the API probably requires wallet address,
-        #     crypto type, exchange hint, etc. now)
-        #   - tests/api.test.ts:148 POST /:id/paid — 404 because the prior
-        #     order wasn't created
-        #   - tests/api.test.ts:164 GET /api/orders — possibly different
-        # These are tracked in a follow-up cleanup PR. The deploy workflow's
-        # https://bkpay.app/health end-to-end probe remains the authoritative
-        # production health signal.
-        continue-on-error: true
+        # All pre-existing test drift has been resolved:
+        #   - Auth: Bearer token in body + 127.0.0.1 + NODE_ENV=test IP skip
+        #   - Order schema: POST /api/orders now sends customerWalletAddress
+        #     + crypto in addition to amount + payMethod
+        #   - Admin password: CI env matches the hard-coded 'bkpay2026' fixture
+        #   - Public endpoint assertions: /api/orders list is documented as
+        #     open (no authRequired middleware)
         run: |
           node dist/index.js &
           SERVER_PID=$!
