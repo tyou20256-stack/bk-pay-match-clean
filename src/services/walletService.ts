@@ -186,6 +186,62 @@ export async function sendUSDT(toAddress: string, amount: number): Promise<SendR
 }
 
 /**
+ * Enqueue a USDT send via BullMQ, or fall back to the synchronous
+ * `sendUSDT` above if the queue feature flag is off.
+ *
+ * When `ENABLE_JOB_QUEUE=true`:
+ *   - Returns immediately with `{ success: true, queued: true, jobId }`
+ *   - The actual on-chain send happens asynchronously in a worker
+ *     (either in this process or in a dedicated signer container)
+ *   - Caller must observe job status via BullMQ events or DB state
+ *
+ * When `ENABLE_JOB_QUEUE=false`:
+ *   - Behaves exactly like the synchronous `sendUSDT`
+ *   - Preserves the pre-queue execution model for gradual rollout
+ *
+ * @param opts.idempotencyKey — if provided, a prior job with the same
+ *   key is returned instead of creating a new one. Critical for
+ *   at-least-once delivery from the order flow to prevent double-sends.
+ */
+export async function enqueueOrSendUSDT(
+  toAddress: string,
+  amount: number,
+  opts: { orderId?: string; idempotencyKey?: string } = {}
+): Promise<{ success: boolean; queued?: boolean; jobId?: string; txId?: string; error?: string }> {
+  // Lazy import to avoid pulling bullmq/ioredis into code paths where
+  // the queue is disabled (e.g. unit tests that don't need Redis).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const queues = require('../queues/index.js') as typeof import('../queues/index.js');
+
+  if (!queues.isJobQueueEnabled()) {
+    // Legacy synchronous path — unchanged behavior.
+    return sendUSDT(toAddress, amount);
+  }
+
+  const queue = queues.getUsdtSendQueue();
+  if (!queue) {
+    logger.warn('Queue enabled but getUsdtSendQueue returned null, falling back to sync');
+    return sendUSDT(toAddress, amount);
+  }
+
+  try {
+    const jobId = opts.idempotencyKey || `${toAddress}-${amount}-${Date.now()}`;
+    const job = await queue.add(
+      'send',
+      { toAddress, amount, orderId: opts.orderId, idempotencyKey: opts.idempotencyKey },
+      { jobId }
+    );
+    logger.info('USDT send enqueued', { jobId: job.id, toAddress, amount, orderId: opts.orderId });
+    return { success: true, queued: true, jobId: job.id };
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : 'Enqueue failed';
+    logger.error('USDT send enqueue failed, falling back to sync', { error: errMsg });
+    // Fall back to sync on queue errors so orders don't silently stall
+    return sendUSDT(toAddress, amount);
+  }
+}
+
+/**
  * Get wallet TRX balance (for fee estimation)
  */
 export async function getWalletBalance(): Promise<{ trx: number; usdt: number } | null> {

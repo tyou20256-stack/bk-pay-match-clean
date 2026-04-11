@@ -43,6 +43,16 @@ import logger, { runWithRequestId, getRequestId } from './services/logger';
 import { hookLogger } from './services/errorTracker';
 import { runMigrations } from './services/migrationManager';
 import { closeDatabase } from './services/database';
+import {
+  isJobQueueEnabled,
+  shouldRunUsdtSendWorker,
+  startUsdtSendWorker,
+  startNotificationWorker,
+  startQueueEventMonitoring,
+  stopQueueEventMonitoring,
+  closeQueues,
+} from './queues';
+import { sendUSDT } from './services/walletService';
 import { AppError } from './errors.js';
 
 // Ensure proof upload directory exists
@@ -592,6 +602,43 @@ async function start() {
   // Discord Webhook (rate posting)
   startDiscordWebhook();
 
+  // BullMQ queues + workers (feature-flagged)
+  // When ENABLE_JOB_QUEUE=false (default): this is a no-op and the legacy
+  // synchronous sendUSDT path is used by all callers (existing behavior).
+  // When ENABLE_JOB_QUEUE=true: queues are initialized and workers are
+  // started in this process UNLESS ENABLE_SIGNER_WORKER=true (in which
+  // case the dedicated signer container consumes usdt-send jobs and this
+  // main app only enqueues them + runs the notification worker).
+  if (isJobQueueEnabled()) {
+    logger.info('Job queue enabled', {
+      signerWorkerInSeparateContainer: !shouldRunUsdtSendWorker(),
+    });
+    startQueueEventMonitoring();
+
+    if (shouldRunUsdtSendWorker()) {
+      startUsdtSendWorker(async (job) => {
+        return sendUSDT(job.data.toAddress, job.data.amount);
+      });
+    } else {
+      logger.info('usdt-send worker delegated to signer container');
+    }
+
+    // Notification worker always runs in the main app (it needs access
+    // to the Telegram bot client, which lives here).
+    // For now this worker is a placeholder — existing code calls notifier
+    // functions directly and doesn't yet route through the queue. When
+    // the order/send flows are migrated to enqueue notifications, they
+    // will land here.
+    startNotificationWorker(async (job) => {
+      logger.info('Notification job processed (queue is ready)', {
+        type: job.data.type,
+        priority: job.data.priority,
+      });
+    });
+  } else {
+    logger.info('Job queue disabled (ENABLE_JOB_QUEUE != true)');
+  }
+
   // Generate SEO landing pages
   generateSeoPages();
 
@@ -648,6 +695,10 @@ async function start() {
     stopTruPayPoller();
     stopTruPayMatcher();
     stopTruPayVerifier();
+    // Close BullMQ queues and workers before the DB so pending jobs are
+    // drained while DB is still usable.
+    await stopQueueEventMonitoring();
+    await closeQueues();
     closeDatabase();
     logger.info('Shutdown complete');
     process.exit(0);

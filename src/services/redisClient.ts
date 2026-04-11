@@ -25,8 +25,8 @@ export async function initRedis(): Promise<void> {
 
   try {
     // Dynamic import — redis package is optional
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
+     
     const redisMod = await (Function('return import("redis")')() as Promise<Record<string, unknown>>);
     const createClient = redisMod.createClient as (opts: { url: string }) => RedisLike;
     redisClient = createClient({ url });
