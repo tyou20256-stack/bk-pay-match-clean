@@ -45,7 +45,10 @@ describe('E2E: Complete Purchase Journey', () => {
   });
 
   it('Step 5: Cancel registration', async () => {
-    const res = await fetch(`${BASE}/api/p2p-buy/cancel/${buyerId}`, { method: 'DELETE' });
+    const res = await fetch(
+      `${BASE}/api/p2p-buy/cancel/${buyerId}?buyerToken=${encodeURIComponent(buyerToken)}`,
+      { method: 'DELETE' }
+    );
     const data = await res.json();
     expect(data.success).toBe(true);
   });
