@@ -180,6 +180,178 @@ docker logs -f bk-pay-match-signer 2>&1 | grep "signer.*processing"
 docker exec bk-pay-match-redis redis-cli LLEN bull:usdt-send:completed
 ```
 
+---
+
+## Nile testnet validation — complete runbook
+
+**Purpose:** End-to-end verification of the signer worker pipeline
+without touching real mainnet funds. Must be completed successfully
+before the `ENABLE_SIGNER_WORKER=true` flag is flipped in production.
+
+### Prerequisites
+
+- Local Docker + `docker compose` installed
+- Node.js 20+ (for the wallet generation script)
+- This repo checked out locally
+- A browser to claim testnet TRX from the Nile faucet
+
+### N-1: Generate a disposable Nile wallet
+
+```bash
+bash scripts/generate-nile-wallet.sh
+```
+
+This creates `.env.signer.nile` (gitignored) with:
+- A brand-new TRON key pair generated via `tronweb.utils.accounts.generateAccount()`
+- `ENABLE_JOB_QUEUE=true` and `ENABLE_SIGNER_WORKER=true` pre-set
+- `TRON_NETWORK=nile` and `TRON_FULL_HOST=https://api.nileex.io`
+
+The script prints the generated address. Save it — you will fund it in
+the next step.
+
+### N-2: Fund the wallet from the Nile faucet
+
+1. Visit https://nileex.io/join/getJoinPage
+2. Paste the generated address
+3. Click "Get 2000 TRX" — funds arrive in ~10 seconds
+4. Verify: https://nile.tronscan.org/#/address/<YOUR_ADDRESS>
+5. Also send a small amount of TestUSDT (optional — only needed if
+   the actual `contract.transfer()` call is exercised; the worker will
+   sign and broadcast it, and you want to confirm a real TRC-20 hit)
+
+### N-3: Point the signer code at Nile (temporary)
+
+The signer code currently hardcodes `TRONGRID_API = https://api.trongrid.io`
+in `src/services/walletService.ts`. For Nile testing, edit temporarily:
+
+```bash
+# In src/services/walletService.ts, change:
+const TRONGRID_API = 'https://api.trongrid.io';
+# to:
+const TRONGRID_API = process.env.TRON_FULL_HOST || 'https://api.trongrid.io';
+```
+
+This is a test-only patch. Do NOT commit. Revert after validation.
+
+Alternatively (future cleanup): always read from env. Tracked as a
+follow-up in the test-refactor backlog.
+
+### N-4: Start the stack with Nile env
+
+```bash
+# From project root
+docker compose --profile signer up -d --build
+
+# Verify main app is running
+docker ps | grep bk-pay-match
+
+# Start the signer with the Nile env file
+docker run -d \
+  --name bk-pay-match-signer-nile \
+  --network bk-pay-match_default \
+  --env-file .env.signer.nile \
+  --rm \
+  bk-pay-match-app \
+  node dist/workers/signer.js
+
+# Verify signer is ready
+docker logs -f bk-pay-match-signer-nile 2>&1 | grep "ready — consuming"
+# Expect: [signer] ready — consuming usdt-send queue
+```
+
+### N-5: Trigger a test send via BullMQ directly
+
+Because the admin UI's USDT send flow assumes real mainnet, the
+cleanest Nile test is to enqueue a job manually via the Redis CLI:
+
+```bash
+# Inside the main app container:
+docker exec -it bk-pay-match node -e '
+const { getUsdtSendQueue } = require("./dist/queues/index.js");
+const queue = getUsdtSendQueue();
+if (!queue) { console.error("queue not initialized"); process.exit(1); }
+queue.add("send", {
+  toAddress: "TGehVcNhud84JDCGrNHKVz9jEAVKUpbuiv", // any valid Nile address
+  amount: 1,  // 1 USDT-equivalent (testnet has no real value)
+  orderId: "NILE-TEST-001",
+}).then(job => {
+  console.log("enqueued:", job.id);
+  process.exit(0);
+});
+'
+```
+
+### N-6: Observe the signer pipeline
+
+```bash
+# Main app enqueue log:
+docker logs bk-pay-match 2>&1 | grep "USDT send enqueued"
+
+# Signer processing log (the key signal):
+docker logs bk-pay-match-signer-nile 2>&1 | grep "signer.*processing"
+
+# If the signer attempted to sign + broadcast, you'll see either:
+#   "USDT sent" (with txId)  — success
+#   "Send failed" (with error) — expected if wallet has no USDT balance
+#                                  (TestUSDT on Nile is scarce; success on
+#                                  TRX-only balance is fine for the signer
+#                                  worker plumbing validation)
+
+# Redis queue state:
+docker exec bk-pay-match-redis redis-cli KEYS "bull:usdt-send:*"
+docker exec bk-pay-match-redis redis-cli LLEN bull:usdt-send:completed
+```
+
+### N-7: Validation checklist
+
+Mark each as pass/fail:
+
+- [ ] `bk-pay-match-signer-nile` container started without error
+- [ ] Signer log shows `[signer] ready — consuming usdt-send queue`
+- [ ] Manual enqueue succeeded (job id returned)
+- [ ] Signer log shows `[signer] processing send job` with the job id
+- [ ] Signer log shows either `USDT sent` (if testnet funded) OR a
+      meaningful error (not a crash)
+- [ ] Redis `bull:usdt-send:completed` list is non-empty
+- [ ] Main app did NOT attempt to sign directly (grep for `USDT sent`
+      in bk-pay-match logs → should be 0 occurrences)
+- [ ] Signer container has `read_only: true` (docker inspect)
+- [ ] Signer container has no public ports (docker port)
+- [ ] Main app env does NOT contain `TRON_WALLET_PRIVATE_KEY` (docker
+      exec env)
+- [ ] Rollback rehearsal: `docker stop bk-pay-match-signer-nile`, set
+      `ENABLE_JOB_QUEUE=false`, `docker compose up -d --build app`,
+      verify main app sync path works
+
+### N-8: Cleanup
+
+```bash
+# Stop the Nile signer
+docker stop bk-pay-match-signer-nile
+
+# Remove the .env.signer.nile file (testnet key, but still good hygiene)
+rm -f .env.signer.nile
+
+# Revert the temporary TRONGRID_API patch in src/services/walletService.ts
+git checkout src/services/walletService.ts
+
+# Rebuild
+docker compose up -d --build app
+```
+
+### Failure modes to watch for
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Signer exits immediately | `ENABLE_JOB_QUEUE` or `ENABLE_SIGNER_WORKER` not in env | Check `.env.signer.nile` is actually passed via `--env-file` |
+| Signer waits forever, no jobs | Not connected to the right Redis | Verify `REDIS_URL` points at the compose network Redis (`redis://redis:6379`) |
+| Jobs stay in "active" state indefinitely | Signer crashed mid-job | Check `docker logs bk-pay-match-signer-nile` for stack trace |
+| Signer signs but broadcasts fail with "BANDWIDTH_ERROR" | Nile wallet has no TRX for gas | Claim more from faucet |
+| `Cannot find module` at startup | Build was incomplete | `docker compose build --no-cache` |
+| Private key leaks into main app logs | Code bug | **STOP. Review diff. Do NOT proceed to mainnet.** |
+
+---
+
 ## Rollback
 
 At any stage, revert by:

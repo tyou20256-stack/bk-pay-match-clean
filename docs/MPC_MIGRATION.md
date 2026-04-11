@@ -272,6 +272,53 @@ risk unit reduced. MPC is about **insurance**, not optimization.
 - Regulatory requirements mandate multi-party custody (FSA, Travel Rule)
 - Institutional counterparties require SOC 2 attestation of custody
 
+## 9b. Post-launch decision timeline
+
+This section is evaluated monthly after launch. Tick one at each review.
+
+### Month 1 (launch → launch+30d)
+- [ ] Phase 1c signer container deployed and stable for 14+ days
+- [ ] No signer-related incidents
+- [ ] Transaction volume observed: ___ tx/day (fill in at review)
+- [ ] **Decision**: Phase 2 not yet justified — defer to Month 2 review
+
+### Month 2 (launch+30d → launch+60d)
+- [ ] Transaction volume > 50 tx/day sustained for 14+ days? ___ (Y/N)
+- [ ] Any security incident on the signer container? ___ (Y/N)
+- [ ] Regulatory guidance updated? ___ (Y/N)
+- [ ] **Decision**: Proceed OR defer to Month 3 review
+
+### Month 3 (launch+60d → launch+90d)
+- [ ] Transaction volume > 100 tx/day sustained? ___ (Y/N)
+- [ ] Has an institutional counterparty (exchange, payment rail,
+      custody partner) requested MPC/multi-party attestation? ___ (Y/N)
+- [ ] Team has 2-week bandwidth for dedicated security project? ___ (Y/N)
+- [ ] **Decision**: Proceed (kick off Phase 2a key ceremony) OR
+      defer to quarterly review
+
+### Quarterly review (after Month 3)
+- Re-evaluate the 5 conditions from Section 9 "Proceed when"
+- If all pending: commission an external security review of Phase 1c
+  before deciding to skip Phase 2 permanently
+
+### Immediate trigger (any time)
+If ANY of the following happen, jump straight to Phase 2a kickoff:
+- Signer container RCE CVE published (tronweb, bullmq, ioredis, or
+  any transitive dep)
+- Hot wallet outflow to non-whitelisted destination detected
+- Docker runtime CVE affecting container isolation (CVE-2024-21626
+  class)
+- Physical access to the VPS detected (rare but possible — cloud
+  provider insider threat, legal seizure, etc.)
+- Auditor or insurance requirement forces custody upgrade
+
+The per-trigger playbook:
+1. Freeze hot wallet signing (set `ENABLE_SIGNER_WORKER=false`,
+   restart main app with sync path disabled via code flag)
+2. Sweep all non-operational funds to cold wallet within 1h
+3. Commission external security review (~1 week)
+4. Begin Phase 2a key ceremony in parallel with review
+
 ## 10. Related documents
 
 - [SIGNER_WORKER.md](./SIGNER_WORKER.md) — Phase 1c single-signer
