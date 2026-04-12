@@ -112,15 +112,21 @@ export async function fetchAllRates(crypto: string): Promise<AggregatedRates> {
   processArbitrage(result, crypto);
 
   // Record price history
-  try { recordSnapshot(crypto, result); } catch(e) {}
+  try { recordSnapshot(crypto, result); } catch (e: unknown) {
+    logger.error('recordSnapshot failed', { crypto, error: e instanceof Error ? e.message : String(e) });
+  }
 
   cachedRates.set(crypto, result);
 
   // Update merchant scores
-  try { const { updateMerchantsFromRates } = await import('./merchantScoring.js'); updateMerchantsFromRates(result); } catch(e) {}
+  try { const { updateMerchantsFromRates } = await import('./merchantScoring.js'); updateMerchantsFromRates(result); } catch (e: unknown) {
+    logger.warn('merchantScoring unavailable', { error: e instanceof Error ? e.message : String(e) });
+  }
 
   // Check trading rules
-  try { const { checkAllRules } = await import('./ruleEngine.js'); await checkAllRules(result); } catch(e) {}
+  try { const { checkAllRules } = await import('./ruleEngine.js'); await checkAllRules(result); } catch (e: unknown) {
+    logger.warn('ruleEngine unavailable', { error: e instanceof Error ? e.message : String(e) });
+  }
 
   // Broadcast rates via WebSocket
   broadcast("rates", { crypto, ...result });

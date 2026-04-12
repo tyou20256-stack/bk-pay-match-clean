@@ -205,6 +205,16 @@ router.post('/orders', async (req, res) => {
 router.get('/orders/:id', (req, res) => {
   const order = orderManager.getOrder(req.params.id);
   if (!order) throw new NotFoundError('Order');
+  // Require orderToken for non-admin access to prevent enumeration
+  const orderToken = (req.query.orderToken || req.headers['x-order-token']) as string | undefined;
+  const adminToken = req.cookies?.bkpay_token || req.headers.authorization?.replace('Bearer ', '');
+  const isAdmin = adminToken && dbSvc.validateSession(String(adminToken), req.ip || '');
+  if (!isAdmin) {
+    const stored = (order as Record<string, unknown>).orderToken as string | undefined;
+    if (stored && orderToken !== stored) {
+      throw new AuthenticationError('Invalid order token');
+    }
+  }
   res.json({ success: true, order });
 });
 
@@ -1831,7 +1841,7 @@ router.delete('/p2p-buy/cancel/:buyerId', (req, res) => {
     if (!buyerToken || typeof buyerToken !== 'string') {
       return res.status(401).json({ success: false, error: 'buyerToken required' });
     }
-    const hmacSecret = process.env.BK_ENC_KEY || 'bkpay-buyer-hmac-fallback';
+    const hmacSecret = process.env.BK_ENC_KEY || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('BK_ENC_KEY required in production'); })() : 'fallback-dev-only');
     const expectedToken = crypto.createHmac('sha256', hmacSecret).update(buyerId).digest('hex').slice(0, 32);
     if (
       buyerToken.length !== expectedToken.length ||
@@ -1970,6 +1980,9 @@ router.post('/admin/wallet-config', async (req, res) => {
       // Validate private key format (64 hex chars)
       if (!/^[a-fA-F0-9]{64}$/.test(privateKey)) throw new ValidationError('Private key must be 64 hex characters');
       setSystemConfig('TRON_WALLET_PRIVATE_KEY', privateKey, true); // encrypted
+      // Invalidate cached TronWeb so next send uses the new key
+      const { resetTronWeb } = await import('../services/walletService.js');
+      resetTronWeb();
       logger.info('TRON wallet private key updated via admin UI');
     }
     if (walletAddress) {
@@ -1996,6 +2009,8 @@ router.delete('/admin/wallet-config', async (req, res) => {
   try {
     deleteSystemConfig('TRON_WALLET_PRIVATE_KEY');
     deleteSystemConfig('TRON_WALLET_ADDRESS');
+    const { resetTronWeb } = await import('../services/walletService.js');
+    resetTronWeb();
     logger.info('TRON wallet config removed via admin UI');
     res.json({ success: true, escrowEnabled: false });
   } catch (e: unknown) { res.json({ success: false, error: safeError(e) }); }

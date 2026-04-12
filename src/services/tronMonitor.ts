@@ -16,6 +16,9 @@ const CHECK_INTERVAL = 30000; // 30 seconds
 
 let lastCheckedTimestamp = Date.now();
 let monitorInterval: ReturnType<typeof setInterval> | null = null;
+/** Track processed txIds to prevent double-processing across polls */
+const processedTxIds = new Set<string>();
+const MAX_PROCESSED_CACHE = 2000;
 
 interface TRC20Transfer {
   transaction_id: string;
@@ -36,17 +39,26 @@ async function checkDeposits(): Promise<void> {
       headers: { 'TRON-PRO-API-KEY': process.env.TRONGRID_API_KEY || '' }
     });
     const data = await res.json() as { data?: TRC20Transfer[] };
-    
+
     if (!data.data?.length) return;
 
     for (const tx of data.data as TRC20Transfer[]) {
       // Only incoming transfers
       if (tx.to.toLowerCase() !== wallet.address.toLowerCase()) continue;
-      
+
+      // Dedup: skip already-processed transactions
+      if (processedTxIds.has(tx.transaction_id)) continue;
+      processedTxIds.add(tx.transaction_id);
+      // Evict oldest entries when cache grows too large
+      if (processedTxIds.size > MAX_PROCESSED_CACHE) {
+        const first = processedTxIds.values().next().value;
+        if (first) processedTxIds.delete(first);
+      }
+
       const usdtAmount = parseFloat(tx.value) / 1e6; // USDT has 6 decimals
       logger.info('Incoming USDT', { amount: usdtAmount, from: tx.from, txId: tx.transaction_id });
 
-      // Try to match with pending buy orders
+      // Try to match with pending buy orders — require exact 1:1 match
       const orders = dbSvc.getAllOrders() as { id: string; status: string; cryptoAmount: number; amount: number; rate: number; payMethod: string; crypto: string; exchange?: string }[];
       const pendingOrders = orders.filter(o =>
         o.status === 'confirming' &&
@@ -60,10 +72,22 @@ async function checkDeposits(): Promise<void> {
         Math.abs(o.cryptoAmount - usdtAmount) < 0.01
       );
 
-      if (matchedSell.length > 0) {
+      // Safety: if multiple orders match the same amount, do NOT auto-complete —
+      // flag for manual review to prevent misattribution
+      if (matchedSell.length > 1) {
+        logger.warn('Multiple sell orders match deposit amount — manual review required', {
+          txId: tx.transaction_id, amount: usdtAmount, from: tx.from,
+          matchedOrderIds: matchedSell.map(o => o.id),
+        });
+        notifier.notifyNewOrder({
+          id: 'AMBIGUOUS_DEPOSIT', amount: 0, cryptoAmount: usdtAmount, rate: 0,
+          payMethod: 'USDT', mode: 'deposit',
+          exchange: `⚠ ${matchedSell.length}件一致 — 手動確認 TX: ${tx.transaction_id.slice(0, 16)}...`,
+        });
+      } else if (matchedSell.length === 1) {
         const order = matchedSell[0];
         dbSvc.updateOrderStatus(order.id, 'deposit_received');
-        logger.info('Sell order deposit received', { orderId: order.id, amount: usdtAmount });
+        logger.info('Sell order deposit received', { orderId: order.id, amount: usdtAmount, from: tx.from, txId: tx.transaction_id });
         notifier.notifyNewOrder({
           id: order.id,
           amount: order.amount,
@@ -73,10 +97,20 @@ async function checkDeposits(): Promise<void> {
           mode: 'sell-deposit',
           exchange: `売却入金確認 TX: ${tx.transaction_id.slice(0, 16)}...`
         });
-      } else if (pendingOrders.length > 0) {
+      } else if (pendingOrders.length > 1) {
+        logger.warn('Multiple buy orders match deposit amount — manual review required', {
+          txId: tx.transaction_id, amount: usdtAmount, from: tx.from,
+          matchedOrderIds: pendingOrders.map(o => o.id),
+        });
+        notifier.notifyNewOrder({
+          id: 'AMBIGUOUS_DEPOSIT', amount: 0, cryptoAmount: usdtAmount, rate: 0,
+          payMethod: 'USDT', mode: 'deposit',
+          exchange: `⚠ ${pendingOrders.length}件一致 — 手動確認 TX: ${tx.transaction_id.slice(0, 16)}...`,
+        });
+      } else if (pendingOrders.length === 1) {
         const order = pendingOrders[0];
         dbSvc.updateOrderStatus(order.id, 'completed', { completedAt: Date.now() });
-        logger.info('Auto-completed order', { orderId: order.id, amount: usdtAmount });
+        logger.info('Auto-completed order', { orderId: order.id, amount: usdtAmount, from: tx.from, txId: tx.transaction_id });
         notifier.notifyCompleted({ ...order, status: 'completed', completedAt: Date.now() });
       } else {
         // Notify about unmatched deposit

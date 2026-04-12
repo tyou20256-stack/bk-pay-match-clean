@@ -315,7 +315,9 @@ export async function createOrder(amount: number, payMethod: string, crypto: str
           order.cryptoAmount = parseFloat((amount / best.price).toFixed(4));
         }
       }
-    } catch (e) {}
+    } catch (e: unknown) {
+      logger.warn('Rate fetch failed in self-mode', { error: e instanceof Error ? e.message : String(e) });
+    }
 
     // Get account from router
     if (payMethod === 'bank') {

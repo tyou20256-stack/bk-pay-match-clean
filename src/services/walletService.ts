@@ -102,6 +102,12 @@ export async function isAddressBlacklisted(address: string): Promise<boolean> {
 
 let tronWebInstance: TronWebInstance | null = null;
 
+/** Invalidate the cached TronWeb singleton so the next call re-reads the key. */
+export function resetTronWeb(): void {
+  tronWebInstance = null;
+  logger.info('TronWeb singleton invalidated — next send will re-read key');
+}
+
 function getTronWeb(): TronWebInstance | null {
   if (tronWebInstance) return tronWebInstance;
 
