@@ -9,7 +9,7 @@ import { manualConfirm, adminConfirm } from '../services/trupayVerifier.js';
 import { pollWithdrawals } from '../services/trupayPoller.js';
 import {
   getTruPayWithdrawals, getTruPayMatches, getTruPayStats,
-  getTruPayMatch, getTruPayWithdrawalById,
+  getTruPayMatch,
 } from '../services/database.js';
 import { ValidationError, NotFoundError } from '../errors.js';
 import { safeError } from './_shared.js';

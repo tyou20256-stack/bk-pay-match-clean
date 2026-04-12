@@ -2,9 +2,7 @@
  * @file transfers.ts — Bank transfers + crypto transactions
  */
 import { db } from './connection.js';
-import type { BankTransferRow, CryptoTransactionRow, OrderRow } from './connection.js';
-import { rowToOrder } from './orders.js';
-import type { OrderData } from './connection.js';
+import type { BankTransferRow, CryptoTransactionRow } from './connection.js';
 
 // === Bank Transfer Recording (Phase C) ===
 export function recordBankTransfer(data: {

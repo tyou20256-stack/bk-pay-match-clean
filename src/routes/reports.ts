@@ -18,7 +18,7 @@ import { getPrediction, getOptimalBuyTime } from '../services/ratePrediction.js'
 import { getTopMerchants, getMerchantStats } from '../services/merchantScoring.js';
 import { simulateBulkPurchase, optimizeSplitting } from '../services/bulkSimulator.js';
 import { CONFIG } from '../config.js';
-import { ValidationError, NotFoundError } from '../errors.js';
+import { ValidationError } from '../errors.js';
 import { safeError, sendCSV } from './_shared.js';
 
 const router = Router();

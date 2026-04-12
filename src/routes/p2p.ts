@@ -7,7 +7,6 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import p2pSellerService from '../services/p2pSellerService.js';
 import * as dbSvc from '../services/database.js';
-import { safeError } from './_shared.js';
 
 const router = Router();
 

@@ -1,7 +1,6 @@
 /**
  * @file trupay.ts — TruPay withdrawals + matches + pending buyers
  */
-import logger from '../logger.js';
 import { db } from './connection.js';
 import type { TruPayWithdrawalRow, TruPayMatchRow, CountRow } from './connection.js';
 

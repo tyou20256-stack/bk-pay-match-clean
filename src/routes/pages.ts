@@ -6,7 +6,7 @@
 import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { validateSession, getSessionUserId } from '../services/database';
+import { validateSession } from '../services/database';
 import { validateCustomerSession } from '../services/customerAccounts';
 import { getSeoPageSlugs } from '../services/seoGenerator';
 
