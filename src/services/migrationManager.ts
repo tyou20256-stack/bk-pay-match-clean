@@ -5,6 +5,7 @@
  */
 import db from './database.js';
 import logger from './logger.js';
+import { encrypt, decrypt } from './db/encryption.js';
 
 // === Migration tracking table ===
 db.exec(`
@@ -212,8 +213,7 @@ const migrations: Migration[] = [
     name: 'migrate_cbc_to_gcm',
     up() {
       // Re-encrypt any CBC data to GCM
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { encrypt, decrypt } = require('./database.js');
+      // encrypt/decrypt imported at module top
       const bankRows = db.prepare('SELECT id, account_number, account_holder FROM bank_accounts').all() as { id: number; account_number: string; account_holder: string }[];
       for (const row of bankRows) {
         try {
@@ -453,8 +453,7 @@ const migrations: Migration[] = [
     up() {
       // L2: Re-encrypt GCM v1 (100k iterations) data to GCM v2 (600k iterations)
       // Also picks up any remaining CBC data from v18
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { encrypt, decrypt } = require('./database.js');
+      // encrypt/decrypt imported at module top
       const reEncryptField = (val: string): string | null => {
         if (!val || val.startsWith('gcm2:')) return null; // already v2
         if (val.startsWith('gcm:') || /^[0-9a-f]+:[0-9a-f]+$/i.test(val)) {

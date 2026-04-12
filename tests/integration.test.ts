@@ -26,7 +26,7 @@ beforeAll(async () => {
   const loginRes = await fetch(`${BASE}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'admin', password: process.env.BK_ADMIN_PASSWORD || 'bkpay2026' }),
+    body: JSON.stringify({ username: 'admin', password: process.env.BK_ADMIN_PASSWORD || 'ci-test-pw-change-me-2026' }),
   });
   sharedAuthCookie = loginRes.headers.get('set-cookie') || '';
 });

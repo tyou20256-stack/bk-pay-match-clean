@@ -15,7 +15,7 @@ async function login(): Promise<string> {
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'admin', password: 'bkpay2026' }),
+    body: JSON.stringify({ username: 'admin', password: process.env.BK_ADMIN_PASSWORD || 'ci-test-pw-change-me-2026' }),
   });
   const data = (await res.json()) as any;
   return data.token;
@@ -539,7 +539,7 @@ describe('認証エッジケース', () => {
     const res = await fetch(`${BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: 'bkpay2026' }),
+      body: JSON.stringify({ password: process.env.BK_ADMIN_PASSWORD || 'ci-test-pw-change-me-2026' }),
     });
     const data = (await res.json()) as any;
     expect(data.success).toBe(false);

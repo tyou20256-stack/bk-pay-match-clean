@@ -46,10 +46,8 @@ jobs:
         env:
           NODE_ENV: test
           BK_ENC_KEY: test_key_0000000000000000000000000000000000000000000000
-          # Matches the hard-coded password in api.test.ts + phase3-5.test.ts
-          # TODO(test-refactor): make all tests read from env var instead of
-          # hard-coding 'bkpay2026'.
-          BK_ADMIN_PASSWORD: bkpay2026
+          # Test credentials — use repository secret if set, else fallback
+          BK_ADMIN_PASSWORD: ${{ secrets.BK_ADMIN_PASSWORD || 'ci-test-pw-change-me-2026' }}
       - name: TypeScript build
         run: npm run build
       - name: Integration tests
@@ -77,10 +75,8 @@ jobs:
         env:
           NODE_ENV: test
           BK_ENC_KEY: test_key_0000000000000000000000000000000000000000000000
-          # Matches the hard-coded password in api.test.ts + phase3-5.test.ts
-          # TODO(test-refactor): make all tests read from env var instead of
-          # hard-coding 'bkpay2026'.
-          BK_ADMIN_PASSWORD: bkpay2026
+          # Test credentials — use repository secret if set, else fallback
+          BK_ADMIN_PASSWORD: ${{ secrets.BK_ADMIN_PASSWORD || 'ci-test-pw-change-me-2026' }}
           PORT: 3003
 
   build:

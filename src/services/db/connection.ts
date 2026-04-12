@@ -475,10 +475,13 @@ export function safeJsonParse(str: string | null | undefined, fallback: unknown 
 
 // === Database Instance ===
 
-const DB_PATH = resolve(process.cwd(), 'data/bkpay.db');
+// Allow tests to override via DB_PATH env (e.g. ':memory:' for unit tests)
+const DB_PATH = process.env.DB_PATH || resolve(process.cwd(), 'data/bkpay.db');
 
-// Ensure data directory exists
-mkdirSync(resolve(process.cwd(), 'data'), { recursive: true });
+// Ensure data directory exists (skip for :memory: or absolute test paths)
+if (DB_PATH !== ':memory:' && !DB_PATH.startsWith('/tmp/') && !DB_PATH.includes('test-')) {
+  mkdirSync(resolve(process.cwd(), 'data'), { recursive: true });
+}
 
 const db: DatabaseType = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
