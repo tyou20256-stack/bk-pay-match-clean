@@ -5,6 +5,7 @@
  */
 import Database from 'better-sqlite3';
 import { resolve } from 'path';
+import IORedis from 'ioredis';
 import { isWalletReady, tronCircuitBreaker, getInflightSendCount } from './walletService.js';
 import { getErrorStats } from './errorTracker.js';
 import { getWebhookDlqStats } from './merchantApiService.js';
@@ -12,8 +13,25 @@ import { getMigrationStatus } from './migrationManager.js';
 
 const startTime = Date.now();
 
+// Lazy Redis client for health checks (reuses REDIS_URL from env)
+const REDIS_URL = process.env.REDIS_URL || 'redis://redis:6379';
+let redisHealthClient: IORedis | null = null;
+
+function getRedisHealthClient(): IORedis {
+  if (redisHealthClient) return redisHealthClient;
+  redisHealthClient = new IORedis(REDIS_URL, {
+    maxRetriesPerRequest: 1,
+    enableReadyCheck: false,
+    connectTimeout: 2000,
+    lazyConnect: true,
+  });
+  redisHealthClient.on('error', () => { /* suppress — checked via ping */ });
+  return redisHealthClient;
+}
+
 interface HealthCheck {
   database: { status: string; latencyMs: number };
+  redis: { status: string; latencyMs: number };
   memory: { heapUsedMB: number; heapTotalMB: number; rssMB: number };
   wallet: { configured: boolean; circuitBreaker: string; inflightSends: number };
   errors: { unresolved: number; last24h: number; fatal24h: number };
@@ -27,6 +45,28 @@ interface HealthStatus {
   timestamp: string;
   version: string;
   checks: HealthCheck;
+}
+
+// Redis status is cached for 5s to avoid hammering on every health check
+let cachedRedisStatus: { status: string; latencyMs: number } = { status: 'unknown', latencyMs: 0 };
+let redisStatusTimestamp = 0;
+const REDIS_CACHE_TTL_MS = 5000;
+
+async function checkRedis(): Promise<{ status: string; latencyMs: number }> {
+  const now = Date.now();
+  if (now - redisStatusTimestamp < REDIS_CACHE_TTL_MS) return cachedRedisStatus;
+
+  const start = performance.now();
+  try {
+    const client = getRedisHealthClient();
+    if (client.status === 'wait') await client.connect();
+    await client.ping();
+    cachedRedisStatus = { status: 'ok', latencyMs: Math.round(performance.now() - start) };
+  } catch {
+    cachedRedisStatus = { status: 'error', latencyMs: Math.round(performance.now() - start) };
+  }
+  redisStatusTimestamp = now;
+  return cachedRedisStatus;
 }
 
 export function getHealth(): HealthStatus {
@@ -47,6 +87,7 @@ export function getHealth(): HealthStatus {
 
   const checks: HealthCheck = {
     database: dbCheck,
+    redis: cachedRedisStatus,
     memory: memCheck,
     wallet: { configured: isWalletReady(), circuitBreaker: cbState, inflightSends },
     errors: errorStats,
@@ -55,12 +96,13 @@ export function getHealth(): HealthStatus {
   };
 
   const dbOk = dbCheck.status === 'ok';
+  const redisOk = cachedRedisStatus.status !== 'error';
   const cbOk = cbState !== 'OPEN';
   const noFatals = errorStats.fatal24h === 0;
 
   let status: 'ok' | 'degraded' | 'down' = 'ok';
   if (!dbOk) status = 'down';
-  else if (!cbOk || !noFatals || dlqStats.pending > 10) status = 'degraded';
+  else if (!redisOk || !cbOk || !noFatals || dlqStats.pending > 10) status = 'degraded';
 
   return {
     status,
@@ -69,6 +111,12 @@ export function getHealth(): HealthStatus {
     version: process.env.npm_package_version || '1.0.0',
     checks,
   };
+}
+
+/** Async health check that refreshes Redis status before returning. */
+export async function getHealthAsync(): Promise<HealthStatus> {
+  await checkRedis();
+  return getHealth();
 }
 
 function checkDatabase(): { status: string; latencyMs: number } {
@@ -105,6 +153,69 @@ export function incrementRequests() { requestCount++; }
 export function incrementErrors() { errorCount++; }
 export function incrementBlacklistCheck() { blacklistChecks++; }
 export function incrementBlacklistFailOpen() { blacklistFailOpens++; }
+
+// --- Request latency histogram (Prometheus-compatible) ---
+// Buckets in seconds — standard Prometheus web request buckets
+const HISTOGRAM_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
+
+interface HistogramEntry {
+  buckets: number[];  // count per bucket (le)
+  sum: number;
+  count: number;
+}
+
+// Key: "method:normalizedPath:statusCode"
+const latencyHistograms = new Map<string, HistogramEntry>();
+
+/** Normalize path to prevent high-cardinality label explosion. */
+function normalizePath(path: string): string {
+  return path
+    .replace(/\/[0-9a-f]{8,}/gi, '/:id')  // hex IDs (UUIDs, mongo IDs)
+    .replace(/\/\d+/g, '/:id')             // numeric IDs
+    .replace(/\/by-token\/[^/]+/, '/by-token/:token');
+}
+
+/** Record a request duration observation into the histogram. */
+export function observeRequestDuration(method: string, path: string, statusCode: number, durationSec: number): void {
+  const normalizedPath = normalizePath(path);
+  const key = `${method}:${normalizedPath}:${statusCode}`;
+  let entry = latencyHistograms.get(key);
+  if (!entry) {
+    entry = { buckets: new Array(HISTOGRAM_BUCKETS.length + 1).fill(0), sum: 0, count: 0 };
+    latencyHistograms.set(key, entry);
+  }
+  entry.sum += durationSec;
+  entry.count++;
+  for (let i = 0; i < HISTOGRAM_BUCKETS.length; i++) {
+    if (durationSec <= HISTOGRAM_BUCKETS[i]) {
+      entry.buckets[i]++;
+    }
+  }
+  // +Inf bucket
+  entry.buckets[HISTOGRAM_BUCKETS.length]++;
+}
+
+/** Render the latency histogram in Prometheus exposition format. */
+function renderHistogramMetrics(): string[] {
+  const lines: string[] = [
+    '# HELP bkpay_http_request_duration_seconds HTTP request duration in seconds',
+    '# TYPE bkpay_http_request_duration_seconds histogram',
+  ];
+  for (const [key, entry] of latencyHistograms) {
+    const [method, path, statusCode] = key.split(':');
+    const labels = `method="${method}",path="${path}",status_code="${statusCode}"`;
+    let cumulative = 0;
+    for (let i = 0; i < HISTOGRAM_BUCKETS.length; i++) {
+      cumulative += entry.buckets[i];
+      lines.push(`bkpay_http_request_duration_seconds_bucket{${labels},le="${HISTOGRAM_BUCKETS[i]}"} ${cumulative}`);
+    }
+    // +Inf is the total count
+    lines.push(`bkpay_http_request_duration_seconds_bucket{${labels},le="+Inf"} ${entry.count}`);
+    lines.push(`bkpay_http_request_duration_seconds_sum{${labels}} ${entry.sum.toFixed(6)}`);
+    lines.push(`bkpay_http_request_duration_seconds_count{${labels}} ${entry.count}`);
+  }
+  return lines;
+}
 
 export async function getMetrics(): Promise<string> {
   const mem = process.memoryUsage();
@@ -160,6 +271,7 @@ export async function getMetrics(): Promise<string> {
     `# HELP bkpay_blacklist_fail_open_total Blacklist lookups that fell open due to RPC errors (safety concern if non-zero)`,
     `# TYPE bkpay_blacklist_fail_open_total counter`,
     `bkpay_blacklist_fail_open_total ${blacklistFailOpens}`,
+    ...renderHistogramMetrics(),
     ...(await getBusinessMetrics()),
   ].join('\n') + '\n';
 }

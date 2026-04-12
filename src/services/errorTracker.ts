@@ -33,6 +33,22 @@ const DEDUP_WINDOW_MS = 5 * 60 * 1000;
 // Rate limit: max 1 Telegram notification per error per 30 minutes
 const notifyCooldown = new Map<string, number>();
 const NOTIFY_COOLDOWN_MS = 30 * 60 * 1000;
+const EVICTION_THRESHOLD = 1000;
+const EVICTION_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+let lastEvictionTime = Date.now();
+
+/** Remove expired entries from notifyCooldown to prevent unbounded growth. */
+function evictStaleCooldowns(): void {
+  const now = Date.now();
+  // Trigger on size threshold or hourly interval
+  if (notifyCooldown.size < EVICTION_THRESHOLD && now - lastEvictionTime < EVICTION_INTERVAL_MS) return;
+  lastEvictionTime = now;
+  for (const [key, timestamp] of notifyCooldown) {
+    if (now - timestamp > NOTIFY_COOLDOWN_MS) {
+      notifyCooldown.delete(key);
+    }
+  }
+}
 
 interface TrackErrorInput {
   level: 'error' | 'fatal';
@@ -82,6 +98,7 @@ async function notifyAdmin(input: TrackErrorInput): Promise<void> {
   const lastNotify = notifyCooldown.get(key) || 0;
   if (Date.now() - lastNotify < NOTIFY_COOLDOWN_MS) return;
   notifyCooldown.set(key, Date.now());
+  evictStaleCooldowns();
 
   const emoji = input.level === 'fatal' ? '🚨' : '⚠️';
   const text = `${emoji} <b>Pay Match ${input.level.toUpperCase()}</b>\n\n` +

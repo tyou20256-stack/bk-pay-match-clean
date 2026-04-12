@@ -4,10 +4,10 @@
  */
 
 import logger from './logger.js';
+import { getCachedRates } from './aggregator.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const STAFF_CHAT_ID = process.env.TELEGRAM_STAFF_CHAT_ID || '';
-const API_BASE = process.env.API_BASE || 'http://localhost:3003';
 const CHECK_INTERVAL = 60_000;
 const MIN_ALERT_INTERVAL = 60 * 60_000; // 1 hour between same type alerts
 
@@ -19,6 +19,20 @@ interface RateSnapshot {
 const lastAlerts = new Map<string, number>();
 const rateHistory: RateSnapshot[] = [];
 let intervalId: ReturnType<typeof setInterval> | null = null;
+let lastAlertsEvictionTime = Date.now();
+const ALERTS_EVICTION_THRESHOLD = 1000;
+
+/** Remove expired entries from lastAlerts to prevent unbounded growth. */
+function evictStaleAlerts(): void {
+  const now = Date.now();
+  if (lastAlerts.size < ALERTS_EVICTION_THRESHOLD && now - lastAlertsEvictionTime < MIN_ALERT_INTERVAL) return;
+  lastAlertsEvictionTime = now;
+  for (const [key, timestamp] of lastAlerts) {
+    if (now - timestamp > MIN_ALERT_INTERVAL) {
+      lastAlerts.delete(key);
+    }
+  }
+}
 
 async function sendAlert(text: string): Promise<void> {
   try {
@@ -36,17 +50,17 @@ function canAlert(type: string): boolean {
   const last = lastAlerts.get(type);
   if (last && Date.now() - last < MIN_ALERT_INTERVAL) return false;
   lastAlerts.set(type, Date.now());
+  evictStaleAlerts();
   return true;
 }
 
 async function checkRates() {
   try {
-    const res = await fetch(`${API_BASE}/api/rates/USDT`);
-    const data = await res.json() as { success?: boolean; rates?: Record<string, unknown>[]; data?: Record<string, unknown>[] };
-    if (!data.success) return;
-
-    const rates = data.rates || data.data || [];
-    if (!Array.isArray(rates) || rates.length === 0) return;
+    // Read rates directly from in-process cache instead of making
+    // an HTTP self-call. Avoids an extra network hop + auth surface.
+    const cached = getCachedRates('USDT') as { rates?: Record<string, unknown>[] } | undefined;
+    const rates = (cached && Array.isArray(cached.rates)) ? cached.rates : [];
+    if (rates.length === 0) return;
 
     const prices = rates.map((r) => Number((r as Record<string, unknown>).price)).filter((p: number) => p > 0);
     if (prices.length === 0) return;

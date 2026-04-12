@@ -17,7 +17,7 @@ import apiRouter from './routes/api';
 import externalApiRouter from './routes/externalApi';
 import { CONFIG } from './config';
 import { authRequired, requirePermission, customerAuthRequired, csrfProtection } from './middleware/auth';
-import { getHealth, getMetrics, incrementRequests, incrementErrors } from './services/healthService';
+import { getHealthAsync, getMetrics, incrementRequests, incrementErrors, observeRequestDuration } from './services/healthService';
 import logger, { runWithRequestId, getRequestId } from './services/logger';
 import { startServices, shutdownServices, initWebSocket, waitForInflightSends } from './bootstrap';
 import { AppError } from './errors.js';
@@ -95,6 +95,16 @@ app.use((req, res, next) => {
     if (reqId) res.setHeader('X-Request-Id', reqId);
     next();
   });
+});
+
+// Request latency histogram — measures wall-clock duration per request
+app.use((req, res, next) => {
+  const startNs = process.hrtime.bigint();
+  res.on('finish', () => {
+    const durationSec = Number(process.hrtime.bigint() - startNs) / 1e9;
+    observeRequestDuration(req.method, req.path, res.statusCode, durationSec);
+  });
+  next();
 });
 
 // Rate limiters
@@ -196,9 +206,9 @@ app.use('/api', apiRouter);
 // --- Infrastructure endpoints ---
 
 // Readiness probe
-app.get('/ready', (_req, res) => {
+app.get('/ready', async (_req, res) => {
   try {
-    const health = getHealth();
+    const health = await getHealthAsync();
     if (health.checks.database.status === 'ok') {
       res.json({ ready: true });
     } else {
@@ -210,8 +220,8 @@ app.get('/ready', (_req, res) => {
 });
 
 // Health check (public, minimal info)
-app.get('/health', (_req, res) => {
-  const health = getHealth();
+app.get('/health', async (_req, res) => {
+  const health = await getHealthAsync();
   const publicHealth = {
     status: health.status,
     timestamp: health.timestamp,

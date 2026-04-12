@@ -15,6 +15,9 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - default
+      - signer-net
     volumes:
       - app-data:/app/data
       - app-logs:/app/logs
@@ -80,6 +83,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - signer-net
     volumes:
       # Shares only the DB volume (read-only) so the signer can use
       # better-sqlite3 init code without a writable mount. The signer
@@ -150,6 +155,8 @@ services:
     container_name: bk-pay-match-redis
     restart: unless-stopped
     command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru --appendonly yes --appendfsync everysec
+    networks:
+      - signer-net
     volumes:
       - redis-data:/data
     healthcheck:
@@ -188,6 +195,16 @@ services:
         find /backups -name "bkpay_*.db" -mtime +7 -delete 2>/dev/null;
         sleep 3600;
       done'
+
+networks:
+  default:
+    driver: bridge
+  # Internal-only network isolating the signer + Redis from egress.
+  # The signer container has no route to the public internet from this
+  # network, preventing private-key exfiltration even if compromised.
+  signer-net:
+    driver: bridge
+    internal: true
 
 volumes:
   app-data:

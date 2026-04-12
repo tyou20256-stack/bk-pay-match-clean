@@ -664,7 +664,7 @@ export function getAllOrders(): Order[] {
 // Cleanup expired orders — queries DB directly so post-restart pending
 // orders are also processed (previously only iterated in-memory Map).
 // Uses CAS transition so a concurrent markPaid cannot race with expiry.
-setInterval(() => {
+const expiryCleanupInterval = setInterval(() => {
   try {
     const now = Date.now();
     const expired = dbSvc.getExpiredPendingOrders(now);
@@ -682,6 +682,10 @@ setInterval(() => {
     logger.error('expire-cleanup failed', { error: e instanceof Error ? e.message : String(e) });
   }
 }, 10000);
+
+export function stopExpiryCleanup(): void {
+  clearInterval(expiryCleanupInterval);
+}
 
 
 

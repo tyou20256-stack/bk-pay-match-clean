@@ -3,10 +3,10 @@
  * @description 全バックグラウンドサービスの初期化と graceful shutdown を管理。
  *   index.ts からインポートして使用する。
  */
-import { startMonitor } from './services/tronMonitor.js';
+import { startMonitor, stopMonitor } from './services/tronMonitor.js';
 import { startTelegramBot } from './services/telegramBot.js';
 import { initFreezeDetector } from './services/freezeDetector.js';
-import { startAlerts } from './services/alertService.js';
+import { startAlerts, stopAlerts } from './services/alertService.js';
 import { startTxConfirmPolling, stopTxConfirmPolling } from './services/txConfirmService.js';
 import { startPriceNotifier } from './services/priceNotifier.js';
 import { startVerifier as startBankVerifier } from './services/bankVerifier.js';
@@ -24,6 +24,7 @@ import { startDiscordWebhook, stopDiscordWebhook } from './services/discordWebho
 import { generateSeoPages } from './services/seoGenerator';
 import { generateDailyReport } from './services/rateReportGenerator.js';
 import { startWebhookDlqProcessor, stopWebhookDlqProcessor } from './services/merchantApiService';
+import { stopExpiryCleanup } from './services/orderManager';
 import logger from './services/logger';
 import { hookLogger } from './services/errorTracker';
 import { runMigrations } from './services/migrationManager';
@@ -171,6 +172,10 @@ export { initWebSocket };
  * Called from index.ts on SIGTERM/SIGINT.
  */
 export async function shutdownServices() {
+  // 1. Stop accepting new work / polling
+  stopMonitor();
+  stopAlerts();
+  stopExpiryCleanup();
   closeWebSocket();
   stopAutoSweep();
   stopTxConfirmPolling();
@@ -182,10 +187,11 @@ export async function shutdownServices() {
   stopTruPayPoller();
   stopTruPayMatcher();
   stopTruPayVerifier();
-  // Close BullMQ queues and workers before the DB so pending jobs are
-  // drained while DB is still usable.
+  // 2. Drain BullMQ queues and workers before the DB so pending jobs are
+  // completed while DB is still usable.
   await stopQueueEventMonitoring();
   await closeQueues();
+  // 3. Close DB last — everything above may need it during drain
   closeDatabase();
 }
 
