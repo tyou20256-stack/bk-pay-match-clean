@@ -12,8 +12,11 @@ function legacySha256Hash(pw: string): string {
   return crypto.createHash('sha256').update(pw + 'bkpay-salt').digest('hex');
 }
 
+// L4: bcrypt cost factor 12 (up from 10). Existing cost-10 hashes verify fine.
+const BCRYPT_COST = 12;
+
 function hashPassword(pw: string): string {
-  return bcrypt.hashSync(pw, 10);
+  return bcrypt.hashSync(pw, BCRYPT_COST);
 }
 
 export function createAdminUser(username: string, password: string): boolean {
@@ -32,7 +35,7 @@ export function authenticateUser(username: string, password: string, ip?: string
     // Legacy SHA-256 hash — verify and auto-upgrade to bcrypt
     if (legacySha256Hash(password) === user.password_hash) {
       valid = true;
-      const bcryptHash = bcrypt.hashSync(password, 10);
+      const bcryptHash = bcrypt.hashSync(password, BCRYPT_COST);
       db.prepare('UPDATE admin_users SET password_hash = ? WHERE id = ?').run(bcryptHash, user.id);
     }
   } else {
@@ -46,13 +49,14 @@ export function authenticateUser(username: string, password: string, ip?: string
     // Issue a short-lived MFA pending token (5 min)
     const mfaPending = crypto.randomBytes(32).toString('hex');
     const expiresAt = Date.now() + 5 * 60 * 1000;
-    db.prepare('INSERT INTO sessions (token, user_id, expires_at, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)').run(`mfa:${mfaPending}`, user.id, expiresAt, ip || null, userAgent || null);
+    db.prepare('INSERT INTO sessions (token, user_id, expires_at, ip_address, user_agent, session_type) VALUES (?, ?, ?, ?, ?, ?)').run(`mfa:${mfaPending}`, user.id, expiresAt, ip || null, userAgent || null, 'admin');
     return { token: mfaPending, userId: user.id, mfaRequired: true };
   }
 
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24h
-  db.prepare('INSERT INTO sessions (token, user_id, expires_at, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)').run(token, user.id, expiresAt, ip || null, userAgent || null);
+  // M3: Store session_type explicitly instead of relying on UA parsing
+  db.prepare('INSERT INTO sessions (token, user_id, expires_at, ip_address, user_agent, session_type) VALUES (?, ?, ?, ?, ?, ?)').run(token, user.id, expiresAt, ip || null, userAgent || null, 'admin');
   return { token, userId: user.id, forcePasswordChange: !!user.force_pw_change };
 }
 
@@ -78,7 +82,7 @@ export function verifyMfaAndLogin(pendingToken: string, totpCode: string, ip?: s
   db.prepare('DELETE FROM sessions WHERE token = ?').run(`mfa:${pendingToken}`);
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
-  db.prepare('INSERT INTO sessions (token, user_id, expires_at, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)').run(token, user.id, expiresAt, ip || null, userAgent || null);
+  db.prepare('INSERT INTO sessions (token, user_id, expires_at, ip_address, user_agent, session_type) VALUES (?, ?, ?, ?, ?, ?)').run(token, user.id, expiresAt, ip || null, userAgent || null, 'admin');
   return { token, userId: user.id };
 }
 
@@ -139,7 +143,8 @@ export function validateSession(token: string, ip?: string): boolean {
   // client IP is stable via X-Forwarded-For.
   const skipIpBinding = process.env.NODE_ENV === 'test';
   if (!skipIpBinding && session.ip_address && ip && session.ip_address !== ip) {
-    const isCustomer = (session as unknown as Record<string, unknown>).user_agent?.toString().includes('customer');
+    // M3: Use stored session_type column instead of parsing user_agent
+    const isCustomer = session.session_type === 'customer';
     if (!isCustomer) {
       logger.warn('Admin session IP mismatch — invalidating', { sessionId: token.slice(0, 8), expected: session.ip_address, actual: ip });
       db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
@@ -177,7 +182,7 @@ export function changePassword(token: string, currentPassword: string, newPasswo
     currentValid = bcrypt.compareSync(currentPassword, user.password_hash);
   }
   if (!currentValid) return false;
-  db.prepare('UPDATE admin_users SET password_hash = ?, force_pw_change = 0 WHERE id = ?').run(bcrypt.hashSync(newPassword, 10), user.id);
+  db.prepare('UPDATE admin_users SET password_hash = ?, force_pw_change = 0 WHERE id = ?').run(bcrypt.hashSync(newPassword, BCRYPT_COST), user.id);
   // Invalidate all sessions for this user (forces re-login with new password)
   deleteAllUserSessions(user.id);
   return true;

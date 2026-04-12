@@ -5,8 +5,10 @@
  */
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
+import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
+import FileType from 'file-type';
 import { registerBuyer, removeBuyer, getPendingBuyers } from '../services/trupayMatcher.js';
 import {
   getTruPayMatches, getTruPayMatch, getTruPayWithdrawalById,
@@ -36,6 +38,44 @@ const uploadProof = multer({
 });
 
 const router = Router();
+
+// M4: Allowed MIME types for proof uploads — validated via magic bytes
+const ALLOWED_IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heif']);
+
+/**
+ * M4: Validate uploaded file's actual content (magic bytes) matches claimed extension.
+ * Rejects polyglot files and extension spoofing.
+ * Returns null if valid, error string if invalid.
+ */
+async function validateUploadMagicBytes(filePath: string, claimedExt: string): Promise<string | null> {
+  try {
+    const buffer = fs.readFileSync(filePath);
+    const detected = await FileType.fromBuffer(buffer);
+    if (!detected) {
+      return 'Unable to detect file type from content — file may be corrupted';
+    }
+    if (!ALLOWED_IMAGE_MIMES.has(detected.mime)) {
+      return `File content is ${detected.mime}, not an allowed image type`;
+    }
+    // Check that detected extension roughly matches claimed extension
+    const claimed = claimedExt.toLowerCase().replace('.', '');
+    const detectedExt = detected.ext;
+    // Allow jpeg/jpg mismatch and heif/heic mismatch
+    const extMap: Record<string, string[]> = {
+      jpg: ['jpg', 'jpeg'], jpeg: ['jpg', 'jpeg'],
+      heic: ['heic', 'heif'], heif: ['heic', 'heif'],
+      png: ['png'], webp: ['webp'],
+    };
+    const allowedExts = extMap[claimed] || [claimed];
+    if (!allowedExts.includes(detectedExt)) {
+      return `File extension .${claimed} does not match detected content type .${detectedExt}`;
+    }
+    return null;
+  } catch (e) {
+    logger.warn('Magic byte validation error', { error: e instanceof Error ? e.message : String(e) });
+    return 'File validation failed';
+  }
+}
 
 /** POST /api/p2p-buy/register */
 router.post('/p2p-buy/register', (req, res) => {
@@ -148,6 +188,14 @@ router.post('/p2p-buy/paid/:matchId', uploadProof.single('proof'), async (req: R
 
     if (!req.file) {
       return res.json({ success: false, error: '振込明細のスクリーンショットは必須です' });
+    }
+
+    // M4: Validate magic bytes match claimed extension — reject polyglot files
+    const magicError = await validateUploadMagicBytes(req.file.path, path.extname(req.file.originalname));
+    if (magicError) {
+      // Delete the rejected file
+      try { fs.unlinkSync(req.file.path); } catch { /* best effort */ }
+      return res.json({ success: false, error: magicError });
     }
 
     const ref = referenceNumber || '';

@@ -5,37 +5,40 @@ import crypto from 'crypto';
 import logger from '../logger.js';
 
 // === Encryption (AES-256-GCM with PBKDF2 key derivation) ===
+// H1: BK_ENC_KEY is REQUIRED in ALL environments — no fallback key
 const RAW_ENC_KEY = process.env.BK_ENC_KEY || '';
 if (!RAW_ENC_KEY || RAW_ENC_KEY === 'bkpay-default-key-change-me-32ch' || RAW_ENC_KEY === 'change-me-to-random-32-chars-key-here') {
-  if (process.env.NODE_ENV === 'production') {
-    logger.fatal('BK_ENC_KEY must be set to a secure random value in production! Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
-    process.exit(1);
-  }
-  logger.warn('BK_ENC_KEY is not set or is a default value. ALL stored credentials are insecure. Set a proper key before deployment.');
+  const msg = 'FATAL: BK_ENC_KEY must be set to a secure random value. Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"';
+  logger.fatal(msg);
+  throw new Error(msg);
 } else if (RAW_ENC_KEY.length < 32) {
   logger.warn('BK_ENC_KEY should be at least 32 characters long');
 }
-const ENC_KEY_FALLBACK = RAW_ENC_KEY || 'bkpay-default-key-change-me-32ch';
 // Derive a proper 32-byte key via PBKDF2 (deterministic, so existing data remains readable)
 const ENC_SALT = process.env.BK_ENC_SALT || 'bkpay-enc-salt-v2';
-if (!process.env.BK_ENC_SALT && process.env.NODE_ENV === 'production') {
-  logger.warn('BK_ENC_SALT not set in production — using default salt. Set a unique value for stronger key derivation.');
+if (!process.env.BK_ENC_SALT) {
+  logger.warn('BK_ENC_SALT not set — using default salt for backward compatibility. Set a unique value for stronger key derivation.');
 }
-const DERIVED_KEY = crypto.pbkdf2Sync(ENC_KEY_FALLBACK, ENC_SALT, 100000, 32, 'sha256');
+// L2: 600k iterations for new data; legacy key derived at 100k for decrypting old data
+const PBKDF2_ITERATIONS_V2 = 600_000;
+const PBKDF2_ITERATIONS_V1 = 100_000;
+const DERIVED_KEY = crypto.pbkdf2Sync(RAW_ENC_KEY, ENC_SALT, PBKDF2_ITERATIONS_V2, 32, 'sha256');
+const DERIVED_KEY_V1 = crypto.pbkdf2Sync(RAW_ENC_KEY, ENC_SALT, PBKDF2_ITERATIONS_V1, 32, 'sha256');
 
 export function encrypt(text: string): string {
-  // AES-256-GCM: iv(12) + authTag(16) + ciphertext
+  // L2: AES-256-GCM with v2 marker (600k iterations)
+  // Format: gcm2:iv:authTag:ciphertext
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', DERIVED_KEY, iv);
   let enc = cipher.update(text, 'utf8', 'hex');
   enc += cipher.final('hex');
   const authTag = cipher.getAuthTag().toString('hex');
-  return 'gcm:' + iv.toString('hex') + ':' + authTag + ':' + enc;
+  return 'gcm2:' + iv.toString('hex') + ':' + authTag + ':' + enc;
 }
 export function decrypt(text: string): string {
   try {
-    if (text.startsWith('gcm:')) {
-      // AES-256-GCM format: gcm:iv:authTag:ciphertext
+    if (text.startsWith('gcm2:')) {
+      // AES-256-GCM v2 format (600k iterations): gcm2:iv:authTag:ciphertext
       const parts = text.split(':');
       const iv = Buffer.from(parts[1], 'hex');
       const authTag = Buffer.from(parts[2], 'hex');
@@ -46,10 +49,23 @@ export function decrypt(text: string): string {
       dec += decipher.final('utf8');
       return dec;
     }
-    // Legacy AES-256-CBC fallback (for data encrypted before upgrade)
-    logger.warn('Legacy CBC decryption used — data should be re-encrypted', { length: text.length });
+    if (text.startsWith('gcm:')) {
+      // AES-256-GCM v1 format (100k iterations): gcm:iv:authTag:ciphertext
+      logger.warn('Decrypting GCM v1 data (100k iterations) — should be re-encrypted with v2', { length: text.length });
+      const parts = text.split(':');
+      const iv = Buffer.from(parts[1], 'hex');
+      const authTag = Buffer.from(parts[2], 'hex');
+      const encHex = parts[3];
+      const decipher = crypto.createDecipheriv('aes-256-gcm', DERIVED_KEY_V1, iv);
+      decipher.setAuthTag(authTag);
+      let dec = decipher.update(encHex, 'hex', 'utf8');
+      dec += decipher.final('utf8');
+      return dec;
+    }
+    // H4: Legacy AES-256-CBC fallback (for data encrypted before upgrade) — kept for safety
+    logger.warn('DEPRECATED: Legacy CBC decryption used — data should be re-encrypted to GCM', { length: text.length });
     const [ivHex, encHex] = text.split(':');
-    const legacyKey = Buffer.from(ENC_KEY_FALLBACK.padEnd(32).slice(0, 32));
+    const legacyKey = Buffer.from(RAW_ENC_KEY.padEnd(32).slice(0, 32));
     const decipher = crypto.createDecipheriv('aes-256-cbc', legacyKey, Buffer.from(ivHex, 'hex'));
     let dec = decipher.update(encHex, 'hex', 'utf8');
     dec += decipher.final('utf8');
@@ -68,6 +84,8 @@ export function encryptBankField(value: string): string {
 }
 export function decryptBankField(value: string): string {
   if (!value) return value;
-  if (value.startsWith('gcm:')) return decrypt(value);
+  if (value.startsWith('gcm2:') || value.startsWith('gcm:')) return decrypt(value);
+  // Check for legacy CBC (hex:hex pattern)
+  if (/^[0-9a-f]+:[0-9a-f]+$/i.test(value)) return decrypt(value);
   return value; // Plaintext (legacy, not yet migrated)
 }

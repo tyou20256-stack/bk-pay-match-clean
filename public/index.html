@@ -42,6 +42,7 @@
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
 </head>
 <body>
+  <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden" onfocus="this.style.position='static';this.style.width='auto';this.style.height='auto';this.style.overflow='visible'" onblur="this.style.position='absolute';this.style.left='-9999px';this.style.width='1px';this.style.height='1px';this.style.overflow='hidden'">メインコンテンツへ</a>
   <!-- Top Bar -->
   <header>
     <div class="header-left">
@@ -58,7 +59,7 @@
       <div class="spot-badge" id="spotPrices"></div>
       <div class="auto-update"><span class="status-dot"></span><span id="countdown">30</span>s</div>
       <button class="icon-btn" id="refreshBtn" title="更新" aria-label="データ更新">&#x21bb;</button>
-      <div class="lang-selector" style="display:inline-flex;gap:2px"><button class="lang-btn active" data-lang="ja" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">JP</button><button class="lang-btn" data-lang="en" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">EN</button><button class="lang-btn" data-lang="zh" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">中</button><button class="lang-btn" data-lang="vi" style="padding:2px 6px;font-size:10px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">VI</button></div>
+      <div class="lang-selector" style="display:inline-flex;gap:2px"><button class="lang-btn active" data-lang="ja" aria-pressed="true" style="padding:2px 6px;font-size:14px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">JP</button><button class="lang-btn" data-lang="en" aria-pressed="false" style="padding:2px 6px;font-size:14px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">EN</button><button class="lang-btn" data-lang="zh" aria-pressed="false" style="padding:2px 6px;font-size:14px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">中</button><button class="lang-btn" data-lang="vi" aria-pressed="false" style="padding:2px 6px;font-size:14px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:4px;cursor:pointer">VI</button></div>
       <a href="/buy-usdt.html" style="text-decoration:none;padding:6px 16px;background:#10b981;color:#fff;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap">USDT購入</a><a href="/paypay-convert.html" style="text-decoration:none;padding:4px 10px;border:1px solid #f59e0b;color:#f59e0b;border-radius:6px;font-size:10px;font-weight:600;white-space:nowrap">PayPay変換</a><a href="/guide.html" class="icon-btn" title="ガイド" style="text-decoration:none;font-size:11px">Guide</a><a href="/about.html" class="icon-btn" title="サービス紹介" style="text-decoration:none;font-size:11px" data-i18n="nav_about">About</a><button class="icon-btn" id="themeToggle" aria-label="テーマ切り替え">&#x263E;</button>
     </div>
   </header>

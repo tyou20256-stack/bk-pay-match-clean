@@ -127,10 +127,27 @@
         document.getElementById('panel-waiting').classList.add('hidden');
         document.getElementById('panel-matched').classList.remove('hidden');
         var c = data.conversion;
-        document.getElementById('matchInfo').innerHTML =
-          '<div style="display:flex;justify-content:space-between"><span style="color:var(--dim)">' + tr('pp_provider_id') + '</span><span style="font-weight:700">' + (c.provider_paypay_id || '--') + '</span></div>' +
-          '<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--dim)">' + tr('pp_send_amount') + '</span><span style="color:var(--accent);font-weight:700">¥' + Number(c.amount).toLocaleString() + '</span></div>' +
-          '<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:var(--dim)">' + tr('pp_recv_amount') + '</span><span>¥' + Number(c.payout_amount).toLocaleString() + '</span></div>';
+        var matchInfoEl = document.getElementById('matchInfo');
+        matchInfoEl.textContent = '';
+
+        function addInfoRow(label, value, opts) {
+          opts = opts || {};
+          var row = document.createElement('div');
+          row.style.cssText = 'display:flex;justify-content:space-between' + (opts.marginTop ? ';margin-top:4px' : '');
+          var labelSpan = document.createElement('span');
+          labelSpan.style.color = 'var(--dim)';
+          labelSpan.textContent = label;
+          var valSpan = document.createElement('span');
+          if (opts.bold) valSpan.style.fontWeight = '700';
+          if (opts.color) valSpan.style.cssText = 'color:' + opts.color + ';font-weight:700';
+          valSpan.textContent = value;
+          row.appendChild(labelSpan);
+          row.appendChild(valSpan);
+          matchInfoEl.appendChild(row);
+        }
+        addInfoRow(tr('pp_provider_id'), c.provider_paypay_id || '--', { bold: true });
+        addInfoRow(tr('pp_send_amount'), '\u00a5' + Number(c.amount).toLocaleString(), { marginTop: true, color: 'var(--accent)' });
+        addInfoRow(tr('pp_recv_amount'), '\u00a5' + Number(c.payout_amount).toLocaleString(), { marginTop: true });
       }
       if (data.conversion && data.conversion.status === 'completed') {
         clearInterval(pollTimer);
@@ -212,11 +229,13 @@
           badge.style.display = 'block';
           var onText = tr('pp_escrow_on');
           var offText = tr('pp_escrow_off');
-          if (d.escrowEnabled) {
-            badge.innerHTML = '<span style="background:#10b981;color:#fff;padding:2px 8px;border-radius:4px">' + onText + '</span>';
-          } else {
-            badge.innerHTML = '<span style="background:var(--card);border:1px solid var(--border);color:var(--dim);padding:2px 8px;border-radius:4px">' + offText + '</span>';
-          }
+          badge.textContent = '';
+          var span = document.createElement('span');
+          span.style.cssText = d.escrowEnabled
+            ? 'background:#10b981;color:#fff;padding:2px 8px;border-radius:4px'
+            : 'background:var(--card);border:1px solid var(--border);color:var(--dim);padding:2px 8px;border-radius:4px';
+          span.textContent = d.escrowEnabled ? onText : offText;
+          badge.appendChild(span);
         }
       })
       .catch(function () {});

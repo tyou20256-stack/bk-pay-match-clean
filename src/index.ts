@@ -33,11 +33,21 @@ app.set('trust proxy', 2);
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 
-// CORS: restrict to own origin in production
+// M6: CORS restricted in ALL environments — no wildcard origin
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const ALLOWED_ORIGINS = ['https://bkpay.app'];
+if (!IS_PRODUCTION) {
+  // In dev/test, also allow localhost variants
+  ALLOWED_ORIGINS.push('http://localhost:3003', 'http://127.0.0.1:3003');
+}
 app.use((_req, res, next) => {
-  const origin = IS_PRODUCTION ? 'https://bkpay.app' : '*';
-  res.setHeader('Access-Control-Allow-Origin', origin);
+  const reqOrigin = _req.headers.origin;
+  if (reqOrigin && ALLOWED_ORIGINS.includes(reqOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', reqOrigin);
+  } else if (!reqOrigin) {
+    // Same-origin requests (no Origin header) — allow with production origin
+    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token');
   res.setHeader('Access-Control-Allow-Credentials', 'true');

@@ -98,8 +98,19 @@
   function addMsg(type, text) {
     var el = document.createElement('div');
     el.className = 'bc-m ' + (type === 'ai' ? 'ai' : 'usr');
-    var avatar = type === 'ai' ? '🤖' : '👤';
-    el.innerHTML = '<div class="av">' + avatar + '</div><div class="bb">' + formatText(text) + '</div>';
+    var avDiv = document.createElement('div');
+    avDiv.className = 'av';
+    avDiv.textContent = type === 'ai' ? '\uD83E\uDD16' : '\uD83D\uDC64';
+    el.appendChild(avDiv);
+    var bbDiv = document.createElement('div');
+    bbDiv.className = 'bb';
+    if (type === 'ai') {
+      // AI messages may contain safe markdown formatting (escapeHtml is called inside formatText)
+      bbDiv.innerHTML = formatText(text);
+    } else {
+      bbDiv.textContent = text;
+    }
+    el.appendChild(bbDiv);
     msgs.appendChild(el);
     msgs.scrollTop = msgs.scrollHeight;
   }

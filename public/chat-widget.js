@@ -245,7 +245,10 @@
   function appendUser(text) {
     const msg = document.createElement('div');
     msg.className = 'bk-msg user';
-    msg.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    msg.appendChild(bubble);
     messagesEl.appendChild(msg);
     scrollToBottom();
     return msg;
@@ -254,7 +257,15 @@
   function appendAI(text) {
     const msg = document.createElement('div');
     msg.className = 'bk-msg ai';
-    msg.innerHTML = `<div class="msg-avatar">🤖</div><div class="bubble">${formatAI(text)}</div>`;
+    const avatar = document.createElement('div');
+    avatar.className = 'msg-avatar';
+    avatar.textContent = '\uD83E\uDD16';
+    msg.appendChild(avatar);
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    // AI text is escaped inside formatAI before markdown is applied
+    bubble.innerHTML = formatAI(text);
+    msg.appendChild(bubble);
     messagesEl.appendChild(msg);
     scrollToBottom();
     return msg;

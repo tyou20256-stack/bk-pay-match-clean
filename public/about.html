@@ -74,6 +74,7 @@
   </style>
 </head>
 <body>
+  <a href="#main-content" class="sr-only" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden" onfocus="this.style.position='static';this.style.width='auto';this.style.height='auto';this.style.overflow='visible'" onblur="this.style.position='absolute';this.style.left='-9999px';this.style.width='1px';this.style.height='1px';this.style.overflow='hidden'">メインコンテンツへ</a>
   <nav>
     <a href="/" style="color:var(--accent);text-decoration:none;font-weight:700;font-size:14px">Pay<span style="color:var(--text)">Match</span></a>
     <div style="display:flex;gap:8px;font-size:11px;align-items:center">
@@ -83,16 +84,16 @@
       <!-- about self-link omitted -->
       <a href="https://t.me/paymatch_rates" style="color:var(--text2);text-decoration:none" target="_blank" rel="noopener">Telegram</a>
       <div style="display:flex;gap:2px;margin-left:4px">
-        <button class="lang-btn" data-lang="ja" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">JA</button>
-        <button class="lang-btn" data-lang="en" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">EN</button>
-        <button class="lang-btn" data-lang="zh" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">ZH</button>
-        <button class="lang-btn" data-lang="vi" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:10px;cursor:pointer">VI</button>
+        <button class="lang-btn" data-lang="ja" aria-pressed="false" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:14px;cursor:pointer">JA</button>
+        <button class="lang-btn" data-lang="en" aria-pressed="false" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:14px;cursor:pointer">EN</button>
+        <button class="lang-btn" data-lang="zh" aria-pressed="false" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:14px;cursor:pointer">ZH</button>
+        <button class="lang-btn" data-lang="vi" aria-pressed="false" style="padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:none;color:var(--text2);font-size:14px;cursor:pointer">VI</button>
       </div>
       <button id="themeToggleAbout" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--text2);font-size:12px;cursor:pointer" aria-label="テーマ切り替え">&#9774;</button>
     </div>
   </nav>
 
-  <div class="container">
+  <div class="container" id="main-content">
     <!-- Hero -->
     <div class="hero">
       <h1><span data-i18n="about_hero_title_pre">Pay</span><span>Match</span><span data-i18n="about_hero_title_post">でできること</span></h1>
@@ -279,35 +280,6 @@
   <script src="/i18n.js"></script>
   <script src="/buyer-chat.js"></script>
   <script src="/floating-cta.js"></script>
-  <script>
-    (function(){
-      var savedTheme=localStorage.getItem('theme')||'dark';
-      document.documentElement.setAttribute('data-theme',savedTheme);
-      // Theme toggle
-      var themeBtn = document.getElementById('themeToggleAbout');
-      if (themeBtn) {
-        themeBtn.innerHTML = savedTheme === 'dark' ? '&#9774;' : '&#9728;';
-        themeBtn.addEventListener('click', function() {
-          var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-          document.documentElement.setAttribute('data-theme', next);
-          localStorage.setItem('theme', next);
-          themeBtn.innerHTML = next === 'dark' ? '&#9774;' : '&#9728;';
-        });
-      }
-      // Language selector
-      document.querySelectorAll('.lang-btn[data-lang]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          if (typeof setLanguage === 'function') setLanguage(this.dataset.lang);
-        });
-      });
-      // FAQ accordion
-      document.querySelectorAll('.faq-q').forEach(function(q){
-        q.addEventListener('click',function(){
-          this.classList.toggle('open');
-          this.nextElementSibling.classList.toggle('open');
-        });
-      });
-    })();
-  </script>
+  <script src="/about-app.js" nonce="{{CSP_NONCE}}"></script>
 </body>
 </html>

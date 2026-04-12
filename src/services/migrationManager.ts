@@ -438,6 +438,74 @@ const migrations: Migration[] = [
       safeIndex('idx_exchange_orders_order', 'exchange_orders', ['order_id']);
     },
   },
+  {
+    version: 27,
+    name: 'session_type_column',
+    up() {
+      // M3: Store session type ('admin' | 'customer') explicitly in DB
+      // instead of inferring from user_agent string parsing
+      safeAddColumn('sessions', 'session_type', "TEXT DEFAULT 'admin'");
+    },
+  },
+  {
+    version: 28,
+    name: 'migrate_gcm_v1_to_v2',
+    up() {
+      // L2: Re-encrypt GCM v1 (100k iterations) data to GCM v2 (600k iterations)
+      // Also picks up any remaining CBC data from v18
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { encrypt, decrypt } = require('./database.js');
+      const reEncryptField = (val: string): string | null => {
+        if (!val || val.startsWith('gcm2:')) return null; // already v2
+        if (val.startsWith('gcm:') || /^[0-9a-f]+:[0-9a-f]+$/i.test(val)) {
+          const plain = decrypt(val);
+          if (plain && plain !== '[DECRYPTION_FAILED]') return encrypt(plain);
+        }
+        return null;
+      };
+      // Re-encrypt bank_accounts
+      try {
+        const bankRows = db.prepare('SELECT id, account_number, account_holder FROM bank_accounts').all() as { id: number; account_number: string; account_holder: string }[];
+        for (const row of bankRows) {
+          try {
+            const newAccNum = reEncryptField(row.account_number);
+            const newAccHolder = reEncryptField(row.account_holder);
+            if (newAccNum) db.prepare('UPDATE bank_accounts SET account_number = ? WHERE id = ?').run(newAccNum, row.id);
+            if (newAccHolder) db.prepare('UPDATE bank_accounts SET account_holder = ? WHERE id = ?').run(newAccHolder, row.id);
+          } catch { /* skip failed records */ }
+        }
+      } catch { /* table may not exist */ }
+      // Re-encrypt exchange_credentials
+      try {
+        const credRows = db.prepare('SELECT exchange, password_enc, api_key, api_secret_enc, totp_secret_enc, passphrase_enc FROM exchange_credentials').all() as { exchange: string; password_enc: string; api_key: string; api_secret_enc: string; totp_secret_enc: string; passphrase_enc: string }[];
+        for (const row of credRows) {
+          try {
+            const updates: string[] = [];
+            const vals: string[] = [];
+            for (const field of ['password_enc', 'api_key', 'api_secret_enc', 'totp_secret_enc', 'passphrase_enc'] as const) {
+              const newVal = reEncryptField(row[field]);
+              if (newVal) { updates.push(`${field} = ?`); vals.push(newVal); }
+            }
+            if (updates.length > 0) {
+              vals.push(row.exchange);
+              db.prepare(`UPDATE exchange_credentials SET ${updates.join(', ')} WHERE exchange = ?`).run(...vals);
+            }
+          } catch { /* skip failed records */ }
+        }
+      } catch { /* table may not exist */ }
+      // Re-encrypt MFA secrets
+      try {
+        const mfaRows = db.prepare('SELECT id, mfa_secret FROM admin_users WHERE mfa_secret IS NOT NULL').all() as { id: number; mfa_secret: string }[];
+        for (const row of mfaRows) {
+          try {
+            const newVal = reEncryptField(row.mfa_secret);
+            if (newVal) db.prepare('UPDATE admin_users SET mfa_secret = ? WHERE id = ?').run(newVal, row.id);
+          } catch { /* skip failed records */ }
+        }
+      } catch { /* table may not exist */ }
+      logger.info('GCM v1 to v2 migration completed (600k PBKDF2 iterations)');
+    },
+  },
 ];
 
 /**

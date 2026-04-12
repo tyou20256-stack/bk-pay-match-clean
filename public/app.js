@@ -1,4 +1,5 @@
 function escapeHtml(s){if(s==null)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+window.escapeHtml = escapeHtml;
 var volThreshold=5.0;
 
 function adjustDeviation(delta) {
@@ -118,7 +119,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Language selector buttons
   document.querySelectorAll('.lang-btn[data-lang]').forEach(function(btn) {
-    btn.addEventListener('click', function() { setLanguage(btn.dataset.lang); });
+    btn.addEventListener('click', function() {
+      setLanguage(btn.dataset.lang);
+      document.querySelectorAll('.lang-btn').forEach(function(b) { b.setAttribute('aria-pressed', 'false'); });
+      btn.setAttribute('aria-pressed', 'true');
+    });
   });
 
   // Theme toggle

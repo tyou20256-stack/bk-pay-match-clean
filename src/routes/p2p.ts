@@ -3,12 +3,23 @@
  * @description Seller registration, login, order management, payment confirmation,
  *   balance management, and withdrawal handling.
  */
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import rateLimit from 'express-rate-limit';
 import p2pSellerService from '../services/p2pSellerService.js';
 import * as dbSvc from '../services/database.js';
 
 const router = Router();
+
+/**
+ * L3: Extract seller token — prefer Authorization: Bearer header, fall back to query param.
+ */
+function extractSellerToken(req: Request): string | undefined {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+  return req.query.token as string | undefined;
+}
 
 // Rate limiters for P2P seller endpoints
 const sellerAuthLimiter = rateLimit({
@@ -72,7 +83,7 @@ router.post('/p2p/sellers/:id/credit', (req, res) => {
 
 /** GET /api/p2p/orders/:id */
 router.get('/p2p/orders/:id', (req, res) => {
-  const token = req.query.token as string;
+  const token = extractSellerToken(req);
   if (!token) return res.json({ success: false, error: 'token required' });
   const seller = p2pSellerService.getSellerByToken(token);
   if (!seller) return res.json({ success: false, error: '無効なトークンです' });
@@ -99,7 +110,7 @@ router.get('/p2p/orders/:id', (req, res) => {
 
 /** POST /api/p2p/orders/:id/confirm */
 router.post('/p2p/orders/:id/confirm', sellerConfirmLimiter, async (req, res) => {
-  const token = (req.query.token || req.body.token) as string;
+  const token = extractSellerToken(req) || (req.body.token as string);
   if (!token) return res.json({ success: false, error: 'token required' });
   try {
     const result = await p2pSellerService.confirmPayment(req.params.id, token);
@@ -123,7 +134,7 @@ router.post('/p2p/sellers/login', sellerAuthLimiter, (req, res) => {
 
 /** GET /api/p2p/sellers/me */
 router.get('/p2p/sellers/me', (req, res) => {
-  const token = req.query.token as string;
+  const token = extractSellerToken(req);
   if (!token) return res.json({ success: false, error: 'トークンが必要です' });
   const seller = p2pSellerService.getSellerByToken(token);
   if (!seller) return res.json({ success: false, error: '無効なトークンです' });
@@ -132,7 +143,7 @@ router.get('/p2p/sellers/me', (req, res) => {
 
 /** GET /api/p2p/sellers/me/orders */
 router.get('/p2p/sellers/me/orders', (req, res) => {
-  const token = req.query.token as string;
+  const token = extractSellerToken(req);
   if (!token) return res.json({ success: false, error: 'トークンが必要です' });
   const seller = p2pSellerService.getSellerByToken(token);
   if (!seller) return res.json({ success: false, error: '無効なトークンです' });

@@ -176,6 +176,7 @@ export interface SessionRow {
   expires_at: number;
   ip_address?: string | null;
   user_agent?: string | null;
+  session_type?: string | null;
 }
 
 export interface CountRow {

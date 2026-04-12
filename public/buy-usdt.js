@@ -28,15 +28,16 @@
     document.querySelectorAll('.lang-btn[data-lang]').forEach(function(btn) {
       btn.addEventListener('click', function() {
         if (typeof setLanguage === 'function') setLanguage(this.getAttribute('data-lang'));
-        document.querySelectorAll('.lang-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.lang-btn').forEach(function(b) { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
         this.classList.add('active');
+        this.setAttribute('aria-pressed', 'true');
       });
     });
     // Set active lang button on load
     (function() {
       var lang = localStorage.getItem('lang') || localStorage.getItem('bkpay_lang') || 'ja';
       var btn = document.querySelector('.lang-btn[data-lang="' + lang + '"]');
-      if (btn) btn.classList.add('active');
+      if (btn) { btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true'); }
     })();
     // Theme toggle (CSP-safe)
     var themeBtn = document.getElementById('themeToggleBuy');
@@ -65,18 +66,12 @@
     }
     trackEvent('page_view');
 
-    // Toast notification (replaces alert())
+    // Toast notification — delegates to global toast.js (BKToast)
     function showToast(msg, type) {
-      var existing = document.getElementById('toast');
-      if (existing) existing.remove();
-      var toast = document.createElement('div');
-      toast.id = 'toast';
-      toast.setAttribute('role', 'alert');
-      toast.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);max-width:90%;padding:12px 20px;border-radius:8px;font-size:13px;z-index:9999;text-align:center;' +
-        (type === 'error' ? 'background:#ef4444;color:#fff' : 'background:var(--accent,#34d399);color:#fff');
-      toast.textContent = msg;
-      document.body.appendChild(toast);
-      setTimeout(function() { toast.remove(); }, 5000);
+      if (typeof window.toast === 'object') {
+        if (type === 'error') window.toast.error(msg);
+        else window.toast.success(msg);
+      }
     }
 
     // Custom modal (replaces confirm())
@@ -91,19 +86,37 @@
       box.setAttribute('aria-modal', 'true');
       box.setAttribute('aria-label', title);
 
-      box.innerHTML = '<div style="font-size:15px;font-weight:700;color:var(--text,#edf0f7);margin-bottom:8px">' + title + '</div>' +
-        '<div style="font-size:12px;color:var(--text2,#c0c8d8);margin-bottom:20px;line-height:1.6">' + message + '</div>' +
-        '<div style="display:flex;gap:8px;justify-content:center">' +
-          '<button id="pmModalCancel" style="padding:8px 20px;background:var(--card2,#1e2538);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer">戻る</button>' +
-          '<button id="pmModalConfirm" style="padding:8px 20px;background:#ef4444;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer">' + title + '</button>' +
-        '</div>';
+      var titleDiv = document.createElement('div');
+      titleDiv.style.cssText = 'font-size:15px;font-weight:700;color:var(--text,#edf0f7);margin-bottom:8px';
+      titleDiv.textContent = title;
+      box.appendChild(titleDiv);
+
+      var msgDiv = document.createElement('div');
+      msgDiv.style.cssText = 'font-size:12px;color:var(--text2,#c0c8d8);margin-bottom:20px;line-height:1.6;white-space:pre-line';
+      msgDiv.textContent = message;
+      box.appendChild(msgDiv);
+
+      var btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:8px;justify-content:center';
+
+      var cancelBtn = document.createElement('button');
+      cancelBtn.id = 'pmModalCancel';
+      cancelBtn.style.cssText = 'padding:8px 20px;background:var(--card2,#1e2538);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer';
+      cancelBtn.textContent = '戻る';
+      btnRow.appendChild(cancelBtn);
+
+      var confirmBtn = document.createElement('button');
+      confirmBtn.id = 'pmModalConfirm';
+      confirmBtn.style.cssText = 'padding:8px 20px;background:#ef4444;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer';
+      confirmBtn.textContent = title;
+      btnRow.appendChild(confirmBtn);
+
+      box.appendChild(btnRow);
 
       overlay.appendChild(box);
       document.body.appendChild(overlay);
 
       // Focus trap
-      var confirmBtn = document.getElementById('pmModalConfirm');
-      var cancelBtn = document.getElementById('pmModalCancel');
       confirmBtn.focus();
 
       function close() { overlay.remove(); }
@@ -242,12 +255,34 @@
           $('rateDisplay').textContent = '\u00a5' + rate.toFixed(2);
           $('usdtDisplay').textContent = (amount / rate).toFixed(2) + ' USDT';
           $('rateBox').classList.remove('hidden');
+          // Remove retry banner if present
+          var retryBanner = document.getElementById('rateRetryBanner');
+          if (retryBanner) retryBanner.remove();
         }
       } catch(e) {
         console.warn('Rate fetch failed:', e);
         var rateBox = document.getElementById('rateBox');
         if (rateBox) rateBox.style.display = 'none';
-        showToast('レートの取得に失敗しました。再試行中...', 'error');
+        // Show retry banner if not already present
+        if (!document.getElementById('rateRetryBanner')) {
+          var banner = document.createElement('div');
+          banner.id = 'rateRetryBanner';
+          banner.style.cssText = 'margin-top:8px;padding:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;text-align:center';
+          var msg = document.createElement('div');
+          msg.style.cssText = 'font-size:11px;color:var(--text2);margin-bottom:6px';
+          msg.textContent = 'レートの取得に失敗しました';
+          banner.appendChild(msg);
+          var retryBtn = document.createElement('button');
+          retryBtn.style.cssText = 'padding:6px 16px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer';
+          retryBtn.textContent = '再試行';
+          retryBtn.addEventListener('click', function() {
+            banner.remove();
+            updateRate();
+          });
+          banner.appendChild(retryBtn);
+          var panelInput = document.getElementById('panel-input');
+          if (panelInput) panelInput.appendChild(banner);
+        }
       }
     }
 
@@ -288,7 +323,7 @@
 
     // Cancel
     $('btnCancel').addEventListener('click', function() {
-      showModal('キャンセル', 'マッチングをキャンセルしますか？<br><br>※ 既に振込済みの場合、返金処理が必要になります。', function() {
+      showModal('キャンセル', 'マッチングをキャンセルしますか？\n\n※ 既に振込済みの場合、返金処理が必要になります。', function() {
         // onConfirm: execute cancel logic
         if (buyerId) {
           fetch(API + '/api/p2p-buy/cancel/' + buyerId, { method: 'DELETE' }).catch(function(){});
@@ -380,9 +415,19 @@
           // Show recovery options
           var recoveryDiv = document.createElement('div');
           recoveryDiv.style.cssText = 'text-align:center;margin-top:12px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px';
-          recoveryDiv.innerHTML = '<p style="font-size:12px;color:var(--text2);margin-bottom:8px">制限時間を超過しました</p>' +
-            '<p style="font-size:11px;color:var(--text2);margin-bottom:12px">振込済みの場合はサポートにお問い合わせください。<br>未振込の場合は再度お申し込みください。</p>' +
-            '<button onclick="location.reload()" style="padding:8px 20px;background:var(--accent,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">再度申し込む</button>';
+          var p1 = document.createElement('p');
+          p1.style.cssText = 'font-size:12px;color:var(--text2);margin-bottom:8px';
+          p1.textContent = '制限時間を超過しました';
+          recoveryDiv.appendChild(p1);
+          var p2 = document.createElement('p');
+          p2.style.cssText = 'font-size:11px;color:var(--text2);margin-bottom:12px';
+          p2.textContent = '振込済みの場合はサポートにお問い合わせください。未振込の場合は再度お申し込みください。';
+          recoveryDiv.appendChild(p2);
+          var reloadBtn = document.createElement('button');
+          reloadBtn.style.cssText = 'padding:8px 20px;background:var(--accent,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer';
+          reloadBtn.textContent = '再度申し込む';
+          reloadBtn.addEventListener('click', function() { location.reload(); });
+          recoveryDiv.appendChild(reloadBtn);
           var matchedPanel = document.getElementById('panel-matched');
           if (matchedPanel) matchedPanel.appendChild(recoveryDiv);
           return;
@@ -531,15 +576,54 @@
         }).catch(function(){});
       }
 
-      shareDiv.innerHTML =
-        '<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)">友達に紹介して報酬を獲得</div>' +
-        '<div id="refCodeDisplay" style="font-size:11px;color:var(--text2);margin-bottom:8px">コード生成中...</div>' +
-        '<div id="refLink" style="font-size:10px;color:var(--dim);word-break:break-all;margin-bottom:10px">' + shareUrl + '</div>' +
-        '<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">' +
-          '<button onclick="navigator.clipboard.writeText(document.getElementById(\'refLink\').textContent).then(function(){this.textContent=\'Copied!\';setTimeout(function(){this.textContent=\'リンクをコピー\'},2000)}.bind(this))" style="padding:6px 14px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">リンクをコピー</button>' +
-          '<a href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl) + '" target="_blank" style="padding:6px 14px;background:#1DA1F2;color:#fff;border-radius:6px;font-size:11px;text-decoration:none">X/Twitter</a>' +
-          '<a href="https://t.me/share/url?url=' + encodeURIComponent(shareUrl) + '&text=' + encodeURIComponent(shareText) + '" target="_blank" style="padding:6px 14px;background:#0088cc;color:#fff;border-radius:6px;font-size:11px;text-decoration:none">Telegram</a>' +
-        '</div>';
+      var shareTitle = document.createElement('div');
+      shareTitle.style.cssText = 'font-size:12px;font-weight:700;margin-bottom:8px;color:var(--accent)';
+      shareTitle.textContent = '友達に紹介して報酬を獲得';
+      shareDiv.appendChild(shareTitle);
+
+      var refCodeEl = document.createElement('div');
+      refCodeEl.id = 'refCodeDisplay';
+      refCodeEl.style.cssText = 'font-size:11px;color:var(--text2);margin-bottom:8px';
+      refCodeEl.textContent = 'コード生成中...';
+      shareDiv.appendChild(refCodeEl);
+
+      var refLinkEl = document.createElement('div');
+      refLinkEl.id = 'refLink';
+      refLinkEl.style.cssText = 'font-size:10px;color:var(--dim);word-break:break-all;margin-bottom:10px';
+      refLinkEl.textContent = shareUrl;
+      shareDiv.appendChild(refLinkEl);
+
+      var shareBtnRow = document.createElement('div');
+      shareBtnRow.style.cssText = 'display:flex;gap:6px;justify-content:center;flex-wrap:wrap';
+
+      var copyBtn = document.createElement('button');
+      copyBtn.style.cssText = 'padding:6px 14px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer';
+      copyBtn.textContent = 'リンクをコピー';
+      copyBtn.addEventListener('click', function() {
+        navigator.clipboard.writeText(refLinkEl.textContent).then(function() {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(function() { copyBtn.textContent = 'リンクをコピー'; }, 2000);
+        });
+      });
+      shareBtnRow.appendChild(copyBtn);
+
+      var twitterLink = document.createElement('a');
+      twitterLink.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl);
+      twitterLink.target = '_blank';
+      twitterLink.rel = 'noopener';
+      twitterLink.style.cssText = 'padding:6px 14px;background:#1DA1F2;color:#fff;border-radius:6px;font-size:11px;text-decoration:none';
+      twitterLink.textContent = 'X/Twitter';
+      shareBtnRow.appendChild(twitterLink);
+
+      var telegramLink = document.createElement('a');
+      telegramLink.href = 'https://t.me/share/url?url=' + encodeURIComponent(shareUrl) + '&text=' + encodeURIComponent(shareText);
+      telegramLink.target = '_blank';
+      telegramLink.rel = 'noopener';
+      telegramLink.style.cssText = 'padding:6px 14px;background:#0088cc;color:#fff;border-radius:6px;font-size:11px;text-decoration:none';
+      telegramLink.textContent = 'Telegram';
+      shareBtnRow.appendChild(telegramLink);
+
+      shareDiv.appendChild(shareBtnRow);
 
       var completePanel = document.getElementById('panel-complete');
       if (completePanel) completePanel.appendChild(shareDiv);
@@ -589,11 +673,14 @@
       if (history.length > 0) {
         var link = document.createElement('div');
         link.style.cssText = 'text-align:center;margin-top:8px;font-size:10px';
-        link.innerHTML = '<a href="#" id="showHistoryLink" style="color:var(--dim);text-decoration:none">過去の取引 (' + history.length + '件)</a>';
+        var anchor = document.createElement('a');
+        anchor.href = '#';
+        anchor.style.cssText = 'color:var(--dim);text-decoration:none';
+        anchor.textContent = '過去の取引 (' + history.length + '件)';
+        anchor.addEventListener('click', function(e) { e.preventDefault(); showHistory(); });
+        link.appendChild(anchor);
         var container = document.querySelector('.container');
         if (container) container.insertBefore(link, container.querySelector('.step-indicator'));
-        var histLink = document.getElementById('showHistoryLink');
-        if (histLink) histLink.addEventListener('click', function(e) { e.preventDefault(); showHistory(); });
       }
     })();
 
@@ -603,22 +690,67 @@
       overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
       var box = document.createElement('div');
       box.style.cssText = 'background:var(--card,#1a1d27);border-radius:12px;padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto';
-      var html = '<div style="font-size:14px;font-weight:700;margin-bottom:12px">取引履歴</div>';
+
+      var heading = document.createElement('div');
+      heading.style.cssText = 'font-size:14px;font-weight:700;margin-bottom:12px';
+      heading.textContent = '取引履歴';
+      box.appendChild(heading);
+
       history.forEach(function(tx) {
-        html += '<div style="border-bottom:1px solid var(--border,#2a2d3a);padding:8px 0;font-size:11px">' +
-          '<div style="color:var(--dim)">' + new Date(tx.date).toLocaleDateString('ja-JP') + '</div>' +
-          '<div>' + (tx.amountJpy || '') + ' → ' + (tx.amountUsdt || '') + '</div>' +
-          (tx.txHash ? '<div style="font-size:9px;color:var(--dim);word-break:break-all">TX: ' + tx.txHash + '</div>' : '') +
-        '</div>';
+        var row = document.createElement('div');
+        row.style.cssText = 'border-bottom:1px solid var(--border,#2a2d3a);padding:8px 0;font-size:11px';
+        var dateEl = document.createElement('div');
+        dateEl.style.color = 'var(--dim)';
+        dateEl.textContent = new Date(tx.date).toLocaleDateString('ja-JP');
+        row.appendChild(dateEl);
+        var amtEl = document.createElement('div');
+        amtEl.textContent = (tx.amountJpy || '') + ' \u2192 ' + (tx.amountUsdt || '');
+        row.appendChild(amtEl);
+        if (tx.txHash) {
+          var txEl = document.createElement('div');
+          txEl.style.cssText = 'font-size:9px;color:var(--dim);word-break:break-all';
+          txEl.textContent = 'TX: ' + tx.txHash;
+          row.appendChild(txEl);
+        }
+        box.appendChild(row);
       });
-      html += '<button id="closeHistoryBtn" style="width:100%;margin-top:12px;padding:8px;background:var(--card2,#1e2538);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer">閉じる</button>';
-      box.innerHTML = html;
+
+      var closeBtn = document.createElement('button');
+      closeBtn.style.cssText = 'width:100%;margin-top:12px;padding:8px;background:var(--card2,#1e2538);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer';
+      closeBtn.textContent = '閉じる';
+      closeBtn.addEventListener('click', function() { overlay.remove(); });
+      box.appendChild(closeBtn);
+
       overlay.appendChild(box);
       overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
       document.body.appendChild(overlay);
-      var closeBtn = document.getElementById('closeHistoryBtn');
-      if (closeBtn) closeBtn.addEventListener('click', function() { overlay.remove(); });
     }
+
+    // --- Connection status indicator ---
+    (function() {
+      var indicator = document.createElement('div');
+      indicator.id = 'connectionStatus';
+      indicator.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:6px 12px;text-align:center;font-size:11px;font-weight:600;z-index:10001;display:none;transition:transform .3s';
+      document.body.appendChild(indicator);
+
+      function showOffline() {
+        indicator.textContent = 'オフライン — インターネット接続を確認してください';
+        indicator.style.background = '#ef4444';
+        indicator.style.color = '#fff';
+        indicator.style.display = 'block';
+      }
+      function showOnline() {
+        indicator.textContent = 'オンラインに復帰しました';
+        indicator.style.background = '#10b981';
+        indicator.style.color = '#fff';
+        indicator.style.display = 'block';
+        setTimeout(function() { indicator.style.display = 'none'; }, 3000);
+      }
+
+      window.addEventListener('offline', showOffline);
+      window.addEventListener('online', showOnline);
+      if (!navigator.onLine) showOffline();
+    })();
 
     // Restore state from localStorage on load
     restoreState();
