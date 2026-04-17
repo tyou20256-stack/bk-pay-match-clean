@@ -2375,7 +2375,9 @@ function setLanguage(lang) {
   document.documentElement.lang = lang;
   applyTranslations();
   document.querySelectorAll('.lang-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.lang === lang);
+    const isActive = btn.dataset.lang === lang;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
   if (typeof render === 'function') render();
   if (typeof loadArbitrage === 'function') loadArbitrage();

@@ -18,6 +18,19 @@ import { ValidationError, AuthenticationError } from '../errors.js';
 import logger from '../services/logger.js';
 import { safeError } from './_shared.js';
 
+// L-R4: Centralized HMAC secret + token generation — single source of truth
+function getBuyerHmacSecret(): string {
+  const key = process.env.BK_ENC_KEY;
+  if (!key) {
+    if (process.env.NODE_ENV === 'production') throw new Error('BK_ENC_KEY required in production');
+    return 'fallback-dev-only';
+  }
+  return key;
+}
+function generateBuyerToken(buyerId: string): string {
+  return crypto.createHmac('sha256', getBuyerHmacSecret()).update(buyerId).digest('hex').slice(0, 32);
+}
+
 // Multer config for payment proof uploads
 const proofStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, path.join(process.cwd(), 'data', 'proofs')),
@@ -49,7 +62,7 @@ const ALLOWED_IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'i
  */
 async function validateUploadMagicBytes(filePath: string, claimedExt: string): Promise<string | null> {
   try {
-    const buffer = fs.readFileSync(filePath);
+    const buffer = await fs.promises.readFile(filePath);
     const detected = await FileType.fromBuffer(buffer);
     if (!detected) {
       return 'Unable to detect file type from content — file may be corrupted';
@@ -87,8 +100,7 @@ router.post('/p2p-buy/register', (req, res) => {
     }
     const refPart = refCode && /^PM[A-F0-9]{8}$/i.test(refCode) ? `_ref_${refCode}` : '';
     const buyerId = `web${refPart}_${crypto.randomBytes(12).toString('hex')}`;
-    const hmacSecret = process.env.BK_ENC_KEY || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('BK_ENC_KEY required in production'); })() : 'fallback-dev-only');
-    const buyerToken = crypto.createHmac('sha256', hmacSecret).update(buyerId).digest('hex').slice(0, 32);
+    const buyerToken = generateBuyerToken(buyerId);
     registerBuyer({
       id: buyerId,
       walletAddress,
@@ -177,7 +189,7 @@ router.post('/p2p-buy/paid/:matchId', uploadProof.single('proof'), async (req: R
   try {
     const matchId = Number(req.params.matchId);
     const { referenceNumber, buyerId, buyerToken } = req.body;
-    const expectedToken = crypto.createHmac('sha256', process.env.BK_ENC_KEY || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('BK_ENC_KEY required in production'); })() : 'fallback-dev-only')).update(buyerId || '').digest('hex').slice(0, 32);
+    const expectedToken = generateBuyerToken(buyerId || '');
     if (!buyerId || !buyerToken || buyerToken.length !== expectedToken.length ||
         !crypto.timingSafeEqual(Buffer.from(buyerToken), Buffer.from(expectedToken))) {
       return res.json({ success: false, error: 'Unauthorized' });
@@ -254,8 +266,7 @@ router.delete('/p2p-buy/cancel/:buyerId', (req, res) => {
     if (!buyerToken || typeof buyerToken !== 'string') {
       return res.status(401).json({ success: false, error: 'buyerToken required' });
     }
-    const hmacSecret = process.env.BK_ENC_KEY || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('BK_ENC_KEY required in production'); })() : 'fallback-dev-only');
-    const expectedToken = crypto.createHmac('sha256', hmacSecret).update(buyerId).digest('hex').slice(0, 32);
+    const expectedToken = generateBuyerToken(buyerId);
     if (
       buyerToken.length !== expectedToken.length ||
       !crypto.timingSafeEqual(Buffer.from(buyerToken), Buffer.from(expectedToken))

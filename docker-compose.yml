@@ -190,7 +190,9 @@ services:
         sqlite3 /data/bkpay.db ".backup /backups/$$FNAME";
         echo "[backup] $$(date) — local $$FNAME done";
         if [ -f /backups/rclone.conf ]; then
-          rclone --config /backups/rclone.conf copy "/backups/$$FNAME" remote:bk-pay-match-backups/ 2>&1 || echo "[backup] rclone failed";
+          rclone --config /backups/rclone.conf copy "/backups/$$FNAME" remote:bk-pay-match-backups/ 2>&1 || echo "[backup] rclone upload FAILED";
+        else
+          echo "[backup] WARNING: /backups/rclone.conf not found — off-host backup DISABLED. Local only.";
         fi;
         find /backups -name "bkpay_*.db" -mtime +7 -delete 2>/dev/null;
         sleep 3600;

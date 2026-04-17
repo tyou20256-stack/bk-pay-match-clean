@@ -17,7 +17,11 @@ if (!RAW_ENC_KEY || RAW_ENC_KEY === 'bkpay-default-key-change-me-32ch' || RAW_EN
 // Derive a proper 32-byte key via PBKDF2 (deterministic, so existing data remains readable)
 const ENC_SALT = process.env.BK_ENC_SALT || 'bkpay-enc-salt-v2';
 if (!process.env.BK_ENC_SALT) {
-  logger.warn('BK_ENC_SALT not set — using default salt for backward compatibility. Set a unique value for stronger key derivation.');
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('BK_ENC_SALT not set in production — using default salt. This weakens key derivation. Set a unique value.');
+  } else {
+    logger.warn('BK_ENC_SALT not set — using default salt for backward compatibility.');
+  }
 }
 // L2: 600k iterations for new data; legacy key derived at 100k for decrypting old data
 const PBKDF2_ITERATIONS_V2 = 600_000;
@@ -62,7 +66,11 @@ export function decrypt(text: string): string {
       dec += decipher.final('utf8');
       return dec;
     }
-    // H4: Legacy AES-256-CBC fallback (for data encrypted before upgrade) — kept for safety
+    // H4: Legacy AES-256-CBC fallback — gated behind ALLOW_CBC_DECRYPT to prevent downgrade
+    if (process.env.ALLOW_CBC_DECRYPT !== 'true') {
+      logger.error('CBC decryption blocked (ALLOW_CBC_DECRYPT not set). Run migration v28 to re-encrypt all data to GCM.', { length: text.length });
+      return '[DECRYPTION_FAILED]';
+    }
     logger.warn('DEPRECATED: Legacy CBC decryption used — data should be re-encrypted to GCM', { length: text.length });
     const [ivHex, encHex] = text.split(':');
     const legacyKey = Buffer.from(RAW_ENC_KEY.padEnd(32).slice(0, 32));
